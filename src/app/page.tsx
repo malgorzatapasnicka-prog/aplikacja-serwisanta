@@ -1,13 +1,12 @@
 import Link from "next/link";
-import { FirebaseStatus } from "@/components/FirebaseStatus";
+import { ClientList } from "@/components/ClientList";
 import { PageHeader } from "@/components/PageHeader";
 import { KOLEKCJE } from "@/lib/collections";
-import { isFirebaseConfigured } from "@/lib/firebaseConfig";
 
 const KARTY = [
   {
-    label: "Klienci",
-    opis: `Baza kontaktów w kolekcji ${KOLEKCJE.klienci}`,
+    label: "Baza klientów",
+    opis: `Pełna lista i formularz w kolekcji ${KOLEKCJE.klienci}`,
     href: "/klienci",
   },
   {
@@ -22,30 +21,20 @@ export default function Home() {
     <div>
       <PageHeader
         title="Pulpit"
-        description="System CRM do prowadzenia klientów i zleceń serwisowych. Dane będą zapisywane w Cloud Firestore."
+        description="Po uruchomieniu aplikacji zapisani klienci są od razu na tej stronie."
       />
-      <FirebaseStatus />
-      <section className="mt-6 grid gap-4 sm:grid-cols-3">
+      <ClientList opisPustej="Brak zapisanych klientów. Dodasz ich w zakładce Baza klientów." />
+      <section className="mt-8 grid gap-4 sm:grid-cols-2">
         {KARTY.map((karta) => (
           <Link
             key={karta.label}
             href={karta.href}
-            className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm transition-colors hover:border-amber-300"
+            className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-colors hover:border-slate-300"
           >
-            <p className="text-sm font-medium text-stone-500">{karta.label}</p>
-            <p className="mt-3 text-3xl font-semibold tracking-tight text-stone-900">—</p>
-            <p className="mt-2 text-sm leading-6 text-stone-600">{karta.opis}</p>
+            <p className="text-sm font-medium text-slate-900">{karta.label}</p>
+            <p className="mt-2 text-sm leading-6 text-slate-600">{karta.opis}</p>
           </Link>
         ))}
-        <div className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-stone-500">Firestore</p>
-          <p className="mt-3 text-3xl font-semibold tracking-tight text-stone-900">—</p>
-          <p className="mt-2 text-sm leading-6 text-stone-600">
-            {isFirebaseConfigured()
-              ? "Klucze są wklejone. Odczyt kolekcji można już podłączyć."
-              : "Połączenie pojawi się po wklejeniu kluczy"}
-          </p>
-        </div>
       </section>
     </div>
   );

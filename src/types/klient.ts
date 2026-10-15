@@ -1,3 +1,5 @@
+import type { Protokol } from "@/types/protokol";
+
 export type Klient = {
   id: string;
   imieNazwisko: string;
@@ -6,5 +8,7 @@ export type Klient = {
   adres: string;
   dataOstatniegoPrzegladu: string;
   numerKotla: string;
+  nazwaKotla: string;
+  protokoly: Protokol[];
   utworzono: string;
 };
