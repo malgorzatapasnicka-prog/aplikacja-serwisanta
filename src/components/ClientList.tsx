@@ -15,6 +15,8 @@ import { getDb } from "@/lib/firebase";
 
 type KlientDokument = {
   id: string;
+  imie?: string;
+  nazwisko?: string;
   imieNazwisko?: string;
   telefon?: string;
   email?: string;
@@ -88,17 +90,29 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
     return () => unsubscribe();
   }, []);
 
-  // Funkcja eksportu bazy do pliku CSV na komputer
+  const pobierzImie = (k: KlientDokument) => {
+    if (k.imie) return k.imie;
+    if (k.imieNazwisko) return k.imieNazwisko.split(" ")[0] || "";
+    return "";
+  };
+
+  const pobierzNazwisko = (k: KlientDokument) => {
+    if (k.nazwisko) return k.nazwisko;
+    if (k.imieNazwisko) return k.imieNazwisko.split(" ").slice(1).join(" ") || "";
+    return "";
+  };
+
+  // Eksport CSV z podziałem na Imię i Nazwisko
   const handleEksportCSV = () => {
     if (klienci.length === 0) {
       alert("Baza klientów jest pusta.");
       return;
     }
 
-    // Nagłówki kolumn w pliku CSV
     const naglowki = [
       "ID",
-      "Imię i nazwisko",
+      "Imię",
+      "Nazwisko",
       "Telefon",
       "E-mail",
       "Adres",
@@ -106,10 +120,10 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
       "Data ostatniego przeglądu",
     ];
 
-    // Formatowanie pojedynczych wierszy
     const wiersze = klienci.map((k) => [
       `"${(k.id || "").replace(/"/g, '""')}"`,
-      `"${(k.imieNazwisko || "").replace(/"/g, '""')}"`,
+      `"${pobierzImie(k).replace(/"/g, '""')}"`,
+      `"${pobierzNazwisko(k).replace(/"/g, '""')}"`,
       `"${(k.telefon || "").replace(/"/g, '""')}"`,
       `"${(k.email || "").replace(/"/g, '""')}"`,
       `"${(k.adres || "").replace(/"/g, '""')}"`,
@@ -117,12 +131,10 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
       `"${(k.dataOstatniegoPrzegladu || "").replace(/"/g, '""')}"`,
     ]);
 
-    // Łączenie średnikiem (standard polskiego Excela) i dodanie znaku UTF-8 BOM (\uFEFF)
     const zawartoscCSV =
       "\uFEFF" +
       [naglowki.join(";"), ...wiersze.map((w) => w.join(";"))].join("\r\n");
 
-    // Tworzenie pliku w pamięci przeglądarki i uruchomienie pobierania
     const blob = new Blob([zawartoscCSV], {
       type: "text/csv;charset=utf-8;",
     });
@@ -139,9 +151,9 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
   };
 
   // Usuwanie klienta
-  const handleUsun = async (id: string, nazwisko?: string) => {
+  const handleUsun = async (id: string, nazwa?: string) => {
     const potwierdzenie = window.confirm(
-      `Czy na pewno chcesz bezpowrotnie usunąć klienta: ${nazwisko || "bez nazwy"}?`
+      `Czy na pewno chcesz bezpowrotnie usunąć klienta: ${nazwa || "bez nazwy"}?`
     );
     if (!potwierdzenie) return;
 
@@ -156,21 +168,23 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
     }
   };
 
-  // Rozpoczęcie edycji
+  // Start edycji
   const handleStartEdycja = (klient: KlientDokument) => {
     setEdytowanyId(klient.id);
-    setFormEdycji({ ...klient });
+    setFormEdycji({
+      ...klient,
+      imie: pobierzImie(klient),
+      nazwisko: pobierzNazwisko(klient),
+    });
     setBlad(null);
   };
 
-  // Anulowanie edycji
   const handleAnulujEdycje = () => {
     setEdytowanyId(null);
     setFormEdycji(null);
     setBlad(null);
   };
 
-  // Zapisanie edycji w Firestore
   const handleZapiszEdycje = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!edytowanyId || !formEdycji) return;
@@ -183,8 +197,13 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
 
     try {
       const docRef = doc(db, KOLEKCJE.klienci, edytowanyId);
+      const imieTrim = formEdycji.imie?.trim() || "";
+      const nazwiskoTrim = formEdycji.nazwisko?.trim() || "";
+
       await updateDoc(docRef, {
-        imieNazwisko: formEdycji.imieNazwisko?.trim() || "",
+        imie: imieTrim,
+        nazwisko: nazwiskoTrim,
+        imieNazwisko: `${imieTrim} ${nazwiskoTrim}`.trim(),
         telefon: formEdycji.telefon?.trim() || "",
         email: formEdycji.email?.trim() || "",
         adres: formEdycji.adres?.trim() || "",
@@ -219,8 +238,12 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
 
   const przefiltrowani = klienci.filter((k) => {
     const q = szukaj.toLowerCase();
+    const imie = pobierzImie(k).toLowerCase();
+    const nazwisko = pobierzNazwisko(k).toLowerCase();
+    const calosc = `${imie} ${nazwisko}`;
+
     return (
-      (k.imieNazwisko || "").toLowerCase().includes(q) ||
+      calosc.includes(q) ||
       (k.telefon || "").toLowerCase().includes(q) ||
       (k.adres || "").toLowerCase().includes(q) ||
       (k.numerKotla || "").toLowerCase().includes(q)
@@ -229,7 +252,6 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
 
   return (
     <div className="space-y-4">
-      {/* Pasek narzędzi: Wyszukiwarka + Przycisk Pobierz CSV */}
       <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
         <input
           type="text"
@@ -248,9 +270,11 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
         </button>
       </div>
 
-      {/* Lista kafelków */}
       <div className="space-y-4">
         {przefiltrowani.map((klient) => {
+          const imie = pobierzImie(klient);
+          const nazwisko = pobierzNazwisko(klient);
+          const pelnaNazwa = `${imie} ${nazwisko}`.trim() || "Klient bez nazwy";
           const czyEdytowany = edytowanyId === klient.id;
 
           if (czyEdytowany && formEdycji) {
@@ -267,16 +291,30 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                   {blad && <span className="text-xs text-red-600">{blad}</span>}
                 </div>
 
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
                   <div>
                     <label className="text-[11px] font-semibold uppercase text-stone-600">
-                      Imię i nazwisko
+                      Imię
                     </label>
                     <input
                       type="text"
-                      value={formEdycji.imieNazwisko || ""}
+                      value={formEdycji.imie || ""}
                       onChange={(e) =>
-                        setFormEdycji({ ...formEdycji, imieNazwisko: e.target.value })
+                        setFormEdycji({ ...formEdycji, imie: e.target.value })
+                      }
+                      className="mt-1 w-full rounded-lg border border-stone-300 bg-white p-2 text-sm outline-none focus:border-amber-400"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-semibold uppercase text-stone-600">
+                      Nazwisko
+                    </label>
+                    <input
+                      type="text"
+                      value={formEdycji.nazwisko || ""}
+                      onChange={(e) =>
+                        setFormEdycji({ ...formEdycji, nazwisko: e.target.value })
                       }
                       className="mt-1 w-full rounded-lg border border-stone-300 bg-white p-2 text-sm outline-none focus:border-amber-400"
                     />
@@ -287,160 +325,4 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                       Telefon
                     </label>
                     <input
-                      type="tel"
-                      value={formEdycji.telefon || ""}
-                      onChange={(e) =>
-                        setFormEdycji({ ...formEdycji, telefon: e.target.value })
-                      }
-                      className="mt-1 w-full rounded-lg border border-stone-300 bg-white p-2 text-sm outline-none focus:border-amber-400"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] font-semibold uppercase text-stone-600">
-                      E-mail
-                    </label>
-                    <input
-                      type="email"
-                      value={formEdycji.email || ""}
-                      onChange={(e) =>
-                        setFormEdycji({ ...formEdycji, email: e.target.value })
-                      }
-                      className="mt-1 w-full rounded-lg border border-stone-300 bg-white p-2 text-sm outline-none focus:border-amber-400"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] font-semibold uppercase text-stone-600">
-                      Adres
-                    </label>
-                    <input
-                      type="text"
-                      value={formEdycji.adres || ""}
-                      onChange={(e) =>
-                        setFormEdycji({ ...formEdycji, adres: e.target.value })
-                      }
-                      className="mt-1 w-full rounded-lg border border-stone-300 bg-white p-2 text-sm outline-none focus:border-amber-400"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] font-semibold uppercase text-stone-600">
-                      Numer kotła
-                    </label>
-                    <input
-                      type="text"
-                      value={formEdycji.numerKotla || ""}
-                      onChange={(e) =>
-                        setFormEdycji({ ...formEdycji, numerKotla: e.target.value })
-                      }
-                      className="mt-1 w-full rounded-lg border border-stone-300 bg-white p-2 text-sm outline-none focus:border-amber-400"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] font-semibold uppercase text-stone-600">
-                      Data ostatniego przeglądu
-                    </label>
-                    <input
-                      type="date"
-                      value={formEdycji.dataOstatniegoPrzegladu || ""}
-                      onChange={(e) =>
-                        setFormEdycji({
-                          ...formEdycji,
-                          dataOstatniegoPrzegladu: e.target.value,
-                        })
-                      }
-                      className="mt-1 w-full rounded-lg border border-stone-300 bg-white p-2 text-sm outline-none focus:border-amber-400"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex gap-2 justify-end pt-2">
-                  <button
-                    type="button"
-                    onClick={handleAnulujEdycje}
-                    className="rounded-lg border border-stone-300 px-3 py-1.5 text-xs font-semibold text-stone-700 hover:bg-stone-100"
-                  >
-                    Anuluj
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={zapisujeEdycje}
-                    className="rounded-lg bg-amber-500 px-4 py-1.5 text-xs font-semibold text-stone-950 hover:bg-amber-400 disabled:opacity-50"
-                  >
-                    {zapisujeEdycje ? "Zapisywanie..." : "Zapisz zmiany"}
-                  </button>
-                </div>
-              </form>
-            );
-          }
-
-          return (
-            <div
-              key={klient.id}
-              className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm transition hover:shadow-md"
-            >
-              <div className="flex items-center justify-between border-b border-stone-100 pb-3">
-                <h3 className="text-lg font-bold text-stone-900">
-                  {klient.imieNazwisko || "Klient bez nazwy"}
-                </h3>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleStartEdycja(klient)}
-                    className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs font-medium text-stone-700 transition hover:bg-amber-50 hover:text-amber-800 hover:border-amber-300"
-                  >
-                    ✏️ Edytuj
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleUsun(klient.id, klient.imieNazwisko)}
-                    className="rounded-lg border border-red-100 bg-red-50/50 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-100 hover:text-red-700"
-                  >
-                    🗑️ Usuń
-                  </button>
-                </div>
-              </div>
-
-              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
-                <KomorkaDanych
-                  etykieta="Telefon"
-                  wartosc={klient.telefon}
-                  ikona="📞"
-                />
-                <KomorkaDanych
-                  etykieta="E-mail"
-                  wartosc={klient.email}
-                  ikona="✉️"
-                />
-                <KomorkaDanych
-                  etykieta="Adres"
-                  wartosc={klient.adres}
-                  ikona="📍"
-                />
-                <KomorkaDanych
-                  etykieta="Numer kotła"
-                  wartosc={klient.numerKotla}
-                  ikona="🔥"
-                />
-                <KomorkaDanych
-                  etykieta="Data ostatniego przeglądu"
-                  wartosc={klient.dataOstatniegoPrzegladu}
-                  ikona="📅"
-                />
-              </div>
-            </div>
-          );
-        })}
-
-        {przefiltrowani.length === 0 && (
-          <div className="rounded-xl border border-dashed border-stone-200 p-6 text-center text-sm text-stone-500">
-            Brak klientów pasujących do frazy &quot;{szukaj}&quot;.
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+                      type

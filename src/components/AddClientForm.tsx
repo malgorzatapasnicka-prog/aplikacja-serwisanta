@@ -7,7 +7,8 @@ import { KOLEKCJE } from "@/lib/collections";
 import { getDb } from "@/lib/firebase";
 
 type FormularzKlienta = {
-  imieNazwisko: string;
+  imie: string;
+  nazwisko: string;
   telefon: string;
   email: string;
   adres: string;
@@ -16,7 +17,8 @@ type FormularzKlienta = {
 };
 
 const PUSTY_FORMULARZ: FormularzKlienta = {
-  imieNazwisko: "",
+  imie: "",
+  nazwisko: "",
   telefon: "",
   email: "",
   adres: "",
@@ -30,7 +32,8 @@ const POLA: {
   type: string;
   autoComplete?: string;
 }[] = [
-  { name: "imieNazwisko", label: "Imię i nazwisko", type: "text", autoComplete: "name" },
+  { name: "imie", label: "Imię", type: "text", autoComplete: "given-name" },
+  { name: "nazwisko", label: "Nazwisko", type: "text", autoComplete: "family-name" },
   { name: "telefon", label: "Telefon", type: "tel", autoComplete: "tel" },
   { name: "email", label: "E-mail", type: "email", autoComplete: "email" },
   { name: "adres", label: "Adres", type: "text", autoComplete: "street-address" },
@@ -75,8 +78,14 @@ export function AddClientForm() {
     setZapisuje(true);
 
     try {
+      const imieTrim = formularz.imie.trim();
+      const nazwiskoTrim = formularz.nazwisko.trim();
+
       await addDoc(collection(db, KOLEKCJE.klienci), {
-        imieNazwisko: formularz.imieNazwisko.trim(),
+        imie: imieTrim,
+        nazwisko: nazwiskoTrim,
+        // zapisujemy również imieNazwisko dla zgodności ze starszymi widokami
+        imieNazwisko: `${imieTrim} ${nazwiskoTrim}`.trim(),
         telefon: formularz.telefon.trim(),
         email: formularz.email.trim(),
         adres: formularz.adres.trim(),
@@ -107,7 +116,6 @@ export function AddClientForm() {
               name={pole.name}
               type={pole.type}
               autoComplete={pole.autoComplete}
-              
               value={formularz[pole.name]}
               onChange={(event) => zmienPole(pole.name, event.target.value)}
               className="mt-1.5 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-normal text-stone-900 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200"

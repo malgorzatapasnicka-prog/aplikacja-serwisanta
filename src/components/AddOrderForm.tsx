@@ -7,6 +7,8 @@ import { getDb } from "@/lib/firebase";
 
 type KlientOpcja = {
   id: string;
+  imie?: string;
+  nazwisko?: string;
   imieNazwisko?: string;
   telefon?: string;
   adres?: string;
@@ -18,16 +20,16 @@ export function AddOrderForm() {
   const [klienci, setKlienci] = useState<KlientOpcja[]>([]);
   const [wybranyKlientId, setWybranyKlientId] = useState("");
 
-  // Dane nowego klienta (gdy wybrano tryb "nowy")
+  // Rozdzielone imię i nazwisko nowego klienta
   const [nowyKlient, setNowyKlient] = useState({
-    imieNazwisko: "",
+    imie: "",
+    nazwisko: "",
     telefon: "",
     adres: "",
     email: "",
     numerKotla: "",
   });
 
-  // Dane zlecenia
   const [opisZlecenia, setOpisZlecenia] = useState("");
   const [typZlecenia, setTypZlecenia] = useState("Przegląd okresowy");
   const [terminRealizacji, setTerminRealizacji] = useState("");
@@ -37,20 +39,28 @@ export function AddOrderForm() {
   const [sukces, setSukces] = useState("");
   const [blad, setBlad] = useState("");
 
-  // Pobieranie listy istniejących klientów do listy rozwijanej
   useEffect(() => {
     const db = getDb();
     if (!db) return;
 
-    const q = query(collection(db, KOLEKCJE.klienci), orderBy("imieNazwisko", "asc"));
+    const q = query(collection(db, KOLEKCJE.klienci), orderBy("utworzono", "desc"));
     const unsub = onSnapshot(q, (snap) => {
-      const lista = snap.docs.map((d) => ({
-        id: d.id,
-        imieNazwisko: d.data().imieNazwisko || "Bez nazwy",
-        telefon: d.data().telefon || "",
-        adres: d.data().adres || "",
-        numerKotla: d.data().numerKotla || "",
-      }));
+      const lista = snap.docs.map((d) => {
+        const data = d.data();
+        const imie = data.imie || (data.imieNazwisko ? data.imieNazwisko.split(" ")[0] : "");
+        const nazwisko = data.nazwisko || (data.imieNazwisko ? data.imieNazwisko.split(" ").slice(1).join(" ") : "");
+        const pelna = `${imie} ${nazwisko}`.trim() || data.imieNazwisko || "Bez nazwy";
+
+        return {
+          id: d.id,
+          imie,
+          nazwisko,
+          imieNazwisko: pelna,
+          telefon: data.telefon || "",
+          adres: data.adres || "",
+          numerKotla: data.numerKotla || "",
+        };
+      });
       setKlienci(lista);
       if (lista.length > 0 && !wybranyKlientId) {
         setWybranyKlientId(lista[0].id);
@@ -81,13 +91,17 @@ export function AddOrderForm() {
       let klientKociol = "";
 
       if (trybKlienta === "nowy") {
-        if (!nowyKlient.imieNazwisko.trim()) {
+        const imieTrim = nowyKlient.imie.trim();
+        const nazwiskoTrim = nowyKlient.nazwisko.trim();
+
+        if (!imieTrim || !nazwiskoTrim) {
           throw new Error("Wpisz imię i nazwisko nowego klienta.");
         }
 
-        // 1. Utworzenie nowego klienta w bazie
         const klientRef = await addDoc(collection(db, KOLEKCJE.klienci), {
-          imieNazwisko: nowyKlient.imieNazwisko.trim(),
+          imie: imieTrim,
+          nazwisko: nazwiskoTrim,
+          imieNazwisko: `${imieTrim} ${nazwiskoTrim}`.trim(),
           telefon: nowyKlient.telefon.trim(),
           adres: nowyKlient.adres.trim(),
           email: nowyKlient.email.trim(),
@@ -96,7 +110,7 @@ export function AddOrderForm() {
         });
 
         klientId = klientRef.id;
-        klientNazwa = nowyKlient.imieNazwisko.trim();
+        klientNazwa = `${imieTrim} ${nazwiskoTrim}`.trim();
         klientTelefon = nowyKlient.telefon.trim();
         klientAdres = nowyKlient.adres.trim();
         klientKociol = nowyKlient.numerKotla.trim();
@@ -111,7 +125,6 @@ export function AddOrderForm() {
         klientKociol = znaleziony.numerKotla || "";
       }
 
-      // 2. Utworzenie zlecenia powiązanego z klientem
       await addDoc(collection(db, KOLEKCJE.zlecenia), {
         klientId,
         klientNazwa,
@@ -126,10 +139,9 @@ export function AddOrderForm() {
         utworzono: serverTimestamp(),
       });
 
-      // Czyszczenie formularza
       setOpisZlecenia("");
       setTerminRealizacji("");
-      setNowyKlient({ imieNazwisko: "", telefon: "", adres: "", email: "", numerKotla: "" });
+      setNowyKlient({ imie: "", nazwisko: "", telefon: "", adres: "", email: "", numerKotla: "" });
       setSukces("Zlecenie zostało pomyślnie dodane!");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Wystąpił błąd zapisu.";
@@ -146,7 +158,6 @@ export function AddOrderForm() {
         <p className="text-xs text-stone-500">Wybierz klienta z bazy lub dodaj nowego klienta w locie.</p>
       </div>
 
-      {/* Przełącznik wyboru klienta */}
       <div className="flex gap-2">
         <button
           type="button"
@@ -198,14 +209,25 @@ export function AddOrderForm() {
           <span className="text-xs font-bold uppercase tracking-wider text-amber-700">Dane nowego klienta</span>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="block text-xs font-medium text-stone-700">Imię i nazwisko *</label>
+              <label className="block text-xs font-medium text-stone-700">Imię *</label>
               <input
                 type="text"
                 required
-                value={nowyKlient.imieNazwisko}
-                onChange={(e) => setNowyKlient({ ...nowyKlient, imieNazwisko: e.target.value })}
+                value={nowyKlient.imie}
+                onChange={(e) => setNowyKlient({ ...nowyKlient, imie: e.target.value })}
                 className="mt-1 w-full rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm outline-none focus:border-amber-400"
-                placeholder="Jan Kowalski"
+                placeholder="Jan"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-stone-700">Nazwisko *</label>
+              <input
+                type="text"
+                required
+                value={nowyKlient.nazwisko}
+                onChange={(e) => setNowyKlient({ ...nowyKlient, nazwisko: e.target.value })}
+                className="mt-1 w-full rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm outline-none focus:border-amber-400"
+                placeholder="Kowalski"
               />
             </div>
             <div>
@@ -242,7 +264,6 @@ export function AddOrderForm() {
         </div>
       )}
 
-      {/* Dane zlecenia */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div>
           <label className="block text-xs font-semibold uppercase text-stone-600 mb-1">Typ zlecenia</label>
