@@ -2,7 +2,7 @@
 
 import { FirebaseError } from "firebase/app";
 import { arrayUnion, doc, updateDoc } from "firebase/firestore";
-import { FormEvent, useState } from "react";
+import { ChangeEvent, FormEvent, useState } from "react";
 import { KOLEKCJE } from "@/lib/collections";
 import { getDb } from "@/lib/firebase";
 import { ETYKIETY_CZYNNOSCI, type CzynnoscProtokolu } from "@/types/protokol";
@@ -75,17 +75,79 @@ function komunikatBledu(error: unknown) {
   return "Nie udało się zapisać protokołu.";
 }
 
+function kompresujZdjecie(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (e) => {
+      const img = new Image();
+      img.src = e.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const maxWymiar = 1024;
+        let szerokosc = img.width;
+        let wysokosc = img.height;
+
+        if (szerokosc > wysokosc) {
+          if (szerokosc > maxWymiar) {
+            wysokosc = Math.round((wysokosc * maxWymiar) / szerokosc);
+            szerokosc = maxWymiar;
+          }
+        } else {
+          if (wysokosc > maxWymiar) {
+            szerokosc = Math.round((szerokosc * maxWymiar) / wysokosc);
+            wysokosc = maxWymiar;
+          }
+        }
+
+        canvas.width = szerokosc;
+        canvas.height = wysokosc;
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(img, 0, 0, szerokosc, wysokosc);
+        resolve(canvas.toDataURL("image/jpeg", 0.7));
+      };
+      img.onerror = reject;
+    };
+    reader.onerror = reject;
+  });
+}
+
 const klasaPola =
   "mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-normal text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200";
 
 export function AddProtocolForm({ klientId, imieNazwisko, onClose }: AddProtocolFormProps) {
   const [formularz, setFormularz] = useState<FormularzProtokolu>(PUSTY_FORMULARZ);
+  const [zdjecia, setZdjecia] = useState<string[]>([]);
+  const [przetwarzamZdjecia, setPrzetwarzamZdjecia] = useState(false);
   const [zapisuje, setZapisuje] = useState(false);
   const [blad, setBlad] = useState("");
   const data = dataWypelnienia();
 
   function zmienPole(name: keyof FormularzProtokolu, value: string) {
     setFormularz((aktualny) => ({ ...aktualny, [name]: value }));
+  }
+
+  async function handleDodajZdjecia(e: ChangeEvent<HTMLInputElement>) {
+    if (!e.target.files || e.target.files.length === 0) return;
+    setPrzetwarzamZdjecia(true);
+    try {
+      const pliki = Array.from(e.target.files);
+      const noweZdjecia: string[] = [];
+      for (const plik of pliki) {
+        const skompresowane = await kompresujZdjecie(plik);
+        noweZdjecia.push(skompresowane);
+      }
+      setZdjecia((poprzednie) => [...poprzednie, ...noweZdjecia]);
+    } catch {
+      alert("Wystąpił problem podczas przetwarzania zdjęć.");
+    } finally {
+      setPrzetwarzamZdjecia(false);
+      e.target.value = "";
+    }
+  }
+
+  function usunZdjecie(index: number) {
+    setZdjecia((poprzednie) => poprzednie.filter((_, i) => i !== index));
   }
 
   async function zapiszProtokol(event: FormEvent<HTMLFormElement>) {
@@ -113,6 +175,7 @@ export function AddProtocolForm({ klientId, imieNazwisko, onClose }: AddProtocol
           numerSeryjny: formularz.numerSeryjny.trim(),
           grzanie: formularz.grzanie.trim(),
           maksymalnaTemperaturaZasilania: formularz.maksymalnaTemperaturaZasilania.trim(),
+          zdjecia: zdjecia,
           dataWypelnienia: data,
         }),
       });
@@ -152,6 +215,7 @@ export function AddProtocolForm({ klientId, imieNazwisko, onClose }: AddProtocol
             value={formularz.nazwaRaportu}
             onChange={(event) => zmienPole("nazwaRaportu", event.target.value)}
             className={klasaPola}
+            placeholder="np. Przegląd roczny kotła"
           />
         </label>
 
@@ -212,6 +276,56 @@ export function AddProtocolForm({ klientId, imieNazwisko, onClose }: AddProtocol
           ))}
         </div>
 
+        {/* Widoczna sekcja: Zdjęcia z aparatu i galerii */}
+        <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50/40 p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-stone-900 flex items-center gap-1.5">
+                📷 Dokumentacja zdjęciowa
+              </h3>
+              <p className="text-xs text-stone-600 mt-0.5">
+                Zrób zdjęcie aparatem telefonu lub załącz z galerii
+              </p>
+            </div>
+            <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-amber-500 px-4 py-2.5 text-xs font-bold text-stone-950 shadow-sm transition hover:bg-amber-400 active:scale-95">
+              <span>📸 Otwórz aparat / Dodaj</span>
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                multiple
+                onChange={handleDodajZdjecia}
+                className="hidden"
+              />
+            </label>
+          </div>
+
+          {przetwarzamZdjecia && (
+            <p className="mt-3 text-xs font-semibold text-amber-800 animate-pulse">
+              ⏳ Przetwarzanie i kompresja zdjęć...
+            </p>
+          )}
+
+          {zdjecia.length > 0 && (
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              {zdjecia.map((src, i) => (
+                <div key={i} className="group relative aspect-square overflow-hidden rounded-lg border border-stone-300 bg-white shadow-sm">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={src} alt={`Zdjęcie ${i + 1}`} className="h-full w-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => usunZdjecie(i)}
+                    className="absolute top-1 right-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-600 text-xs font-bold text-white shadow hover:bg-red-700"
+                    title="Usuń zdjęcie"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         <p className="mt-5 text-sm text-slate-600">Data wypełnienia: {formatujDate(data)}</p>
 
         {blad ? (
@@ -223,7 +337,7 @@ export function AddProtocolForm({ klientId, imieNazwisko, onClose }: AddProtocol
         <div className="mt-5 flex gap-3">
           <button
             type="submit"
-            disabled={zapisuje}
+            disabled={zapisuje || przetwarzamZdjecia}
             className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:bg-slate-400"
           >
             {zapisuje ? "Zapisywanie…" : "Zapisz protokół"}
