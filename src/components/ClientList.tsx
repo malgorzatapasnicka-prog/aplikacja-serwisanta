@@ -25,6 +25,7 @@ type Protokol = {
   numerSeryjny?: string;
   grzanie?: string;
   maksymalnaTemperaturaZasilania?: string;
+  zdjecia?: string[];
   dataWypelnienia: string;
 };
 
@@ -176,7 +177,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
     URL.revokeObjectURL(url);
   };
 
-  // Pobieranie PDF metodą POST do /api/pdf
+  // Pobieranie PDF metodą POST do /api/protokol/pdf
   const handlePobierzPdf = async (
     klientId: string,
     protokolId: string,
