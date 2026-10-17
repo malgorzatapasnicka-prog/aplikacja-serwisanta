@@ -174,6 +174,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
     URL.revokeObjectURL(url);
   };
 
+  // Usuwanie całego klienta
   const handleUsun = async (id: string, nazwa?: string) => {
     const potwierdzenie = window.confirm(
       `Czy na pewno chcesz bezpowrotnie usunąć klienta: ${nazwa || "bez nazwy"}?`
@@ -186,8 +187,34 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
     try {
       await deleteDoc(doc(db, KOLEKCJE.klienci, id));
     } catch (err) {
-      console.error("Błąd podczas usuwania:", err);
+      console.error("Błąd podczas usuwania klienta:", err);
       alert("Nie udało się usunąć klienta. Sprawdź uprawnienia w Firestore.");
+    }
+  };
+
+  // Usuwanie konkretnego raportu/protokołu klienta
+  const handleUsunProtokol = async (klientId: string, protokolId: string, nazwaRaportu: string) => {
+    const potwierdzenie = window.confirm(
+      `Czy na pewno chcesz usunąć raport "${nazwaRaportu}"?`
+    );
+    if (!potwierdzenie) return;
+
+    const db = getDb();
+    if (!db) return;
+
+    try {
+      const klient = klienci.find((k) => k.id === klientId);
+      if (!klient || !klient.protokoly) return;
+
+      // Filtrujemy tablicę protokołów usuwając wybrany raport
+      const zaktualizowaneProtokoly = klient.protokoly.filter((p) => p.id !== protokolId);
+
+      await updateDoc(doc(db, KOLEKCJE.klienci, klientId), {
+        protokoly: zaktualizowaneProtokoly,
+      });
+    } catch (err) {
+      console.error("Błąd usuwania protokołu:", err);
+      alert("Nie udało się usunąć protokołu.");
     }
   };
 
@@ -473,7 +500,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                 </div>
               </div>
 
-              {/* Rozdzielone komórki Imię i Nazwisko oraz pozostałe dane */}
+              {/* Rozdzielone komórki danych */}
               <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
                 <KomorkaDanych etykieta="Imię" wartosc={imie} ikona="👤" />
                 <KomorkaDanych etykieta="Nazwisko" wartosc={nazwisko} ikona="👤" />
@@ -498,7 +525,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                     {klient.protokoly.map((protokol) => (
                       <div
                         key={protokol.id}
-                        className="flex flex-wrap items-center justify-between rounded-lg bg-stone-50 border border-stone-200 px-3 py-2 text-xs"
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-stone-50 border border-stone-200 px-3 py-2 text-xs"
                       >
                         <div>
                           <strong className="text-stone-900">{protokol.nazwaRaportu}</strong>
@@ -507,14 +534,27 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                             {protokol.czynnosci}
                           </span>
                         </div>
-                        <a
-                          href={`/api/pdf?klientId=${klient.id}&protokolId=${protokol.id}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-semibold text-blue-600 hover:text-blue-800 underline"
-                        >
-                          📄 Pobierz PDF
-                        </a>
+
+                        <div className="flex items-center gap-3">
+                          {/* Poprawiony URL: /pdf zamiast /api/pdf */}
+                          <a
+                            href={`/pdf?klientId=${klient.id}&protokolId=${protokol.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-semibold text-blue-600 hover:text-blue-800 underline"
+                          >
+                            📄 Pobierz PDF
+                          </a>
+                          {/* Przycisk usuwania raportu */}
+                          <button
+                            type="button"
+                            onClick={() => handleUsunProtokol(klient.id, protokol.id, protokol.nazwaRaportu)}
+                            className="rounded p-1 text-stone-400 hover:bg-red-50 hover:text-red-600 transition"
+                            title="Usuń ten raport"
+                          >
+                            ✕
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
