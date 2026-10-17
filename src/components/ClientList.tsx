@@ -185,7 +185,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
     try {
       setPobieramPdfId(protokolId);
 
-      const res = await fetch("/api/pdf", {
+      const res = await fetch("/api/protokol/pdf", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
