@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { AppNav } from "@/components/AppNav";
-import { AuthGate } from "@/components/AuthGate";
+import { AuthGate } from "../components/AuthGate";
 import "./globals.css";
 
 const geistSans = Geist({
