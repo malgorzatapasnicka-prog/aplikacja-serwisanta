@@ -88,6 +88,56 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
     return () => unsubscribe();
   }, []);
 
+  // Funkcja eksportu bazy do pliku CSV na komputer
+  const handleEksportCSV = () => {
+    if (klienci.length === 0) {
+      alert("Baza klientów jest pusta.");
+      return;
+    }
+
+    // Nagłówki kolumn w pliku CSV
+    const naglowki = [
+      "ID",
+      "Imię i nazwisko",
+      "Telefon",
+      "E-mail",
+      "Adres",
+      "Numer kotła",
+      "Data ostatniego przeglądu",
+    ];
+
+    // Formatowanie pojedynczych wierszy
+    const wiersze = klienci.map((k) => [
+      `"${(k.id || "").replace(/"/g, '""')}"`,
+      `"${(k.imieNazwisko || "").replace(/"/g, '""')}"`,
+      `"${(k.telefon || "").replace(/"/g, '""')}"`,
+      `"${(k.email || "").replace(/"/g, '""')}"`,
+      `"${(k.adres || "").replace(/"/g, '""')}"`,
+      `"${(k.numerKotla || "").replace(/"/g, '""')}"`,
+      `"${(k.dataOstatniegoPrzegladu || "").replace(/"/g, '""')}"`,
+    ]);
+
+    // Łączenie średnikiem (standard polskiego Excela) i dodanie znaku UTF-8 BOM (\uFEFF)
+    const zawartoscCSV =
+      "\uFEFF" +
+      [naglowki.join(";"), ...wiersze.map((w) => w.join(";"))].join("\r\n");
+
+    // Tworzenie pliku w pamięci przeglądarki i uruchomienie pobierania
+    const blob = new Blob([zawartoscCSV], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const dzisiejszaData = new Date().toISOString().split("T")[0];
+
+    link.setAttribute("href", url);
+    link.setAttribute("download", `baza_klientow_${dzisiejszaData}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   // Usuwanie klienta
   const handleUsun = async (id: string, nazwisko?: string) => {
     const potwierdzenie = window.confirm(
@@ -179,15 +229,23 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
 
   return (
     <div className="space-y-4">
-      {/* Wyszukiwarka */}
-      <div>
+      {/* Pasek narzędzi: Wyszukiwarka + Przycisk Pobierz CSV */}
+      <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
         <input
           type="text"
           value={szukaj}
           onChange={(e) => setSzukaj(e.target.value)}
           placeholder="Szukaj klienta (imię, nazwisko, telefon, adres, numer kotła)..."
-          className="w-full rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 shadow-sm outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+          className="flex-1 rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 shadow-sm outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
         />
+        <button
+          type="button"
+          onClick={handleEksportCSV}
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-semibold text-stone-700 shadow-sm transition hover:bg-stone-50 hover:text-stone-900"
+          title="Pobierz bazę do arkusza kalkulacyjnego"
+        >
+          📥 Pobierz CSV
+        </button>
       </div>
 
       {/* Lista kafelków */}
@@ -323,7 +381,6 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
               key={klient.id}
               className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm transition hover:shadow-md"
             >
-              {/* Pasek tytułowy klienta z przyciskami Edytuj / Usuń */}
               <div className="flex items-center justify-between border-b border-stone-100 pb-3">
                 <h3 className="text-lg font-bold text-stone-900">
                   {klient.imieNazwisko || "Klient bez nazwy"}
@@ -347,7 +404,6 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                 </div>
               </div>
 
-              {/* Podpisane komórki danych */}
               <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
                 <KomorkaDanych
                   etykieta="Telefon"
@@ -381,7 +437,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
 
         {przefiltrowani.length === 0 && (
           <div className="rounded-xl border border-dashed border-stone-200 p-6 text-center text-sm text-stone-500">
-            Brak wyników dla wyszukiwania &quot;{szukaj}&quot;.
+            Brak klientów pasujących do frazy &quot;{szukaj}&quot;.
           </div>
         )}
       </div>
