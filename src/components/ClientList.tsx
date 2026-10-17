@@ -75,8 +75,9 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
   const [zapisujeEdycje, setZapisujeEdycje] = useState(false);
   const [blad, setBlad] = useState<string | null>(null);
 
-  // Stan modala protokołu
+  // Stan modala protokołu oraz pobierania PDF
   const [protokolKlient, setProtokolKlient] = useState<KlientDokument | null>(null);
+  const [pobieramPdfId, setPobieramPdfId] = useState<string | null>(null);
 
   useEffect(() => {
     const db = getDb();
@@ -127,6 +128,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
     return "";
   };
 
+  // Eksport bazy do CSV z UTF-8 BOM
   const handleEksportCSV = () => {
     if (klienci.length === 0) {
       alert("Baza klientów jest pusta.");
@@ -174,6 +176,45 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
     URL.revokeObjectURL(url);
   };
 
+  // Pobieranie PDF metodą POST do /api/pdf
+  const handlePobierzPdf = async (
+    klientId: string,
+    protokolId: string,
+    nazwaRaportu: string
+  ) => {
+    try {
+      setPobieramPdfId(protokolId);
+
+      const res = await fetch("/api/pdf", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ klientId, protokolId }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.blad || `Błąd pobierania (${res.status})`);
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${nazwaRaportu || "protokol"}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Nie udało się pobrać PDF.";
+      alert(msg);
+    } finally {
+      setPobieramPdfId(null);
+    }
+  };
+
   // Usuwanie całego klienta
   const handleUsun = async (id: string, nazwa?: string) => {
     const potwierdzenie = window.confirm(
@@ -192,8 +233,12 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
     }
   };
 
-  // Usuwanie konkretnego raportu/protokołu klienta
-  const handleUsunProtokol = async (klientId: string, protokolId: string, nazwaRaportu: string) => {
+  // Usuwanie konkretnego raportu/protokołu
+  const handleUsunProtokol = async (
+    klientId: string,
+    protokolId: string,
+    nazwaRaportu: string
+  ) => {
     const potwierdzenie = window.confirm(
       `Czy na pewno chcesz usunąć raport "${nazwaRaportu}"?`
     );
@@ -206,7 +251,6 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
       const klient = klienci.find((k) => k.id === klientId);
       if (!klient || !klient.protokoly) return;
 
-      // Filtrujemy tablicę protokołów usuwając wybrany raport
       const zaktualizowaneProtokoly = klient.protokoly.filter((p) => p.id !== protokolId);
 
       await updateDoc(doc(db, KOLEKCJE.klienci, klientId), {
@@ -301,7 +345,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
 
   return (
     <div className="space-y-4">
-      {/* Pasek narzędzi */}
+      {/* Pasek narzędzi: Wyszukiwarka + CSV */}
       <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
         <input
           type="text"
@@ -500,7 +544,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                 </div>
               </div>
 
-              {/* Rozdzielone komórki danych */}
+              {/* Rozdzielone komórki Imię i Nazwisko oraz pozostałe dane */}
               <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
                 <KomorkaDanych etykieta="Imię" wartosc={imie} ikona="👤" />
                 <KomorkaDanych etykieta="Nazwisko" wartosc={nazwisko} ikona="👤" />
@@ -536,19 +580,31 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                         </div>
 
                         <div className="flex items-center gap-3">
-                          {/* Poprawiony URL: /pdf zamiast /api/pdf */}
-                          <a
-                            href={`/pdf?klientId=${klient.id}&protokolId=${protokol.id}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="font-semibold text-blue-600 hover:text-blue-800 underline"
-                          >
-                            📄 Pobierz PDF
-                          </a>
-                          {/* Przycisk usuwania raportu */}
                           <button
                             type="button"
-                            onClick={() => handleUsunProtokol(klient.id, protokol.id, protokol.nazwaRaportu)}
+                            disabled={pobieramPdfId === protokol.id}
+                            onClick={() =>
+                              handlePobierzPdf(
+                                klient.id,
+                                protokol.id,
+                                protokol.nazwaRaportu
+                              )
+                            }
+                            className="font-semibold text-blue-600 hover:text-blue-800 underline disabled:opacity-50"
+                          >
+                            {pobieramPdfId === protokol.id
+                              ? "Generowanie..."
+                              : "📄 Pobierz PDF"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleUsunProtokol(
+                                klient.id,
+                                protokol.id,
+                                protokol.nazwaRaportu
+                              )
+                            }
                             className="rounded p-1 text-stone-400 hover:bg-red-50 hover:text-red-600 transition"
                             title="Usuń ten raport"
                           >
@@ -575,7 +631,9 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
       {protokolKlient && (
         <AddProtocolForm
           klientId={protokolKlient.id}
-          imieNazwisko={`${pobierzImie(protokolKlient)} ${pobierzNazwisko(protokolKlient)}`.trim()}
+          imieNazwisko={`${pobierzImie(protokolKlient)} ${pobierzNazwisko(
+            protokolKlient
+          )}`.trim()}
           onClose={() => setProtokolKlient(null)}
         />
       )}
