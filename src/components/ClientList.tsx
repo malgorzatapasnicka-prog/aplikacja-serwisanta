@@ -53,7 +53,6 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
   const [laduje, setLaduje] = useState(true);
   const [szukaj, setSzukaj] = useState("");
 
-  // Stan edycji
   const [edytowanyId, setEdytowanyId] = useState<string | null>(null);
   const [formEdycji, setFormEdycji] = useState<KlientDokument | null>(null);
   const [zapisujeEdycje, setZapisujeEdycje] = useState(false);
@@ -91,18 +90,23 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
   }, []);
 
   const pobierzImie = (k: KlientDokument) => {
-    if (k.imie) return k.imie;
-    if (k.imieNazwisko) return k.imieNazwisko.split(" ")[0] || "";
+    if (k.imie && k.imie.trim() !== "") return k.imie;
+    if (k.imieNazwisko) {
+      const czesci = k.imieNazwisko.trim().split(" ");
+      return czesci[0] || "";
+    }
     return "";
   };
 
   const pobierzNazwisko = (k: KlientDokument) => {
-    if (k.nazwisko) return k.nazwisko;
-    if (k.imieNazwisko) return k.imieNazwisko.split(" ").slice(1).join(" ") || "";
+    if (k.nazwisko && k.nazwisko.trim() !== "") return k.nazwisko;
+    if (k.imieNazwisko) {
+      const czesci = k.imieNazwisko.trim().split(" ");
+      return czesci.slice(1).join(" ") || "";
+    }
     return "";
   };
 
-  // Eksport CSV z podziałem na Imię i Nazwisko
   const handleEksportCSV = () => {
     if (klienci.length === 0) {
       alert("Baza klientów jest pusta.");
@@ -150,7 +154,6 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
     URL.revokeObjectURL(url);
   };
 
-  // Usuwanie klienta
   const handleUsun = async (id: string, nazwa?: string) => {
     const potwierdzenie = window.confirm(
       `Czy na pewno chcesz bezpowrotnie usunąć klienta: ${nazwa || "bez nazwy"}?`
@@ -168,7 +171,6 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
     }
   };
 
-  // Start edycji
   const handleStartEdycja = (klient: KlientDokument) => {
     setEdytowanyId(klient.id);
     setFormEdycji({
@@ -252,6 +254,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
 
   return (
     <div className="space-y-4">
+      {/* Pasek narzędzi: Wyszukiwarka + CSV */}
       <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
         <input
           type="text"
@@ -270,6 +273,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
         </button>
       </div>
 
+      {/* Lista kafelków */}
       <div className="space-y-4">
         {przefiltrowani.map((klient) => {
           const imie = pobierzImie(klient);
@@ -325,4 +329,147 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                       Telefon
                     </label>
                     <input
-                      type
+                      type="tel"
+                      value={formEdycji.telefon || ""}
+                      onChange={(e) =>
+                        setFormEdycji({ ...formEdycji, telefon: e.target.value })
+                      }
+                      className="mt-1 w-full rounded-lg border border-stone-300 bg-white p-2 text-sm outline-none focus:border-amber-400"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-semibold uppercase text-stone-600">
+                      E-mail
+                    </label>
+                    <input
+                      type="email"
+                      value={formEdycji.email || ""}
+                      onChange={(e) =>
+                        setFormEdycji({ ...formEdycji, email: e.target.value })
+                      }
+                      className="mt-1 w-full rounded-lg border border-stone-300 bg-white p-2 text-sm outline-none focus:border-amber-400"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="text-[11px] font-semibold uppercase text-stone-600">
+                      Adres
+                    </label>
+                    <input
+                      type="text"
+                      value={formEdycji.adres || ""}
+                      onChange={(e) =>
+                        setFormEdycji({ ...formEdycji, adres: e.target.value })
+                      }
+                      className="mt-1 w-full rounded-lg border border-stone-300 bg-white p-2 text-sm outline-none focus:border-amber-400"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-semibold uppercase text-stone-600">
+                      Numer kotła
+                    </label>
+                    <input
+                      type="text"
+                      value={formEdycji.numerKotla || ""}
+                      onChange={(e) =>
+                        setFormEdycji({ ...formEdycji, numerKotla: e.target.value })
+                      }
+                      className="mt-1 w-full rounded-lg border border-stone-300 bg-white p-2 text-sm outline-none focus:border-amber-400"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-semibold uppercase text-stone-600">
+                      Data ostatniego przeglądu
+                    </label>
+                    <input
+                      type="date"
+                      value={formEdycji.dataOstatniegoPrzegladu || ""}
+                      onChange={(e) =>
+                        setFormEdycji({
+                          ...formEdycji,
+                          dataOstatniegoPrzegladu: e.target.value,
+                        })
+                      }
+                      className="mt-1 w-full rounded-lg border border-stone-300 bg-white p-2 text-sm outline-none focus:border-amber-400"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2 justify-end pt-2">
+                  <button
+                    type="button"
+                    onClick={handleAnulujEdycje}
+                    className="rounded-lg border border-stone-300 px-3 py-1.5 text-xs font-semibold text-stone-700 hover:bg-stone-100"
+                  >
+                    Anuluj
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={zapisujeEdycje}
+                    className="rounded-lg bg-amber-500 px-4 py-1.5 text-xs font-semibold text-stone-950 hover:bg-amber-400 disabled:opacity-50"
+                  >
+                    {zapisujeEdycje ? "Zapisywanie..." : "Zapisz zmiany"}
+                  </button>
+                </div>
+              </form>
+            );
+          }
+
+          return (
+            <div
+              key={klient.id}
+              className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm transition hover:shadow-md"
+            >
+              <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+                <h3 className="text-lg font-bold text-stone-900">
+                  {pelnaNazwa}
+                </h3>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleStartEdycja(klient)}
+                    className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs font-medium text-stone-700 transition hover:bg-amber-50 hover:text-amber-800 hover:border-amber-300"
+                  >
+                    ✏️ Edytuj
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleUsun(klient.id, pelnaNazwa)}
+                    className="rounded-lg border border-red-100 bg-red-50/50 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-100 hover:text-red-700"
+                  >
+                    🗑️ Usuń
+                  </button>
+                </div>
+              </div>
+
+              {/* Rozdzielone komórki Imię i Nazwisko oraz pozostałe dane */}
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
+                <KomorkaDanych etykieta="Imię" wartosc={imie} ikona="👤" />
+                <KomorkaDanych etykieta="Nazwisko" wartosc={nazwisko} ikona="👤" />
+                <KomorkaDanych etykieta="Telefon" wartosc={klient.telefon} ikona="📞" />
+                <KomorkaDanych etykieta="E-mail" wartosc={klient.email} ikona="✉️" />
+                <KomorkaDanych etykieta="Adres" wartosc={klient.adres} ikona="📍" />
+                <KomorkaDanych etykieta="Numer kotła" wartosc={klient.numerKotla} ikona="🔥" />
+                <KomorkaDanych
+                  etykieta="Data ostatniego przeglądu"
+                  wartosc={klient.dataOstatniegoPrzegladu}
+                  ikona="📅"
+                />
+              </div>
+            </div>
+          );
+        })}
+
+        {przefiltrowani.length === 0 && (
+          <div className="rounded-xl border border-dashed border-stone-200 p-6 text-center text-sm text-stone-500">
+            Brak klientów pasujących do frazy &quot;{szukaj}&quot;.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
