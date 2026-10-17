@@ -107,7 +107,7 @@ export function AddClientForm() {
               name={pole.name}
               type={pole.type}
               autoComplete={pole.autoComplete}
-              required
+              
               value={formularz[pole.name]}
               onChange={(event) => zmienPole(pole.name, event.target.value)}
               className="mt-1.5 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-normal text-stone-900 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200"

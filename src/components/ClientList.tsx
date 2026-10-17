@@ -1,6 +1,6 @@
 "use client";
 
-import { collection, onSnapshot, type DocumentData } from "firebase/firestore";
+import { collection, onSnapshot, doc, deleteDoc, type DocumentData } from "firebase/firestore";
 import { useEffect, useState } from "react";
 import { AddProtocolForm } from "@/components/AddProtocolForm";
 import { EmptyState } from "@/components/EmptyState";
@@ -47,7 +47,7 @@ function czasUtworzenia(data: DocumentData) {
   return 0;
 }
 
-type KlientNaLiscie = Klient & { sortowanie: number };
+type KlientNaLiscie = Klient & { sortowanie: number; dataOstatniegoPrzegladuRaw: string };
 
 function jakoKlient(id: string, data: DocumentData): KlientNaLiscie {
   const utworzono = data.utworzono;
@@ -58,6 +58,7 @@ function jakoKlient(id: string, data: DocumentData): KlientNaLiscie {
     email: tekst(data.email),
     adres: formatujAdres(data),
     dataOstatniegoPrzegladu: formatujDate(tekst(data.dataOstatniegoPrzegladu)),
+    dataOstatniegoPrzegladuRaw: tekst(data.dataOstatniegoPrzegladu), // Surowa data do obliczeń
     numerKotla: tekst(data.numerKotla),
     nazwaKotla: tekst(data.nazwaKotla),
     protokoly: protokolyZDokumentu(data.protokoly).sort((a, b) =>
@@ -79,6 +80,29 @@ function hrefMapy(adres: string) {
     return "";
   }
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(adres)}`;
+}
+
+// Funkcja określająca kolor na podstawie daty przeglądu
+function getStatusKolor(dataRaw: string) {
+  if (!dataRaw || dataRaw === "—") return { kolor: "bg-slate-100 text-slate-700", tekst: "Brak danych" };
+
+  const dzis = new Date();
+  const ostatniPrzeglad = new Date(dataRaw);
+  const nastepnyPrzeglad = new Date(ostatniPrzeglad);
+  nastepnyPrzeglad.setFullYear(nastepnyPrzeglad.getFullYear() + 1); // Rok od ostatniego przeglądu
+
+  const roznicaCzasu = nastepnyPrzeglad.getTime() - dzis.getTime();
+  const roznicaDni = Math.ceil(roznicaCzasu / (1000 * 3600 * 24));
+  
+  const sformatowanaData = `${String(nastepnyPrzeglad.getDate()).padStart(2, '0')}.${String(nastepnyPrzeglad.getMonth() + 1).padStart(2, '0')}.${nastepnyPrzeglad.getFullYear()}`;
+
+  if (roznicaDni < 0) {
+    return { kolor: "bg-red-500 text-white", tekst: `Minął: ${sformatowanaData}` };
+  } else if (roznicaDni <= 30) {
+    return { kolor: "bg-yellow-400 text-slate-900", tekst: `Wkrótce: ${sformatowanaData}` };
+  } else {
+    return { kolor: "bg-green-500 text-white", tekst: `Kolejny: ${sformatowanaData}` };
+  }
 }
 
 type ClientListProps = {
@@ -123,6 +147,21 @@ export function ClientList({
       setBladPdf({ id: protokolId, tekst: "Nie udało się pobrać pliku PDF." });
     } finally {
       setPobieraId(null);
+    }
+  }
+
+  // Funkcja usuwająca klienta
+  async function usunKlienta(idKlienta: string) {
+    const potwierdzenie = window.confirm("Czy na pewno chcesz usunąć tego klienta z bazy? Tej operacji nie można cofnąć.");
+    if (potwierdzenie) {
+      try {
+        const db = getDb();
+        if (!db) return;
+        await deleteDoc(doc(db, KOLEKCJE.klienci, idKlienta));
+      } catch (error) {
+        console.error("Błąd podczas usuwania klienta:", error);
+        alert("Nie udało się usunąć klienta. Sprawdź konsolę, aby poznać szczegóły.");
+      }
     }
   }
 
@@ -183,16 +222,26 @@ export function ClientList({
           {klienci.map((klient) => {
             const telefon = hrefTelefon(klient.telefon);
             const mapy = hrefMapy(klient.adres);
+            const statusPrzegladu = getStatusKolor(klient.dataOstatniegoPrzegladuRaw);
 
             return (
               <li
                 key={klient.id}
                 className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5"
               >
-                <p className="text-base font-semibold text-slate-900">{klient.imieNazwisko}</p>
-                {klient.email !== "—" ? (
-                  <p className="mt-0.5 text-sm text-slate-500">{klient.email}</p>
-                ) : null}
+                <div className="flex justify-between items-start gap-4">
+                  <div>
+                    <p className="text-base font-semibold text-slate-900">{klient.imieNazwisko}</p>
+                    {klient.email !== "—" ? (
+                      <p className="mt-0.5 text-sm text-slate-500">{klient.email}</p>
+                    ) : null}
+                  </div>
+                  {klient.dataOstatniegoPrzegladuRaw !== "—" && (
+                    <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${statusPrzegladu.kolor}`}>
+                      {statusPrzegladu.tekst}
+                    </span>
+                  )}
+                </div>
                 <div className="mt-4 grid gap-2">
                   {telefon ? (
                     <a
@@ -250,13 +299,22 @@ export function ClientList({
                     ))}
                   </ul>
                 ) : null}
-                <button
-                  type="button"
-                  onClick={() => setProtokolKlientaId(klient.id)}
-                  className="mt-4 rounded-lg border border-slate-900 px-4 py-2.5 text-sm font-medium text-slate-900 hover:bg-slate-900 hover:text-white"
-                >
-                  Dodaj protokół
-                </button>
+                <div className="mt-4 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setProtokolKlientaId(klient.id)}
+                    className="flex-1 rounded-lg border border-slate-900 px-4 py-2.5 text-sm font-medium text-slate-900 hover:bg-slate-900 hover:text-white"
+                  >
+                    Dodaj protokół
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => usunKlienta(klient.id)}
+                    className="rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-red-700 transition-colors"
+                  >
+                    Usuń
+                  </button>
+                </div>
               </li>
             );
           })}
