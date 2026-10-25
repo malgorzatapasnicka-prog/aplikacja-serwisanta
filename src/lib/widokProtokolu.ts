@@ -78,7 +78,7 @@ export function widokProtokolu(dane: DaneProtokoluPdf): WidokProtokolu {
   return {
     dataPrzegladu: dataZRoku(raport.dataWypelnienia),
     numerProtokolu: raport.numerProtokolu?.trim() || numerProtokoluZDaty(raport.dataWypelnienia, 1),
-    podtytul: "Przegląd okresowy/awaria",
+    podtytul: raport.czynnosci === "awaria" ? "awaria" : "Przegląd okresowy",
     serwisantNazwa: FIRMA.wlasciciel,
     serwisantTelefon: FIRMA.telefon,
     serwisantEmail: FIRMA.email,
