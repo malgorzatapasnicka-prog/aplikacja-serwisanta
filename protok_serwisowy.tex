@@ -1,0 +1,157 @@
+\documentclass[10pt, a4paper]{article}
+
+% Wymagane pakiety i ustawienia marginesów
+\usepackage[a4paper, margin=2cm]{geometry}
+\usepackage{fontspec}
+\usepackage[polish, bidi=basic, provide=*]{babel}
+\babelprovide[import, onchar=ids fonts]{polish}
+\babelfont{rm}{Noto Sans}
+
+% Pakiety do tabel i kolorów
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage[table]{xcolor}
+\usepackage{enumitem}
+
+% Definicje kolorów dla przejrzystego układu
+\definecolor{HeaderBg}{HTML}{1E293B}       % Elegancki granat nagłówka
+\definecolor{RowEven}{HTML}{F8FAFC}        % Delikatny odcień dla parzystych wierszy
+\definecolor{StatusErr}{HTML}{DC2626}      % Czerwień błędu
+\definecolor{BorderGray}{HTML}{CBD5E1}
+
+\renewcommand{\arraystretch}{1.25}         % Zwiększona czytelność wierszy tabel
+
+\begin{document}
+
+% Górny pasek informacyjny z numerem protokołu i datą
+\noindent
+\begin{minipage}[c]{0.5\textwidth}
+    ~
+\end{minipage}
+\hfill
+\begin{minipage}[c]{0.48\textwidth}
+    \raggedleft
+    \textbf{Data przeglądu:} 25.10.2026 r.\\
+    \textbf{Nr protokołu:} PR/2026/10/042
+\end{minipage}
+
+\vspace{0.4cm}
+\hrule height 1.5pt
+\vspace{0.5cm}
+
+% Tytuł główny dokumentu
+\begin{center}
+    {\LARGE \textbf{PROTOKÓŁ}}\\[0.15cm]
+    {\normalsize Przegląd okresowy/awaria}
+\end{center}
+
+\vspace{0.4cm}
+
+% Dane stron (uproszczone wg zaleceń)
+\noindent
+\begin{minipage}[t]{0.48\textwidth}
+    \textbf{Serwisant}\\
+    Wiński Arkadiusz\\
+    Tel: +48 785-221-412\\
+    
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.48\textwidth}
+    Małgorzata Wińska\\
+    Al. Jarzębinowa 87/1\\
+    05-825 Książenice
+\end{minipage}
+
+\vspace{0.6cm}
+
+% 1. Identyfikacja i parametry urządzenia
+\section*{1. Identyfikacja i ustawienia urządzenia}
+\rowcolors{2}{RowEven}{white}
+\noindent
+\begin{tabularx}{\textwidth}{X l X l}
+\toprule
+\textbf{Parametr} & \textbf{Wartość} & \textbf{Parametr} & \textbf{Wartość} \\
+\midrule
+Model kotła & \dotfill & Numer kotła & 7878787 \\
+Moc nominalna & 460 kW & Typ sterownika & brak \\
+Zadana temp. grzania & 25$^\circ$C & Maks. temp. zasilania & 25$^\circ$C \\
+Status urządzenia & \textbf{\textcolor{StatusErr}{ERROR / Usterka}} & & \\
+\bottomrule
+\end{tabularx}
+
+\vspace{0.5cm}
+
+% 2. Test bezpieczeństwa i szczelności
+\section*{2. Test bezpieczeństwa i szczelności}
+\rowcolors{2}{RowEven}{white}
+\noindent
+\begin{tabularx}{\textwidth}{X l X l}
+\toprule
+\textbf{Kryterium kontrolne} & \textbf{Status} & \textbf{Parametr} & \textbf{Wartość} \\
+\midrule
+Szczelność instalacji gazowej & [ \hspace{0.3cm} ] Pozytywny & Ciśnienie w instalacji C.O. & \dotfill bar \\
+Zawór - kocioł & [ \hspace{0.3cm} ] & Ciśnienie naczynia wzbiorczego & \dotfill bar \\
+\bottomrule
+\end{tabularx}
+
+\vspace{0.5cm}
+
+% 3. Lista kontrolna wykonanych czynności
+\section*{3. Lista kontrolna wykonanych czynności}
+\noindent
+\begin{itemize}[label={[\hspace{0.4cm}]}]
+    \item Czyszczenie wymiennika ciepła
+    \item Czyszczenie palnika i elektrod
+    \item Sprawdzenie syfonu kondensatu
+    \item Inne: \dotfill
+\end{itemize}
+\vspace{0.2cm}
+\noindent \textbf{Data kolejnego przeglądu:} \dotfill
+
+\vspace{0.5cm}
+
+% 4. Uwagi, zdiagnozowane usterki i zalecenia
+\section*{4. Uwagi serwisanta i zdiagnozowane usterki}
+\noindent
+\fbox{%
+\begin{minipage}{0.98\textwidth}
+\vspace{12cm}
+~
+\end{minipage}
+}
+
+\vspace{0.5cm}
+
+% 5. Analiza spalin (Miejsce na zdjęcie)
+\section*{5. Analiza spalin}
+\noindent
+\fbox{%
+\begin{minipage}{0.98\textwidth}
+\centering
+\vspace{1.5cm}
+\textit{[Tu system automatycznie wklei zdjęcie z analizatora spalin / aparatu]}\\
+\vspace{1.5cm}
+\end{minipage}
+}
+
+\vfill
+
+% Sekcja: Podpisy
+\noindent
+\begin{minipage}[t]{0.45\textwidth}
+    \centering
+    \vspace{1.2cm}
+    \rule{5.5cm}{0.4pt}\\
+    \vspace{0.15cm}
+    \small Podpis klienta
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.45\textwidth}
+    \centering
+    \vspace{1.2cm}
+    \rule{5.5cm}{0.4pt}\\
+    \vspace{0.15cm}
+    \small Podpis i pieczęć serwisanta
+\end{minipage}
+
+\end{document}
