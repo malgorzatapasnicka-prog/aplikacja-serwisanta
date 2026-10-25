@@ -34,5 +34,6 @@ export type Protokol = {
   zdjecia?: string[];
   podpisyZdjec?: string[];
   podpisKlienta?: string;
+  podpisSerwisanta?: string;
   maZalacznikPdf?: boolean;
 };
