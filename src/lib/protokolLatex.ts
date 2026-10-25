@@ -38,6 +38,42 @@ function cisnienie(wartosc: string) {
   return wartosc.trim() ? tex(wartosc) : "\\dotfill~bar";
 }
 
+function kolumnaZdjecia(plik: string, podpis: string, szerokosc: string, wysokosc: string) {
+  const opis = podpis.trim() ? `\\\\[0.15cm]\n{\\small ${tex(podpis.trim())}}` : "";
+  return `\\begin{minipage}[t]{${szerokosc}}
+\\centering
+\\includegraphics[width=\\linewidth,height=${wysokosc},keepaspectratio]{${plik}}${opis}
+\\end{minipage}`;
+}
+
+function ukladZdjec(pliki: { plik: string; podpis: string }[]) {
+  if (pliki.length === 1) {
+    const jedyne = pliki[0];
+    return `\\noindent
+\\begin{center}
+${kolumnaZdjecia(jedyne.plik, jedyne.podpis, "0.78\\textwidth", "8.2cm")}
+\\end{center}
+\\vspace{0.4cm}`;
+  }
+
+  const wiersze: string[] = [];
+  for (let indeks = 0; indeks < pliki.length; indeks += 2) {
+    const lewe = pliki[indeks];
+    const prawe = pliki[indeks + 1];
+    const lewaRamka = kolumnaZdjecia(lewe.plik, lewe.podpis, "0.48\\textwidth", "7.4cm");
+    const prawaRamka = prawe
+      ? kolumnaZdjecia(prawe.plik, prawe.podpis, "0.48\\textwidth", "7.4cm")
+      : "\\begin{minipage}[t]{0.48\\textwidth}~\\end{minipage}";
+    wiersze.push(`\\noindent
+${lewaRamka}
+\\hfill
+${prawaRamka}
+\\par
+\\vspace{0.45cm}`);
+  }
+  return wiersze.join("\n");
+}
+
 export function trescLatex(dane: DaneProtokoluPdf, plikiZdjec: { plik: string; podpis: string }[] = []) {
   const widok = widokProtokolu(dane);
   const adres = widok.klientLinie.map((linia) => tex(linia)).join("\\\\\n    ");
@@ -56,16 +92,7 @@ export function trescLatex(dane: DaneProtokoluPdf, plikiZdjec: { plik: string; p
     : "\\vspace{12cm}\n~";
   const analiza =
     plikiZdjec.length > 0
-      ? plikiZdjec
-          .map(
-            ({ plik, podpis }, indeks) => `\\noindent
-\\begin{center}
-\\includegraphics[width=0.92\\textwidth,height=4.6cm,keepaspectratio]{${plik}}\\\\[0.2cm]
-{\\small \\textbf{Zdjęcie nr ${indeks + 1}}}${podpis ? `\\\\[0.1cm]\n{\\small ${tex(podpis)}}` : ""}
-\\end{center}
-\\vspace{0.35cm}`,
-          )
-          .join("\n")
+      ? ukladZdjec(plikiZdjec)
       : `\\noindent
 \\begin{center}
 \\vspace{0.4cm}

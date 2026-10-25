@@ -235,24 +235,38 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
     });
     doc.setTextColor(15, 23, 42);
     y += 10;
-  }
-  zdjecia.forEach((adres, indeks) => {
-    zapewnij(56);
-    const wysokoscZdjecia = 42;
-    wstawZdjecie(doc, adres, lewy, y, szerokosc, wysokoscZdjecia);
-    y += wysokoscZdjecia + 5;
-    doc.setFontSize(9);
-    doc.setTextColor(15, 23, 42);
-    tekst(`Zdjęcie nr ${indeks + 1}`, lewy, y);
-    const podpis = widok.podpisyZdjec[indeks]?.trim();
-    if (podpis) {
-      y += 4.5;
-      const linie = doc.splitTextToSize(podpis, szerokosc) as string[];
-      doc.text(linie, lewy, y);
-      y += Math.max(0, (linie.length - 1) * 4);
+  } else if (zdjecia.length === 1) {
+    const wysokoscZdjecia = 78;
+    zapewnij(wysokoscZdjecia + 16);
+    const szerokoscZdjecia = 130;
+    const x = lewy + (szerokosc - szerokoscZdjecia) / 2;
+    wstawZdjecie(doc, zdjecia[0], x, y, szerokoscZdjecia, wysokoscZdjecia);
+    y += wysokoscZdjecia + 4;
+    y = dopiszPodpis(doc, widok.podpisyZdjec[0], x, y, szerokoscZdjecia);
+    y += 6;
+  } else {
+    const szerokoscKolumny = 80;
+    const odstep = 10;
+    const wysokoscZdjecia = 68;
+    for (let indeks = 0; indeks < zdjecia.length; indeks += 2) {
+      const praweJest = indeks + 1 < zdjecia.length;
+      const podpisLewy = widok.podpisyZdjec[indeks]?.trim() ?? "";
+      const podpisPrawy = praweJest ? (widok.podpisyZdjec[indeks + 1]?.trim() ?? "") : "";
+      const dodatkowyOpis = Math.max(wysokoscPodpisu(doc, podpisLewy, szerokoscKolumny), wysokoscPodpisu(doc, podpisPrawy, szerokoscKolumny));
+      zapewnij(wysokoscZdjecia + dodatkowyOpis + 8);
+      const start = y;
+      wstawZdjecie(doc, zdjecia[indeks], lewy, start, szerokoscKolumny, wysokoscZdjecia);
+      if (praweJest) {
+        wstawZdjecie(doc, zdjecia[indeks + 1], lewy + szerokoscKolumny + odstep, start, szerokoscKolumny, wysokoscZdjecia);
+      }
+      const yPodpisu = start + wysokoscZdjecia + 4;
+      dopiszPodpis(doc, podpisLewy, lewy, yPodpisu, szerokoscKolumny);
+      if (praweJest) {
+        dopiszPodpis(doc, podpisPrawy, lewy + szerokoscKolumny + odstep, yPodpisu, szerokoscKolumny);
+      }
+      y = yPodpisu + dodatkowyOpis + 4;
     }
-    y += 8;
-  });
+  }
 
   zapewnij(28);
   const podpisY = Math.max(y + 14, 262);
@@ -270,6 +284,28 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
   tekst("Podpis i pieczęć serwisanta", lewy + szerokosc - 27.5, liniaPodpisu + 5, { align: "center" });
 
   return Buffer.from(doc.output("arraybuffer"));
+}
+
+function wysokoscPodpisu(doc: jsPDF, podpis: string, szerokosc: number) {
+  const czysty = podpis.trim();
+  if (!czysty) {
+    return 0;
+  }
+  const linie = doc.splitTextToSize(czysty, szerokosc) as string[];
+  return 4 + linie.length * 3.6;
+}
+
+function dopiszPodpis(doc: jsPDF, podpis: string | undefined, x: number, y: number, szerokosc: number) {
+  const czysty = podpis?.trim() ?? "";
+  if (!czysty) {
+    return y;
+  }
+  doc.setFont("NotoSans", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(15, 23, 42);
+  const linie = doc.splitTextToSize(czysty, szerokosc) as string[];
+  doc.text(linie, x, y);
+  return y + linie.length * 3.6;
 }
 
 function wstawZdjecie(doc: jsPDF, adres: string, x: number, y: number, szerokosc: number, wysokosc: number) {
