@@ -27,6 +27,7 @@ type Protokol = {
   maksymalnaTemperaturaZasilania?: string;
   zdjecia?: string[];
   dataWypelnienia: string;
+  numerProtokolu?: string;
 };
 
 type KlientDokument = {
@@ -645,7 +646,9 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
           )}`.trim()}
           numerKotla={protokolKlient.numerKotla}
           nazwaKotla={protokolKlient.nazwaKotla}
-          kolejnyNumer={(protokolKlient.protokoly?.length ?? 0) + 1}
+          numeryProtokolow={klienci.flatMap((klient) =>
+            (klient.protokoly ?? []).map((protokol) => protokol.numerProtokolu ?? ""),
+          )}
           onClose={() => setProtokolKlient(null)}
         />
       )}

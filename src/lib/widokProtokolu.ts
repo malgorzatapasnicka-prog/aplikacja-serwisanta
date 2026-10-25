@@ -45,6 +45,20 @@ export function numerProtokoluZDaty(dataIso: string, kolejny: number) {
   return `PR/${rok}/${miesiac}/${numer}`;
 }
 
+export function nastepnyNumerProtokolu(dataIso: string, istniejace: string[]) {
+  const data = /^(\d{4})-(\d{2})-\d{2}$/.exec(dataIso);
+  const rok = data?.[1] ?? "0000";
+  const miesiac = data?.[2] ?? "00";
+  const najwyzszy = istniejace.reduce((max, numer) => {
+    const dopasowanie = /^PR\/(\d{4})\/(\d{2})\/(\d+)$/.exec(numer.trim());
+    if (!dopasowanie || dopasowanie[1] !== rok || dopasowanie[2] !== miesiac) {
+      return max;
+    }
+    return Math.max(max, Number(dopasowanie[3]));
+  }, 0);
+  return numerProtokoluZDaty(dataIso, najwyzszy + 1);
+}
+
 export function linieAdresu(adres: string) {
   return adres
     .split(",")

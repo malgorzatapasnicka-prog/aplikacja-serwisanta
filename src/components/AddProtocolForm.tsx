@@ -5,7 +5,7 @@ import { arrayUnion, deleteDoc, doc, setDoc, updateDoc } from "firebase/firestor
 import { ChangeEvent, FormEvent, useState, type ReactNode } from "react";
 import { KOLEKCJE } from "@/lib/collections";
 import { getDb } from "@/lib/firebase";
-import { numerProtokoluZDaty } from "@/lib/widokProtokolu";
+import { nastepnyNumerProtokolu } from "@/lib/widokProtokolu";
 import { PodpisNaEkranie } from "@/components/PodpisNaEkranie";
 import { ETYKIETY_CZYNNOSCI, type CzynnoscProtokolu } from "@/types/protokol";
 
@@ -14,7 +14,7 @@ type AddProtocolFormProps = {
   imieNazwisko: string;
   numerKotla?: string;
   nazwaKotla?: string;
-  kolejnyNumer?: number;
+  numeryProtokolow?: string[];
   onClose: () => void;
 };
 
@@ -171,7 +171,7 @@ export function AddProtocolForm({
   imieNazwisko,
   numerKotla = "",
   nazwaKotla = "",
-  kolejnyNumer = 1,
+  numeryProtokolow = [],
   onClose,
 }: AddProtocolFormProps) {
   const [formularz, setFormularz] = useState<FormularzProtokolu>({
@@ -204,6 +204,7 @@ export function AddProtocolForm({
   const [przetwarzamZdjecie, setPrzetwarzamZdjecie] = useState(false);
   const [zapisuje, setZapisuje] = useState(false);
   const [blad, setBlad] = useState("");
+  const numerProtokolu = nastepnyNumerProtokolu(formularz.dataPrzegladu, numeryProtokolow);
 
   function zmienPole<K extends keyof FormularzProtokolu>(name: K, value: FormularzProtokolu[K]) {
     setFormularz((aktualny) => ({ ...aktualny, [name]: value }));
@@ -309,7 +310,7 @@ export function AddProtocolForm({
           grzanie: temperatura,
           maksymalnaTemperaturaZasilania: formularz.maksymalnaTemperaturaZasilania.trim(),
           dataWypelnienia: formularz.dataPrzegladu,
-          numerProtokolu: numerProtokoluZDaty(formularz.dataPrzegladu, kolejnyNumer),
+          numerProtokolu,
           modelKotla: model,
           numerKotla: numer,
           zadanaTemperaturaGrzania: temperatura,
@@ -352,7 +353,7 @@ export function AddProtocolForm({
             <h2 className="text-lg font-semibold text-slate-900">Dodaj protokół</h2>
             <p className="mt-1 text-sm text-slate-600">{imieNazwisko}</p>
             <p className="mt-1 text-sm font-medium text-slate-800">
-              Nr protokołu: {numerProtokoluZDaty(formularz.dataPrzegladu, kolejnyNumer)}
+              Nr protokołu: {numerProtokolu}
             </p>
           </div>
           <button type="button" onClick={onClose} className="rounded-lg px-2 py-1 text-sm text-slate-500 hover:bg-slate-100">
