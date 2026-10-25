@@ -229,6 +229,12 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
 
     try {
       await deleteDoc(doc(db, KOLEKCJE.klienci, id));
+      const protokoly = klienci.find((klient) => klient.id === id)?.protokoly ?? [];
+      await Promise.all(
+        protokoly.map((protokol) =>
+          deleteDoc(doc(db, KOLEKCJE.zalacznikiProtokolu, protokol.id)).catch(() => undefined),
+        ),
+      );
     } catch (err) {
       console.error("Błąd podczas usuwania klienta:", err);
       alert("Nie udało się usunąć klienta. Sprawdź uprawnienia w Firestore.");
@@ -258,6 +264,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
       await updateDoc(doc(db, KOLEKCJE.klienci, klientId), {
         protokoly: zaktualizowaneProtokoly,
       });
+      await deleteDoc(doc(db, KOLEKCJE.zalacznikiProtokolu, protokolId)).catch(() => undefined);
     } catch (err) {
       console.error("Błąd usuwania protokołu:", err);
       alert("Nie udało się usunąć protokołu.");

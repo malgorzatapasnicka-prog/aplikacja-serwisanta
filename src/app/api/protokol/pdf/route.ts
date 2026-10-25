@@ -4,6 +4,7 @@ import { nazwaPlikuPdf } from "@/lib/daneProtokolu";
 import { KOLEKCJE } from "@/lib/collections";
 import { getServerDb } from "@/lib/firebaseServer";
 import { daneProtokoluZDokumentu } from "@/lib/klientDokument";
+import { dolaczZalacznikPdf } from "@/lib/dolaczZalacznikPdf";
 import { utworzPdfLatex } from "@/lib/protokolLatex";
 import { utworzPdfProtokolu } from "@/lib/protokolPdf";
 
@@ -48,7 +49,14 @@ export async function POST(request: Request) {
       return blad("Nie znaleziono protokołu.", 404);
     }
 
-    const pdf = (await utworzPdfLatex(dane)) ?? utworzPdfProtokolu(dane);
+    let pdf = (await utworzPdfLatex(dane)) ?? utworzPdfProtokolu(dane);
+    if (dane.protokol.maZalacznikPdf) {
+      const zalacznik = await getDoc(doc(db, KOLEKCJE.zalacznikiProtokolu, protokolId));
+      const tresc = zalacznik.exists() ? zalacznik.data().pdf : "";
+      if (typeof tresc === "string" && tresc.startsWith("data:application/pdf")) {
+        pdf = await dolaczZalacznikPdf(pdf, tresc);
+      }
+    }
     const nazwa = nazwaPlikuPdf(dane.protokol.nazwaRaportu);
 
     return new Response(new Uint8Array(pdf), {

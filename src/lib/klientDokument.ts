@@ -79,6 +79,7 @@ export function protokolyZDokumentu(wartosc: unknown): Protokol[] {
         uwagi: tekst(raport.uwagi),
         zdjecia: zdjeciaZDokumentu(raport.zdjecia),
         podpisyZdjec: podpisyZDokumentu(raport.podpisyZdjec, zdjeciaZDokumentu(raport.zdjecia).length),
+        maZalacznikPdf: tak(raport.maZalacznikPdf),
       },
     ];
   });

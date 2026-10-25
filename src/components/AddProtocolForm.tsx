@@ -1,7 +1,7 @@
 "use client";
 
 import { FirebaseError } from "firebase/app";
-import { arrayUnion, doc, updateDoc } from "firebase/firestore";
+import { arrayUnion, deleteDoc, doc, setDoc, updateDoc } from "firebase/firestore";
 import { ChangeEvent, FormEvent, useState, type ReactNode } from "react";
 import { KOLEKCJE } from "@/lib/collections";
 import { getDb } from "@/lib/firebase";
@@ -196,6 +196,8 @@ export function AddProtocolForm({
     uwagi: "",
   });
   const [zdjecia, setZdjecia] = useState<ZdjecieFormularza[]>([]);
+  const [zalacznikPdf, setZalacznikPdf] = useState("");
+  const [nazwaZalacznika, setNazwaZalacznika] = useState("");
   const [przetwarzamZdjecie, setPrzetwarzamZdjecie] = useState(false);
   const [zapisuje, setZapisuje] = useState(false);
   const [blad, setBlad] = useState("");
@@ -236,6 +238,38 @@ export function AddProtocolForm({
     }
   }
 
+  async function handleZalacznik(event: ChangeEvent<HTMLInputElement>) {
+    const plik = event.target.files?.[0];
+    event.target.value = "";
+    if (!plik) {
+      return;
+    }
+    const toPdf = plik.type === "application/pdf" || plik.name.toLowerCase().endsWith(".pdf");
+    if (!toPdf) {
+      setBlad("Załącznik musi być plikiem PDF.");
+      return;
+    }
+    if (plik.size > 700_000) {
+      setBlad("Załącznik PDF jest za duży. Maksymalny rozmiar to 700 KB.");
+      return;
+    }
+
+    setBlad("");
+    try {
+      const dane = await plik.arrayBuffer();
+      const naglowek = new TextDecoder().decode(dane.slice(0, 5));
+      if (!naglowek.startsWith("%PDF")) {
+        setBlad("Wybrany plik nie jest dokumentem PDF.");
+        return;
+      }
+      const base64 = btoa(new Uint8Array(dane).reduce((wynik, bajt) => wynik + String.fromCharCode(bajt), ""));
+      setZalacznikPdf(`data:application/pdf;base64,${base64}`);
+      setNazwaZalacznika(plik.name);
+    } catch {
+      setBlad("Nie udało się odczytać załącznika PDF.");
+    }
+  }
+
   async function zapiszProtokol(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBlad("");
@@ -250,11 +284,18 @@ export function AddProtocolForm({
     const model = formularz.modelKotla.trim();
     const numer = formularz.numerKotla.trim();
     const temperatura = formularz.zadanaTemperaturaGrzania.trim();
+    const protokolId = crypto.randomUUID();
 
     try {
+      if (zalacznikPdf) {
+        await setDoc(doc(db, KOLEKCJE.zalacznikiProtokolu, protokolId), {
+          klientId,
+          pdf: zalacznikPdf,
+        });
+      }
       await updateDoc(doc(db, KOLEKCJE.klienci, klientId), {
         protokoly: arrayUnion({
-          id: crypto.randomUUID(),
+          id: protokolId,
           nazwaRaportu: formularz.nazwaRaportu.trim(),
           czynnosci: formularz.czynnosci,
           status: formularz.status.trim(),
@@ -281,10 +322,14 @@ export function AddProtocolForm({
           uwagi: formularz.uwagi.trim(),
           zdjecia: zdjecia.slice(0, LIMIT_ZDJECIA).map((zdjecie) => zdjecie.src),
           podpisyZdjec: zdjecia.slice(0, LIMIT_ZDJECIA).map((zdjecie) => zdjecie.podpis.trim()),
+          maZalacznikPdf: Boolean(zalacznikPdf),
         }),
       });
       onClose();
     } catch (error) {
+      if (zalacznikPdf) {
+        await deleteDoc(doc(db, KOLEKCJE.zalacznikiProtokolu, protokolId)).catch(() => undefined);
+      }
       setBlad(komunikatBledu(error));
     } finally {
       setZapisuje(false);
@@ -524,6 +569,30 @@ export function AddProtocolForm({
                 </div>
               </div>
             ))}
+          </div>
+        ) : null}
+
+        <h3 className="mt-6 text-sm font-semibold tracking-wide text-slate-900 uppercase">Załącznik PDF</h3>
+        <p className="mt-1 text-xs text-slate-500">
+          Opcjonalnie. Strony tego pliku zostaną dodane na końcu gotowego protokołu.
+        </p>
+        <label className="mt-3 inline-flex cursor-pointer items-center rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700">
+          Wybierz PDF
+          <input type="file" accept="application/pdf,.pdf" className="hidden" onChange={handleZalacznik} />
+        </label>
+        {nazwaZalacznika ? (
+          <div className="mt-3 flex items-center justify-between gap-3 rounded-lg border border-slate-200 px-3 py-2">
+            <p className="min-w-0 truncate text-sm text-slate-800">{nazwaZalacznika}</p>
+            <button
+              type="button"
+              onClick={() => {
+                setZalacznikPdf("");
+                setNazwaZalacznika("");
+              }}
+              className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-bold text-white"
+            >
+              ✕
+            </button>
           </div>
         ) : null}
 
