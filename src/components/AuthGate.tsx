@@ -50,11 +50,14 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <div className="text-sm font-medium text-slate-500">
-          Ładowanie aplikacji...
+      <>
+        <div className="flex min-h-screen items-center justify-center bg-slate-50">
+          <div className="text-sm font-medium text-slate-500">
+            Ładowanie aplikacji...
+          </div>
         </div>
-      </div>
+        <div hidden>{children}</div>
+      </>
     );
   }
 
