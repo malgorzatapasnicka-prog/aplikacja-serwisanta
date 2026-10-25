@@ -84,6 +84,7 @@ export function protokolyZDokumentu(wartosc: unknown): Protokol[] {
         zdjecia: zdjeciaZDokumentu(raport.zdjecia),
         podpisyZdjec: podpisyZDokumentu(raport.podpisyZdjec, zdjeciaZDokumentu(raport.zdjecia).length),
         podpisKlienta: obrazPodpisu(raport.podpisKlienta),
+        podpisSerwisanta: obrazPodpisu(raport.podpisSerwisanta),
         maZalacznikPdf: tak(raport.maZalacznikPdf),
       },
     ];

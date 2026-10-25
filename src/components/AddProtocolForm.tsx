@@ -200,6 +200,7 @@ export function AddProtocolForm({
   const [zalacznikPdf, setZalacznikPdf] = useState("");
   const [nazwaZalacznika, setNazwaZalacznika] = useState("");
   const [podpisKlienta, setPodpisKlienta] = useState("");
+  const [podpisSerwisanta, setPodpisSerwisanta] = useState("");
   const [przetwarzamZdjecie, setPrzetwarzamZdjecie] = useState(false);
   const [zapisuje, setZapisuje] = useState(false);
   const [blad, setBlad] = useState("");
@@ -325,6 +326,7 @@ export function AddProtocolForm({
           zdjecia: zdjecia.slice(0, LIMIT_ZDJECIA).map((zdjecie) => zdjecie.src),
           podpisyZdjec: zdjecia.slice(0, LIMIT_ZDJECIA).map((zdjecie) => zdjecie.podpis.trim()),
           ...(podpisKlienta ? { podpisKlienta } : {}),
+          ...(podpisSerwisanta ? { podpisSerwisanta } : {}),
           maZalacznikPdf: Boolean(zalacznikPdf),
         }),
       });
@@ -599,6 +601,11 @@ export function AddProtocolForm({
           </div>
         ) : null}
 
+        <PodpisNaEkranie
+          tytul="Podpis serwisanta"
+          opis="Opcjonalnie. Serwisant podpisuje się palcem. Podpis trafi nad kreskę w protokole."
+          onChange={setPodpisSerwisanta}
+        />
         <PodpisNaEkranie onChange={setPodpisKlienta} />
 
         {blad ? (
