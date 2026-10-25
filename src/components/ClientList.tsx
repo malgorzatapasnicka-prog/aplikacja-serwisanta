@@ -39,6 +39,7 @@ type KlientDokument = {
   adres?: string;
   dataOstatniegoPrzegladu?: string;
   numerKotla?: string;
+  nazwaKotla?: string;
   protokoly?: Protokol[];
 };
 
@@ -635,6 +636,9 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
           imieNazwisko={`${pobierzImie(protokolKlient)} ${pobierzNazwisko(
             protokolKlient
           )}`.trim()}
+          numerKotla={protokolKlient.numerKotla}
+          nazwaKotla={protokolKlient.nazwaKotla}
+          kolejnyNumer={(protokolKlient.protokoly?.length ?? 0) + 1}
           onClose={() => setProtokolKlient(null)}
         />
       )}

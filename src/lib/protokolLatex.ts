@@ -1,16 +1,15 @@
 import { execFile } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import { FIRMA } from "@/lib/firma";
-import { formatujDateIso, type DaneProtokoluPdf } from "@/lib/daneProtokolu";
-import { ETYKIETY_CZYNNOSCI } from "@/types/protokol";
+import type { DaneProtokoluPdf } from "@/lib/daneProtokolu";
+import { widokProtokolu } from "@/lib/widokProtokolu";
 
 const uruchom = promisify(execFile);
 
 function tex(wartosc: string) {
-  return (wartosc.trim() || "—")
+  return wartosc
     .replaceAll("\\", "\\textbackslash{}")
     .replaceAll("&", "\\&")
     .replaceAll("%", "\\%")
@@ -20,129 +19,189 @@ function tex(wartosc: string) {
     .replaceAll("{", "\\{")
     .replaceAll("}", "\\}")
     .replaceAll("~", "\\textasciitilde{}")
-    .replaceAll("^", "\\textasciicircum{}");
+    .replaceAll("^", "\\textasciicircum{}")
+    .replaceAll("°C", "$^\\circ$C")
+    .replaceAll("°", "$^\\circ$");
 }
 
-function wiersze(pary: Array<[string, string]>) {
-  return pary
-    .map(
-      ([etykieta, wartosc]) =>
-        `\\wiersz{${tex(etykieta)}}{${tex(wartosc)}}`,
-    )
+function pole(wartosc: string) {
+  const czysta = wartosc.trim();
+  return czysta ? tex(czysta) : "\\dotfill";
+}
+
+function kratka(zaznaczone: boolean, dopisek = "") {
+  const pudelko = zaznaczone ? "\\mbox{[\\,$\\times$\\,]}" : "\\mbox{[\\hspace{0.3cm}]}";
+  return dopisek ? `${pudelko} ${tex(dopisek)}` : pudelko;
+}
+
+function cisnienie(wartosc: string) {
+  return wartosc.trim() ? tex(wartosc) : "\\dotfill~bar";
+}
+
+export function trescLatex(dane: DaneProtokoluPdf, plikZdjecia?: string) {
+  const widok = widokProtokolu(dane);
+  const adres = widok.klientLinie.map((linia) => tex(linia)).join("\\\\\n    ");
+  const status = widok.status
+    ? widok.statusAwaria
+      ? `\\textbf{\\textcolor{StatusErr}{${tex(widok.status)}}}`
+      : `\\textbf{${tex(widok.status)}}`
+    : "\\dotfill";
+  const czynnosci = widok.czynnosci
+    .map((pozycja) => `    \\item ${kratka(pozycja.wykonano)} ${tex(pozycja.etykieta)}`)
     .join("\n");
-}
+  const inne = widok.inneCzynnosci ? tex(widok.inneCzynnosci) : "\\dotfill";
+  const kolejny = widok.dataKolejnegoPrzegladu ? tex(widok.dataKolejnegoPrzegladu) : "\\dotfill";
+  const uwagi = widok.uwagi
+    ? `\\vspace{0.3cm}\n${tex(widok.uwagi).replaceAll("\n", "\\\\\n")}\n\\vspace{0.4cm}`
+    : "\\vspace{12cm}\n~";
+  const analiza = plikZdjecia
+    ? `\\vspace{0.3cm}\n\\includegraphics[width=0.92\\textwidth,height=4.6cm,keepaspectratio]{${plikZdjecia}}\\\\\n\\vspace{0.3cm}`
+    : `\\vspace{1.5cm}\n\\textit{[Tu system automatycznie wklei zdjęcie z analizatora spalin / aparatu]}\\\\\n\\vspace{1.5cm}`;
 
-export function trescLatex(dane: DaneProtokoluPdf) {
-  const raport = dane.protokol;
-  const czynnosci = ETYKIETY_CZYNNOSCI[raport.czynnosci];
-  const kociol = [dane.numerKotla, dane.nazwaKotla].filter((wartosc) => wartosc.trim()).join(" · ");
+  return `\\documentclass[10pt, a4paper]{article}
 
-  return `\\documentclass[a4paper,11pt]{article}
-\\usepackage[T1]{fontenc}
-\\usepackage[utf8]{inputenc}
-\\usepackage[polish]{babel}
-\\usepackage[margin=16mm,top=18mm,headheight=16pt,footskip=12mm]{geometry}
-\\usepackage{tgheros}
-\\usepackage{microtype}
-\\usepackage{xcolor}
+\\usepackage[a4paper, margin=2cm]{geometry}
+\\usepackage{fontspec}
+\\usepackage[polish, bidi=basic, provide=*]{babel}
+\\babelprovide[import, onchar=ids fonts]{polish}
+\\babelfont{rm}[
+  Path=./,
+  Extension=.ttf,
+  UprightFont=NotoSans-Regular,
+  BoldFont=NotoSans-Regular,
+  BoldFeatures={FakeBold=2}
+]{NotoSans}
+
 \\usepackage{tabularx}
-\\usepackage{array}
-\\usepackage{fancyhdr}
-\\renewcommand{\\familydefault}{\\sfdefault}
+\\usepackage{booktabs}
+\\usepackage[table]{xcolor}
+\\usepackage{enumitem}
+\\usepackage{graphicx}
 
-\\definecolor{ink}{HTML}{0F172A}
-\\definecolor{muted}{HTML}{64748B}
-\\definecolor{line}{HTML}{CBD5E1}
-\\definecolor{rule}{HTML}{0F172A}
+\\definecolor{HeaderBg}{HTML}{1E293B}
+\\definecolor{RowEven}{HTML}{F8FAFC}
+\\definecolor{StatusErr}{HTML}{DC2626}
+\\definecolor{BorderGray}{HTML}{CBD5E1}
 
-\\pagestyle{fancy}
-\\fancyhf{}
-\\fancyhead[L]{\\textcolor{ink}{\\small\\bfseries ${tex(FIRMA.nazwa)}}\\ \\textcolor{muted}{\\small ${tex(FIRMA.wlasciciel)}}}
-\\fancyhead[R]{\\textcolor{muted}{\\small tel. ${tex(FIRMA.telefon)}}}
-\\renewcommand{\\headrulewidth}{0.4pt}
-\\renewcommand{\\headrule}{\\hbox to\\headwidth{\\color{line}\\leaders\\hrule height \\headrulewidth\\hfill}}
-\\fancyfoot[L]{\\textcolor{muted}{\\footnotesize ${tex(FIRMA.ulica)}, ${tex(FIRMA.kod)}}}
-\\fancyfoot[R]{\\textcolor{muted}{\\footnotesize \\thepage}}
-\\renewcommand{\\footrulewidth}{0pt}
-
-\\fancypagestyle{pierwsza}{%
-  \\fancyhf{}%
-  \\renewcommand{\\headrulewidth}{0pt}%
-  \\fancyfoot[L]{\\textcolor{muted}{\\footnotesize ${tex(FIRMA.ulica)}, ${tex(FIRMA.kod)}}}%
-  \\fancyfoot[R]{\\textcolor{muted}{\\footnotesize \\thepage}}%
-}
-
-\\setlength{\\parindent}{0pt}
-\\setlength{\\parskip}{0pt}
-\\pagestyle{fancy}
-
-\\newcommand{\\sekcja}[1]{%
-  \\vspace{6mm}%
-  {\\large\\bfseries\\color{ink} #1}\\par
-  \\vspace{1.4mm}{\\color{rule}\\rule{\\textwidth}{0.6pt}}\\par
-  \\vspace{3mm}%
-}
-\\newcommand{\\wiersz}[2]{%
-  \\noindent
-  \\begin{tabularx}{\\textwidth}{@{}>{\\color{muted}\\raggedright\\arraybackslash}p{58mm} >{\\raggedright\\arraybackslash}X@{}}
-    #1 & #2 \\\\
-  \\end{tabularx}\\par
-  \\vspace{1.5mm}{\\color{line}\\rule{\\textwidth}{0.25pt}}\\par
-  \\vspace{2mm}%
-}
+\\renewcommand{\\arraystretch}{1.25}
 
 \\begin{document}
-\\thispagestyle{pierwsza}
-\\color{ink}
 
-{\\fontsize{22}{26}\\selectfont\\bfseries ${tex(FIRMA.nazwa)}}\\\\[1.5mm]
-{\\large ${tex(FIRMA.wlasciciel)}}\\\\[2.5mm]
-{\\color{muted}${tex(FIRMA.ulica)}\\\\[0.8mm]
-${tex(FIRMA.kod)}\\\\[0.8mm]
-tel. ${tex(FIRMA.telefon)}}
-
-\\vspace{6mm}
-{\\color{rule}\\rule{\\textwidth}{1.1pt}}
-\\vspace{7mm}
-
-{\\fontsize{16}{20}\\selectfont\\bfseries Protokół serwisowy}\\\\[2.5mm]
-{\\large ${tex(raport.nazwaRaportu)}}\\\\[1.5mm]
-{\\color{muted} Data wypełnienia: ${tex(formatujDateIso(raport.dataWypelnienia))}
-\\quad\\textperiodcentered\\quad ${tex(czynnosci)}}
-
-\\sekcja{Dane klienta}
-${wiersze([
-  ["Imię i nazwisko", dane.imieNazwisko],
-  ["Adres", dane.adres],
-  ["Numer kotła", kociol || dane.numerKotla],
-])}
-
-\\sekcja{Przeprowadzone czynności}
-${wiersze([["Rodzaj", czynnosci]])}
-
-\\sekcja{Dane urządzenia}
-${wiersze([
-  ["Status", raport.status],
-  ["Typ kotła", raport.typKotla],
-  ["Moc nominalna kotła", raport.mocNominalna],
-  ["Sterownik", raport.sterownik],
-  ["Nr seryjny", raport.numerSeryjny],
-])}
-
-\\sekcja{Ustawienia urządzenia}
-${wiersze([
-  ["Grzanie", raport.grzanie],
-  ["Maksymalna temperatura zasilania", raport.maksymalnaTemperaturaZasilania],
-])}
-
-\\vspace{16mm}
 \\noindent
-\\begin{tabularx}{\\textwidth}{@{}X X@{}}
-\\color{muted}\\small Podpis serwisanta & \\color{muted}\\small Data wypełnienia \\\\
-\\rule{0pt}{14mm} & \\\\
-\\color{line}\\rule{72mm}{0.4pt} & \\color{line}\\rule{52mm}{0.4pt} \\\\
-\\color{ink}\\small ${tex(FIRMA.wlasciciel)} & \\color{ink}\\small ${tex(formatujDateIso(raport.dataWypelnienia))} \\\\
+\\begin{minipage}[c]{0.5\\textwidth}
+    ~
+\\end{minipage}
+\\hfill
+\\begin{minipage}[c]{0.48\\textwidth}
+    \\raggedleft
+    \\textbf{Data przeglądu:} ${pole(widok.dataPrzegladu)}\\\\
+    \\textbf{Nr protokołu:} ${pole(widok.numerProtokolu)}
+\\end{minipage}
+
+\\vspace{0.4cm}
+\\hrule height 1.5pt
+\\vspace{0.5cm}
+
+\\begin{center}
+    {\\LARGE \\textbf{PROTOKÓŁ}}\\\\[0.15cm]
+    {\\normalsize ${tex(widok.podtytul)}}
+\\end{center}
+
+\\vspace{0.4cm}
+
+\\noindent
+\\begin{minipage}[t]{0.48\\textwidth}
+    \\textbf{Serwisant}\\\\
+    ${tex(widok.serwisantNazwa)}\\\\
+    Tel: ${tex(widok.serwisantTelefon)}\\\\
+    e-mail:${tex(widok.serwisantEmail)}
+\\end{minipage}
+\\hfill
+\\begin{minipage}[t]{0.48\\textwidth}
+    ${tex(widok.klientNazwa)}\\\\
+    ${adres}
+\\end{minipage}
+
+\\vspace{0.6cm}
+
+\\section*{1. Identyfikacja i ustawienia urządzenia}
+\\rowcolors{2}{RowEven}{white}
+\\noindent
+\\begin{tabularx}{\\textwidth}{X l X l}
+\\toprule
+\\textbf{Parametr} & \\textbf{Wartość} & \\textbf{Parametr} & \\textbf{Wartość} \\\\
+\\midrule
+Model kotła & ${pole(widok.modelKotla)} & Numer kotła & ${pole(widok.numerKotla)} \\\\
+Moc nominalna & ${pole(widok.mocNominalna)} & Typ sterownika & ${pole(widok.sterownik)} \\\\
+Zadana temp. grzania & ${pole(widok.zadanaTemperatura)} & Maks. temp. zasilania & ${pole(widok.maksTemperatura)} \\\\
+Status urządzenia & ${status} & & \\\\
+\\bottomrule
 \\end{tabularx}
+
+\\vspace{0.5cm}
+
+\\section*{2. Test bezpieczeństwa i szczelności}
+\\rowcolors{2}{RowEven}{white}
+\\noindent
+\\begin{tabularx}{\\textwidth}{X l X l}
+\\toprule
+\\textbf{Kryterium kontrolne} & \\textbf{Status} & \\textbf{Parametr} & \\textbf{Wartość} \\\\
+\\midrule
+Szczelność instalacji gazowej & ${kratka(widok.szczelnoscGazowa, "Pozytywny")} & Ciśnienie w instalacji C.O. & ${cisnienie(widok.cisnienieCO)} \\\\
+Zawór - kocioł & ${kratka(widok.zaworKociol)} & Ciśnienie naczynia wzbiorczego & ${cisnienie(widok.cisnienieNaczynia)} \\\\
+\\bottomrule
+\\end{tabularx}
+
+\\vspace{0.5cm}
+
+\\section*{3. Lista kontrolna wykonanych czynności}
+\\noindent
+\\begin{itemize}[label={}, leftmargin=1.6em]
+${czynnosci}
+    \\item ${kratka(Boolean(widok.inneCzynnosci))} Inne: ${inne}
+\\end{itemize}
+\\vspace{0.2cm}
+\\noindent \\textbf{Data kolejnego przeglądu:} ${kolejny}
+
+\\vspace{0.5cm}
+
+\\section*{4. Uwagi serwisanta i zdiagnozowane usterki}
+\\noindent
+\\fbox{%
+\\begin{minipage}{0.98\\textwidth}
+${uwagi}
+\\end{minipage}
+}
+
+\\vspace{0.5cm}
+
+\\section*{5. Analiza spalin}
+\\noindent
+\\fbox{%
+\\begin{minipage}{0.98\\textwidth}
+\\centering
+${analiza}
+\\end{minipage}
+}
+
+\\vfill
+
+\\noindent
+\\begin{minipage}[t]{0.45\\textwidth}
+    \\centering
+    \\vspace{1.2cm}
+    \\rule{5.5cm}{0.4pt}\\\\
+    \\vspace{0.15cm}
+    \\small Podpis klienta
+\\end{minipage}
+\\hfill
+\\begin{minipage}[t]{0.45\\textwidth}
+    \\centering
+    \\vspace{1.2cm}
+    \\rule{5.5cm}{0.4pt}\\\\
+    \\vspace{0.15cm}
+    \\small Podpis i pieczęć serwisanta
+\\end{minipage}
 
 \\end{document}
 `;
@@ -152,16 +211,31 @@ export async function utworzPdfLatex(dane: DaneProtokoluPdf): Promise<Buffer | n
   const katalog = await mkdtemp(join(tmpdir(), "protokol-"));
 
   try {
-    await writeFile(join(katalog, "protokol.tex"), trescLatex(dane), "utf8");
+    await copyFile(
+      join(process.cwd(), "src/lib/fonts/NotoSans-Regular.ttf"),
+      join(katalog, "NotoSans-Regular.ttf"),
+    );
+
+    let plikZdjecia: string | undefined;
+    const adres = widokProtokolu(dane).zdjecia[0];
+    const dopasowanie = adres
+      ? /^data:image\/(png|jpeg|jpg);base64,([A-Za-z0-9+/=\s]+)$/i.exec(adres)
+      : null;
+    if (dopasowanie) {
+      const rozszerzenie = dopasowanie[1].toLowerCase() === "png" ? "png" : "jpg";
+      plikZdjecia = `analiza.${rozszerzenie}`;
+      await writeFile(join(katalog, plikZdjecia), Buffer.from(dopasowanie[2].replace(/\s/g, ""), "base64"));
+    }
+
+    await writeFile(join(katalog, "protokol.tex"), trescLatex(dane, plikZdjecia), "utf8");
     await uruchom(
-      "pdflatex",
+      "lualatex",
       ["-no-shell-escape", "-interaction=nonstopmode", "-halt-on-error", "protokol.tex"],
-      { cwd: katalog, timeout: 30_000 },
+      { cwd: katalog, timeout: 45_000 },
     );
     return await readFile(join(katalog, "protokol.pdf"));
   } catch (error) {
-    const kod =
-      error && typeof error === "object" && "code" in error ? String(error.code) : "";
+    const kod = error && typeof error === "object" && "code" in error ? String(error.code) : "";
     if (kod !== "ENOENT") {
       console.error("Nie udało się złożyć protokołu w LaTeX.", error);
     }

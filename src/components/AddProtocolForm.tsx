@@ -2,67 +2,52 @@
 
 import { FirebaseError } from "firebase/app";
 import { arrayUnion, doc, updateDoc } from "firebase/firestore";
-import { ChangeEvent, FormEvent, useState } from "react";
+import { ChangeEvent, FormEvent, useState, type ReactNode } from "react";
 import { KOLEKCJE } from "@/lib/collections";
 import { getDb } from "@/lib/firebase";
+import { numerProtokoluZDaty } from "@/lib/widokProtokolu";
 import { ETYKIETY_CZYNNOSCI, type CzynnoscProtokolu } from "@/types/protokol";
 
 type AddProtocolFormProps = {
   klientId: string;
   imieNazwisko: string;
+  numerKotla?: string;
+  nazwaKotla?: string;
+  kolejnyNumer?: number;
   onClose: () => void;
 };
 
 type FormularzProtokolu = {
   nazwaRaportu: string;
+  dataPrzegladu: string;
   czynnosci: CzynnoscProtokolu;
-  status: string;
-  typKotla: string;
+  modelKotla: string;
+  numerKotla: string;
   mocNominalna: string;
   sterownik: string;
-  numerSeryjny: string;
-  grzanie: string;
+  zadanaTemperaturaGrzania: string;
   maksymalnaTemperaturaZasilania: string;
+  status: string;
+  szczelnoscGazowa: boolean;
+  cisnienieCO: string;
+  zaworKociol: boolean;
+  cisnienieNaczynia: string;
+  czyszczenieWymiennika: boolean;
+  czyszczeniePalnika: boolean;
+  sprawdzenieSyfonu: boolean;
+  inneCzynnosci: string;
+  dataKolejnegoPrzegladu: string;
+  uwagi: string;
 };
 
-const PUSTY_FORMULARZ: FormularzProtokolu = {
-  nazwaRaportu: "",
-  czynnosci: "przeglad",
-  status: "",
-  typKotla: "",
-  mocNominalna: "",
-  sterownik: "",
-  numerSeryjny: "",
-  grzanie: "",
-  maksymalnaTemperaturaZasilania: "",
-};
+const klasaPola =
+  "mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-normal text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200";
 
-const POLA_URZADZENIA: { name: keyof FormularzProtokolu; label: string }[] = [
-  { name: "status", label: "Status" },
-  { name: "typKotla", label: "Typ kotła" },
-  { name: "mocNominalna", label: "Moc nominalna kotła" },
-  { name: "sterownik", label: "Sterownik" },
-  { name: "numerSeryjny", label: "Nr seryjny" },
-];
-
-const POLA_USTAWIEN: { name: keyof FormularzProtokolu; label: string }[] = [
-  { name: "grzanie", label: "Grzanie" },
-  { name: "maksymalnaTemperaturaZasilania", label: "Maksymalna temperatura zasilania" },
-];
-
-function dataWypelnienia() {
+function dzis() {
   const teraz = new Date();
   const miesiac = String(teraz.getMonth() + 1).padStart(2, "0");
   const dzien = String(teraz.getDate()).padStart(2, "0");
   return `${teraz.getFullYear()}-${miesiac}-${dzien}`;
-}
-
-function formatujDate(iso: string) {
-  const dopasowanie = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
-  if (!dopasowanie) {
-    return iso;
-  }
-  return `${dopasowanie[3]}.${dopasowanie[2]}.${dopasowanie[1]}`;
 }
 
 function komunikatBledu(error: unknown) {
@@ -75,79 +60,158 @@ function komunikatBledu(error: unknown) {
   return "Nie udało się zapisać protokołu.";
 }
 
-function kompresujZdjecie(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = (e) => {
-      const img = new Image();
-      img.src = e.target?.result as string;
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        const maxWymiar = 1024;
-        let szerokosc = img.width;
-        let wysokosc = img.height;
+function rysujNaPlotnie(zrodlo: CanvasImageSource, szerokoscZrodla: number, wysokoscZrodla: number) {
+  const maks = 1200;
+  const skala = Math.min(1, maks / Math.max(szerokoscZrodla, wysokoscZrodla));
+  const szerokosc = Math.max(1, Math.round(szerokoscZrodla * skala));
+  const wysokosc = Math.max(1, Math.round(wysokoscZrodla * skala));
+  const plotno = document.createElement("canvas");
+  plotno.width = szerokosc;
+  plotno.height = wysokosc;
+  const kontekst = plotno.getContext("2d");
+  if (!kontekst) {
+    throw new Error("Nie udało się przygotować zdjęcia.");
+  }
+  kontekst.fillStyle = "#ffffff";
+  kontekst.fillRect(0, 0, szerokosc, wysokosc);
+  kontekst.drawImage(zrodlo, 0, 0, szerokosc, wysokosc);
+  return plotno.toDataURL("image/jpeg", 0.72);
+}
 
-        if (szerokosc > wysokosc) {
-          if (szerokosc > maxWymiar) {
-            wysokosc = Math.round((wysokosc * maxWymiar) / szerokosc);
-            szerokosc = maxWymiar;
-          }
-        } else {
-          if (wysokosc > maxWymiar) {
-            szerokosc = Math.round((szerokosc * maxWymiar) / wysokosc);
-            wysokosc = maxWymiar;
-          }
-        }
-
-        canvas.width = szerokosc;
-        canvas.height = wysokosc;
-        const ctx = canvas.getContext("2d");
-        ctx?.drawImage(img, 0, 0, szerokosc, wysokosc);
-        resolve(canvas.toDataURL("image/jpeg", 0.7));
-      };
-      img.onerror = reject;
+function wymiaryPrzezObraz(plik: Blob) {
+  return new Promise<string>((resolve, reject) => {
+    const adres = URL.createObjectURL(plik);
+    const obraz = new Image();
+    obraz.onload = () => {
+      try {
+        resolve(rysujNaPlotnie(obraz, obraz.naturalWidth, obraz.naturalHeight));
+      } catch (error) {
+        reject(error);
+      } finally {
+        URL.revokeObjectURL(adres);
+      }
     };
-    reader.onerror = reject;
+    obraz.onerror = () => {
+      URL.revokeObjectURL(adres);
+      reject(new Error("Nie udało się odczytać zdjęcia."));
+    };
+    obraz.src = adres;
   });
 }
 
-const klasaPola =
-  "mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-normal text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200";
+async function kompresujZdjecie(plik: File) {
+  try {
+    if (typeof createImageBitmap === "function") {
+      const bitmap = await createImageBitmap(plik, { imageOrientation: "from-image" });
+      try {
+        return rysujNaPlotnie(bitmap, bitmap.width, bitmap.height);
+      } finally {
+        bitmap.close();
+      }
+    }
+  } catch {
+    // HEIC z iPhone'a często nie przechodzi przez canvas. Wtedy konwersja niżej.
+  }
 
-export function AddProtocolForm({ klientId, imieNazwisko, onClose }: AddProtocolFormProps) {
-  const [formularz, setFormularz] = useState<FormularzProtokolu>(PUSTY_FORMULARZ);
-  const [zdjecia, setZdjecia] = useState<string[]>([]);
-  const [przetwarzamZdjecia, setPrzetwarzamZdjecia] = useState(false);
+  try {
+    return await wymiaryPrzezObraz(plik);
+  } catch {
+    const heic2any = (await import("heic2any")).default;
+    const wynik = await heic2any({ blob: plik, toType: "image/jpeg", quality: 0.72 });
+    const jpeg = Array.isArray(wynik) ? wynik[0] : wynik;
+    return wymiaryPrzezObraz(jpeg);
+  }
+}
+
+function Pole({
+  etykieta,
+  wymagane = true,
+  children,
+}: {
+  etykieta: string;
+  wymagane?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <label className="block text-sm font-medium text-slate-700">
+      {etykieta}
+      {wymagane ? null : <span className="font-normal text-slate-400"> (opcjonalnie)</span>}
+      {children}
+    </label>
+  );
+}
+
+function Kratka({
+  etykieta,
+  zaznaczone,
+  onChange,
+}: {
+  etykieta: string;
+  zaznaczone: boolean;
+  onChange: (zaznaczone: boolean) => void;
+}) {
+  return (
+    <label className="flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800">
+      <input type="checkbox" checked={zaznaczone} onChange={(event) => onChange(event.target.checked)} />
+      {etykieta}
+    </label>
+  );
+}
+
+export function AddProtocolForm({
+  klientId,
+  imieNazwisko,
+  numerKotla = "",
+  nazwaKotla = "",
+  kolejnyNumer = 1,
+  onClose,
+}: AddProtocolFormProps) {
+  const [formularz, setFormularz] = useState<FormularzProtokolu>({
+    nazwaRaportu: "",
+    dataPrzegladu: dzis(),
+    czynnosci: "przeglad",
+    modelKotla: nazwaKotla,
+    numerKotla,
+    mocNominalna: "",
+    sterownik: "",
+    zadanaTemperaturaGrzania: "",
+    maksymalnaTemperaturaZasilania: "",
+    status: "",
+    szczelnoscGazowa: false,
+    cisnienieCO: "",
+    zaworKociol: false,
+    cisnienieNaczynia: "",
+    czyszczenieWymiennika: false,
+    czyszczeniePalnika: false,
+    sprawdzenieSyfonu: false,
+    inneCzynnosci: "",
+    dataKolejnegoPrzegladu: "",
+    uwagi: "",
+  });
+  const [zdjecie, setZdjecie] = useState("");
+  const [przetwarzamZdjecie, setPrzetwarzamZdjecie] = useState(false);
   const [zapisuje, setZapisuje] = useState(false);
   const [blad, setBlad] = useState("");
-  const data = dataWypelnienia();
 
-  function zmienPole(name: keyof FormularzProtokolu, value: string) {
+  function zmienPole<K extends keyof FormularzProtokolu>(name: K, value: FormularzProtokolu[K]) {
     setFormularz((aktualny) => ({ ...aktualny, [name]: value }));
   }
 
-  async function handleDodajZdjecia(e: ChangeEvent<HTMLInputElement>) {
-    if (!e.target.files || e.target.files.length === 0) return;
-    setPrzetwarzamZdjecia(true);
-    try {
-      const pliki = Array.from(e.target.files);
-      const noweZdjecia: string[] = [];
-      for (const plik of pliki) {
-        const skompresowane = await kompresujZdjecie(plik);
-        noweZdjecia.push(skompresowane);
-      }
-      setZdjecia((poprzednie) => [...poprzednie, ...noweZdjecia]);
-    } catch {
-      alert("Wystąpił problem podczas przetwarzania zdjęć.");
-    } finally {
-      setPrzetwarzamZdjecia(false);
-      e.target.value = "";
+  async function handleZdjecie(event: ChangeEvent<HTMLInputElement>) {
+    const plik = event.target.files?.[0];
+    event.target.value = "";
+    if (!plik) {
+      return;
     }
-  }
-
-  function usunZdjecie(index: number) {
-    setZdjecia((poprzednie) => poprzednie.filter((_, i) => i !== index));
+    setPrzetwarzamZdjecie(true);
+    setBlad("");
+    try {
+      setZdjecie(await kompresujZdjecie(plik));
+    } catch {
+      setBlad("Nie udało się odczytać zdjęcia. Wybierz JPEG, PNG albo HEIC z iPhone’a.");
+    } finally {
+      setPrzetwarzamZdjecie(false);
+    }
   }
 
   async function zapiszProtokol(event: FormEvent<HTMLFormElement>) {
@@ -161,6 +225,9 @@ export function AddProtocolForm({ klientId, imieNazwisko, onClose }: AddProtocol
     }
 
     setZapisuje(true);
+    const model = formularz.modelKotla.trim();
+    const numer = formularz.numerKotla.trim();
+    const temperatura = formularz.zadanaTemperaturaGrzania.trim();
 
     try {
       await updateDoc(doc(db, KOLEKCJE.klienci, klientId), {
@@ -169,14 +236,28 @@ export function AddProtocolForm({ klientId, imieNazwisko, onClose }: AddProtocol
           nazwaRaportu: formularz.nazwaRaportu.trim(),
           czynnosci: formularz.czynnosci,
           status: formularz.status.trim(),
-          typKotla: formularz.typKotla.trim(),
+          typKotla: model,
           mocNominalna: formularz.mocNominalna.trim(),
           sterownik: formularz.sterownik.trim(),
-          numerSeryjny: formularz.numerSeryjny.trim(),
-          grzanie: formularz.grzanie.trim(),
+          numerSeryjny: numer,
+          grzanie: temperatura,
           maksymalnaTemperaturaZasilania: formularz.maksymalnaTemperaturaZasilania.trim(),
-          zdjecia: zdjecia,
-          dataWypelnienia: data,
+          dataWypelnienia: formularz.dataPrzegladu,
+          numerProtokolu: numerProtokoluZDaty(formularz.dataPrzegladu, kolejnyNumer),
+          modelKotla: model,
+          numerKotla: numer,
+          zadanaTemperaturaGrzania: temperatura,
+          szczelnoscGazowa: formularz.szczelnoscGazowa,
+          cisnienieCO: formularz.cisnienieCO.trim(),
+          zaworKociol: formularz.zaworKociol,
+          cisnienieNaczynia: formularz.cisnienieNaczynia.trim(),
+          czyszczenieWymiennika: formularz.czyszczenieWymiennika,
+          czyszczeniePalnika: formularz.czyszczeniePalnika,
+          sprawdzenieSyfonu: formularz.sprawdzenieSyfonu,
+          inneCzynnosci: formularz.inneCzynnosci.trim(),
+          dataKolejnegoPrzegladu: formularz.dataKolejnegoPrzegladu,
+          uwagi: formularz.uwagi.trim(),
+          zdjecia: zdjecie ? [zdjecie] : [],
         }),
       });
       onClose();
@@ -197,30 +278,38 @@ export function AddProtocolForm({ klientId, imieNazwisko, onClose }: AddProtocol
           <div>
             <h2 className="text-lg font-semibold text-slate-900">Dodaj protokół</h2>
             <p className="mt-1 text-sm text-slate-600">{imieNazwisko}</p>
+            <p className="mt-1 text-sm font-medium text-slate-800">
+              Nr protokołu: {numerProtokoluZDaty(formularz.dataPrzegladu, kolejnyNumer)}
+            </p>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg px-2 py-1 text-sm text-slate-500 hover:bg-slate-100"
-          >
+          <button type="button" onClick={onClose} className="rounded-lg px-2 py-1 text-sm text-slate-500 hover:bg-slate-100">
             Zamknij
           </button>
         </div>
 
-        <label className="mt-5 block text-sm font-medium text-slate-700">
-          Nazwa raportu
-          <input
-            name="nazwaRaportu"
-            required
-            value={formularz.nazwaRaportu}
-            onChange={(event) => zmienPole("nazwaRaportu", event.target.value)}
-            className={klasaPola}
-            placeholder="np. Przegląd roczny kotła"
-          />
-        </label>
+        <div className="mt-5 grid gap-4">
+          <Pole etykieta="Nazwa raportu">
+            <input
+              required
+              value={formularz.nazwaRaportu}
+              onChange={(event) => zmienPole("nazwaRaportu", event.target.value)}
+              className={klasaPola}
+              placeholder="np. Przegląd roczny"
+            />
+          </Pole>
+          <Pole etykieta="Data przeglądu">
+            <input
+              type="date"
+              required
+              value={formularz.dataPrzegladu}
+              onChange={(event) => zmienPole("dataPrzegladu", event.target.value)}
+              className={klasaPola}
+            />
+          </Pole>
+        </div>
 
         <fieldset className="mt-4">
-          <legend className="text-sm font-medium text-slate-700">Przeprowadzone czynności</legend>
+          <legend className="text-sm font-medium text-slate-700">Przegląd okresowy / awaria</legend>
           <div className="mt-2 flex gap-3">
             {(Object.keys(ETYKIETY_CZYNNOSCI) as CzynnoscProtokolu[]).map((wartosc) => (
               <label
@@ -241,95 +330,156 @@ export function AddProtocolForm({ klientId, imieNazwisko, onClose }: AddProtocol
         </fieldset>
 
         <h3 className="mt-6 text-sm font-semibold tracking-wide text-slate-900 uppercase">
-          Dane urządzenia
+          1. Identyfikacja i ustawienia urządzenia
         </h3>
-        <div className="mt-3 grid gap-4">
-          {POLA_URZADZENIA.map((pole) => (
-            <label key={pole.name} className="block text-sm font-medium text-slate-700">
-              {pole.label}
-              <input
-                name={pole.name}
-                required
-                value={formularz[pole.name]}
-                onChange={(event) => zmienPole(pole.name, event.target.value)}
-                className={klasaPola}
-              />
-            </label>
-          ))}
+        <div className="mt-3 grid gap-4 sm:grid-cols-2">
+          <Pole etykieta="Model kotła">
+            <input required value={formularz.modelKotla} onChange={(event) => zmienPole("modelKotla", event.target.value)} className={klasaPola} />
+          </Pole>
+          <Pole etykieta="Numer kotła">
+            <input required value={formularz.numerKotla} onChange={(event) => zmienPole("numerKotla", event.target.value)} className={klasaPola} />
+          </Pole>
+          <Pole etykieta="Moc nominalna">
+            <input
+              required
+              value={formularz.mocNominalna}
+              onChange={(event) => zmienPole("mocNominalna", event.target.value)}
+              className={klasaPola}
+              placeholder="460 kW"
+            />
+          </Pole>
+          <Pole etykieta="Typ sterownika">
+            <input
+              required
+              value={formularz.sterownik}
+              onChange={(event) => zmienPole("sterownik", event.target.value)}
+              className={klasaPola}
+              placeholder="brak"
+            />
+          </Pole>
+          <Pole etykieta="Zadana temp. grzania">
+            <input
+              required
+              value={formularz.zadanaTemperaturaGrzania}
+              onChange={(event) => zmienPole("zadanaTemperaturaGrzania", event.target.value)}
+              className={klasaPola}
+              placeholder="25"
+            />
+          </Pole>
+          <Pole etykieta="Maks. temp. zasilania">
+            <input
+              required
+              value={formularz.maksymalnaTemperaturaZasilania}
+              onChange={(event) => zmienPole("maksymalnaTemperaturaZasilania", event.target.value)}
+              className={klasaPola}
+              placeholder="25"
+            />
+          </Pole>
+          <Pole etykieta="Status urządzenia">
+            <input
+              required
+              value={formularz.status}
+              onChange={(event) => zmienPole("status", event.target.value)}
+              className={klasaPola}
+              placeholder="ERROR / Usterka"
+            />
+          </Pole>
         </div>
 
         <h3 className="mt-6 text-sm font-semibold tracking-wide text-slate-900 uppercase">
-          Ustawienia urządzenia
+          2. Test bezpieczeństwa i szczelności
         </h3>
         <div className="mt-3 grid gap-4">
-          {POLA_USTAWIEN.map((pole) => (
-            <label key={pole.name} className="block text-sm font-medium text-slate-700">
-              {pole.label}
-              <input
-                name={pole.name}
-                required
-                value={formularz[pole.name]}
-                onChange={(event) => zmienPole(pole.name, event.target.value)}
-                className={klasaPola}
-              />
-            </label>
-          ))}
+          <Kratka
+            etykieta="Szczelność instalacji gazowej — pozytywny"
+            zaznaczone={formularz.szczelnoscGazowa}
+            onChange={(zaznaczone) => zmienPole("szczelnoscGazowa", zaznaczone)}
+          />
+          <Pole etykieta="Ciśnienie w instalacji C.O. (bar)" wymagane={false}>
+            <input value={formularz.cisnienieCO} onChange={(event) => zmienPole("cisnienieCO", event.target.value)} className={klasaPola} />
+          </Pole>
+          <Kratka
+            etykieta="Zawór - kocioł"
+            zaznaczone={formularz.zaworKociol}
+            onChange={(zaznaczone) => zmienPole("zaworKociol", zaznaczone)}
+          />
+          <Pole etykieta="Ciśnienie naczynia wzbiorczego (bar)" wymagane={false}>
+            <input
+              value={formularz.cisnienieNaczynia}
+              onChange={(event) => zmienPole("cisnienieNaczynia", event.target.value)}
+              className={klasaPola}
+            />
+          </Pole>
         </div>
 
-        {/* Widoczna sekcja: Zdjęcia z aparatu i galerii */}
-        <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50/40 p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h3 className="text-sm font-bold text-stone-900 flex items-center gap-1.5">
-                📷 Dokumentacja zdjęciowa
-              </h3>
-              <p className="text-xs text-stone-600 mt-0.5">
-                Zrób zdjęcie aparatem telefonu lub załącz z galerii
-              </p>
-            </div>
-            <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg bg-amber-500 px-4 py-2.5 text-xs font-bold text-stone-950 shadow-sm transition hover:bg-amber-400 active:scale-95">
-              <span>📸 Otwórz aparat / Dodaj</span>
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                multiple
-                onChange={handleDodajZdjecia}
-                className="hidden"
-              />
-            </label>
+        <h3 className="mt-6 text-sm font-semibold tracking-wide text-slate-900 uppercase">
+          3. Lista kontrolna wykonanych czynności
+        </h3>
+        <div className="mt-3 grid gap-3">
+          <Kratka
+            etykieta="Czyszczenie wymiennika ciepła"
+            zaznaczone={formularz.czyszczenieWymiennika}
+            onChange={(zaznaczone) => zmienPole("czyszczenieWymiennika", zaznaczone)}
+          />
+          <Kratka
+            etykieta="Czyszczenie palnika i elektrod"
+            zaznaczone={formularz.czyszczeniePalnika}
+            onChange={(zaznaczone) => zmienPole("czyszczeniePalnika", zaznaczone)}
+          />
+          <Kratka
+            etykieta="Sprawdzenie syfonu kondensatu"
+            zaznaczone={formularz.sprawdzenieSyfonu}
+            onChange={(zaznaczone) => zmienPole("sprawdzenieSyfonu", zaznaczone)}
+          />
+          <Pole etykieta="Inne" wymagane={false}>
+            <input value={formularz.inneCzynnosci} onChange={(event) => zmienPole("inneCzynnosci", event.target.value)} className={klasaPola} />
+          </Pole>
+          <Pole etykieta="Data kolejnego przeglądu" wymagane={false}>
+            <input
+              type="date"
+              value={formularz.dataKolejnegoPrzegladu}
+              onChange={(event) => zmienPole("dataKolejnegoPrzegladu", event.target.value)}
+              className={klasaPola}
+            />
+          </Pole>
+        </div>
+
+        <h3 className="mt-6 text-sm font-semibold tracking-wide text-slate-900 uppercase">
+          4. Uwagi serwisanta i zdiagnozowane usterki
+        </h3>
+        <textarea value={formularz.uwagi} onChange={(event) => zmienPole("uwagi", event.target.value)} rows={5} className={`${klasaPola} mt-3`} />
+
+        <h3 className="mt-6 text-sm font-semibold tracking-wide text-slate-900 uppercase">5. Analiza spalin</h3>
+        <p className="mt-1 text-xs text-slate-500">
+          Jedno zdjęcie z analizatora albo aparatu. Pliki HEIC z iPhone’a są zapisywane jako JPEG.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          <label className="inline-flex cursor-pointer items-center rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white">
+            Zrób zdjęcie
+            <input type="file" accept="image/*,.heic,.heif" capture="environment" className="hidden" onChange={handleZdjecie} />
+          </label>
+          <label className="inline-flex cursor-pointer items-center rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700">
+            Wybierz z galerii
+            <input type="file" accept="image/*,.heic,.heif" className="hidden" onChange={handleZdjecie} />
+          </label>
+        </div>
+        {przetwarzamZdjecie ? <p className="mt-3 text-sm text-slate-600">Przetwarzanie zdjęcia…</p> : null}
+        {zdjecie ? (
+          <div className="relative mt-3 w-40">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={zdjecie} alt="Analiza spalin" className="h-28 w-full rounded-lg border border-slate-200 object-cover" />
+            <button
+              type="button"
+              onClick={() => setZdjecie("")}
+              className="absolute top-1 right-1 rounded-full bg-red-600 px-2 py-0.5 text-xs font-bold text-white"
+            >
+              ✕
+            </button>
           </div>
-
-          {przetwarzamZdjecia && (
-            <p className="mt-3 text-xs font-semibold text-amber-800 animate-pulse">
-              ⏳ Przetwarzanie i kompresja zdjęć...
-            </p>
-          )}
-
-          {zdjecia.length > 0 && (
-            <div className="mt-3 grid grid-cols-3 gap-2">
-              {zdjecia.map((src, i) => (
-                <div key={i} className="group relative aspect-square overflow-hidden rounded-lg border border-stone-300 bg-white shadow-sm">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={src} alt={`Zdjęcie ${i + 1}`} className="h-full w-full object-cover" />
-                  <button
-                    type="button"
-                    onClick={() => usunZdjecie(i)}
-                    className="absolute top-1 right-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-600 text-xs font-bold text-white shadow hover:bg-red-700"
-                    title="Usuń zdjęcie"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <p className="mt-5 text-sm text-slate-600">Data wypełnienia: {formatujDate(data)}</p>
+        ) : null}
 
         {blad ? (
-          <p role="alert" className="mt-3 text-sm font-medium text-red-700">
+          <p role="alert" className="mt-4 text-sm font-medium text-red-700">
             {blad}
           </p>
         ) : null}
@@ -337,8 +487,8 @@ export function AddProtocolForm({ klientId, imieNazwisko, onClose }: AddProtocol
         <div className="mt-5 flex gap-3">
           <button
             type="submit"
-            disabled={zapisuje || przetwarzamZdjecia}
-            className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:bg-slate-400"
+            disabled={zapisuje || przetwarzamZdjecie}
+            className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800 disabled:bg-slate-400"
           >
             {zapisuje ? "Zapisywanie…" : "Zapisz protokół"}
           </button>

@@ -6,6 +6,19 @@ function tekst(wartosc: unknown) {
   return typeof wartosc === "string" ? wartosc.trim() : "";
 }
 
+function tak(wartosc: unknown) {
+  return wartosc === true;
+}
+
+function zdjeciaZDokumentu(wartosc: unknown) {
+  if (!Array.isArray(wartosc)) {
+    return [];
+  }
+  return wartosc
+    .filter((pozycja): pozycja is string => typeof pozycja === "string" && pozycja.startsWith("data:image/"))
+    .slice(0, 1);
+}
+
 function adresZDokumentu(data: DocumentData) {
   const ulicaZNumerem = [tekst(data.ulica), tekst(data.nrDomu)].filter(Boolean).join(" ");
   const kodZMiastem = [tekst(data.kodPocztowy), tekst(data.miasto)].filter(Boolean).join(" ");
@@ -45,6 +58,21 @@ export function protokolyZDokumentu(wartosc: unknown): Protokol[] {
         grzanie: tekst(raport.grzanie),
         maksymalnaTemperaturaZasilania: tekst(raport.maksymalnaTemperaturaZasilania),
         dataWypelnienia: tekst(raport.dataWypelnienia),
+        numerProtokolu: tekst(raport.numerProtokolu),
+        modelKotla: tekst(raport.modelKotla),
+        numerKotla: tekst(raport.numerKotla),
+        zadanaTemperaturaGrzania: tekst(raport.zadanaTemperaturaGrzania),
+        szczelnoscGazowa: tak(raport.szczelnoscGazowa),
+        cisnienieCO: tekst(raport.cisnienieCO),
+        zaworKociol: tak(raport.zaworKociol),
+        cisnienieNaczynia: tekst(raport.cisnienieNaczynia),
+        czyszczenieWymiennika: tak(raport.czyszczenieWymiennika),
+        czyszczeniePalnika: tak(raport.czyszczeniePalnika),
+        sprawdzenieSyfonu: tak(raport.sprawdzenieSyfonu),
+        inneCzynnosci: tekst(raport.inneCzynnosci),
+        dataKolejnegoPrzegladu: tekst(raport.dataKolejnegoPrzegladu),
+        uwagi: tekst(raport.uwagi),
+        zdjecia: zdjeciaZDokumentu(raport.zdjecia),
       },
     ];
   });
