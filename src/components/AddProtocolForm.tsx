@@ -60,6 +60,11 @@ function komunikatBledu(error: unknown) {
   return "Nie udało się zapisać protokołu.";
 }
 
+type ZdjecieFormularza = {
+  src: string;
+  podpis: string;
+};
+
 const LIMIT_ZDJECIA = 10;
 
 function rysujNaPlotnie(zrodlo: CanvasImageSource, szerokoscZrodla: number, wysokoscZrodla: number) {
@@ -190,7 +195,7 @@ export function AddProtocolForm({
     dataKolejnegoPrzegladu: "",
     uwagi: "",
   });
-  const [zdjecia, setZdjecia] = useState<string[]>([]);
+  const [zdjecia, setZdjecia] = useState<ZdjecieFormularza[]>([]);
   const [przetwarzamZdjecie, setPrzetwarzamZdjecie] = useState(false);
   const [zapisuje, setZapisuje] = useState(false);
   const [blad, setBlad] = useState("");
@@ -216,9 +221,9 @@ export function AddProtocolForm({
     setPrzetwarzamZdjecie(true);
     setBlad("");
     try {
-      const nowe: string[] = [];
+      const nowe: ZdjecieFormularza[] = [];
       for (const plik of wybrane) {
-        nowe.push(await kompresujZdjecie(plik));
+        nowe.push({ src: await kompresujZdjecie(plik), podpis: "" });
       }
       setZdjecia((aktualne) => [...aktualne, ...nowe].slice(0, LIMIT_ZDJECIA));
       if (pliki.length > wolne) {
@@ -274,7 +279,8 @@ export function AddProtocolForm({
           inneCzynnosci: formularz.inneCzynnosci.trim(),
           dataKolejnegoPrzegladu: formularz.dataKolejnegoPrzegladu,
           uwagi: formularz.uwagi.trim(),
-          zdjecia: zdjecia.slice(0, LIMIT_ZDJECIA),
+          zdjecia: zdjecia.slice(0, LIMIT_ZDJECIA).map((zdjecie) => zdjecie.src),
+          podpisyZdjec: zdjecia.slice(0, LIMIT_ZDJECIA).map((zdjecie) => zdjecie.podpis.trim()),
         }),
       });
       onClose();
@@ -485,18 +491,37 @@ export function AddProtocolForm({
         </div>
         {przetwarzamZdjecie ? <p className="mt-3 text-sm text-slate-600">Przetwarzanie zdjęć…</p> : null}
         {zdjecia.length > 0 ? (
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            {zdjecia.map((adres, indeks) => (
-              <div key={`${indeks}-${adres.slice(0, 32)}`} className="relative">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={adres} alt={`Analiza spalin ${indeks + 1}`} className="h-24 w-full rounded-lg border border-slate-200 object-cover" />
-                <button
-                  type="button"
-                  onClick={() => setZdjecia((aktualne) => aktualne.filter((_, numer) => numer !== indeks))}
-                  className="absolute top-1 right-1 rounded-full bg-red-600 px-2 py-0.5 text-xs font-bold text-white"
-                >
-                  ✕
-                </button>
+          <div className="mt-3 grid gap-3">
+            {zdjecia.map((zdjecie, indeks) => (
+              <div key={`${indeks}-${zdjecie.src.slice(0, 32)}`} className="rounded-lg border border-slate-200 p-3">
+                <div className="flex items-start gap-3">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={zdjecie.src} alt={`Zdjęcie nr ${indeks + 1}`} className="h-20 w-20 shrink-0 rounded-lg object-cover" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-medium text-slate-800">Zdjęcie nr {indeks + 1}</p>
+                      <button
+                        type="button"
+                        onClick={() => setZdjecia((aktualne) => aktualne.filter((_, numer) => numer !== indeks))}
+                        className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-bold text-white"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <input
+                      value={zdjecie.podpis}
+                      onChange={(event) =>
+                        setZdjecia((aktualne) =>
+                          aktualne.map((pozycja, numer) =>
+                            numer === indeks ? { ...pozycja, podpis: event.target.value } : pozycja,
+                          ),
+                        )
+                      }
+                      className={klasaPola}
+                      placeholder="Podpis (opcjonalnie)"
+                    />
+                  </div>
+                </div>
               </div>
             ))}
           </div>

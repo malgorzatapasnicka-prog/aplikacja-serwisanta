@@ -225,19 +225,34 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
   doc.setFontSize(12);
   doc.setTextColor(15, 23, 42);
   tekst("5. Analiza spalin", lewy, y);
-  y += 4;
-  const zdjecia = widok.zdjecia.slice(0, 10);
-  const ramki = zdjecia.length > 0 ? zdjecia : [""];
-  ramki.forEach((adres) => {
-    zapewnij(48);
-    const wysokoscZdjecia = 42;
-    doc.setDrawColor(15, 23, 42);
-    doc.setLineWidth(0.3);
-    doc.rect(lewy, y, szerokosc, wysokoscZdjecia);
-    wstawZdjecie(doc, adres, lewy + 3, y + 3, szerokosc - 6, wysokoscZdjecia - 6);
-    y += wysokoscZdjecia + 4;
-  });
   y += 6;
+  const zdjecia = widok.zdjecia.slice(0, 10);
+  if (zdjecia.length === 0) {
+    doc.setFontSize(9);
+    doc.setTextColor(100, 116, 139);
+    tekst("Tu system automatycznie wklei zdjęcie z analizatora spalin / aparatu", lewy, y, {
+      maxWidth: szerokosc,
+    });
+    doc.setTextColor(15, 23, 42);
+    y += 10;
+  }
+  zdjecia.forEach((adres, indeks) => {
+    zapewnij(56);
+    const wysokoscZdjecia = 42;
+    wstawZdjecie(doc, adres, lewy, y, szerokosc, wysokoscZdjecia);
+    y += wysokoscZdjecia + 5;
+    doc.setFontSize(9);
+    doc.setTextColor(15, 23, 42);
+    tekst(`Zdjęcie nr ${indeks + 1}`, lewy, y);
+    const podpis = widok.podpisyZdjec[indeks]?.trim();
+    if (podpis) {
+      y += 4.5;
+      const linie = doc.splitTextToSize(podpis, szerokosc) as string[];
+      doc.text(linie, lewy, y);
+      y += Math.max(0, (linie.length - 1) * 4);
+    }
+    y += 8;
+  });
 
   zapewnij(28);
   const podpisY = Math.max(y + 14, 262);

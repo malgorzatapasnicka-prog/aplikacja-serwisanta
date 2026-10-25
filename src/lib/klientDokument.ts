@@ -19,6 +19,11 @@ function zdjeciaZDokumentu(wartosc: unknown) {
     .slice(0, 10);
 }
 
+function podpisyZDokumentu(wartosc: unknown, ile: number) {
+  const zrodlo = Array.isArray(wartosc) ? wartosc : [];
+  return Array.from({ length: ile }, (_, indeks) => tekst(zrodlo[indeks]));
+}
+
 function adresZDokumentu(data: DocumentData) {
   const ulicaZNumerem = [tekst(data.ulica), tekst(data.nrDomu)].filter(Boolean).join(" ");
   const kodZMiastem = [tekst(data.kodPocztowy), tekst(data.miasto)].filter(Boolean).join(" ");
@@ -73,6 +78,7 @@ export function protokolyZDokumentu(wartosc: unknown): Protokol[] {
         dataKolejnegoPrzegladu: tekst(raport.dataKolejnegoPrzegladu),
         uwagi: tekst(raport.uwagi),
         zdjecia: zdjeciaZDokumentu(raport.zdjecia),
+        podpisyZdjec: podpisyZDokumentu(raport.podpisyZdjec, zdjeciaZDokumentu(raport.zdjecia).length),
       },
     ];
   });

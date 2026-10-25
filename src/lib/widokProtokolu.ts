@@ -32,6 +32,7 @@ export type WidokProtokolu = {
   dataKolejnegoPrzegladu: string;
   uwagi: string;
   zdjecia: string[];
+  podpisyZdjec: string[];
 };
 
 export function numerProtokoluZDaty(dataIso: string, kolejny: number) {
@@ -103,6 +104,14 @@ export function widokProtokolu(dane: DaneProtokoluPdf): WidokProtokolu {
     inneCzynnosci: (raport.inneCzynnosci ?? "").trim(),
     dataKolejnegoPrzegladu: dataZRoku(raport.dataKolejnegoPrzegladu ?? ""),
     uwagi: (raport.uwagi ?? "").trim(),
-    zdjecia: (raport.zdjecia ?? []).filter((zdjecie) => zdjecie.startsWith("data:image/")).slice(0, 10),
+    ...zdjeciaZPodpisami(raport.zdjecia, raport.podpisyZdjec),
+  };
+}
+
+function zdjeciaZPodpisami(zdjecia: string[] | undefined, podpisy: string[] | undefined) {
+  const adresy = (zdjecia ?? []).filter((zdjecie) => zdjecie.startsWith("data:image/")).slice(0, 10);
+  return {
+    zdjecia: adresy,
+    podpisyZdjec: adresy.map((_, indeks) => (podpisy?.[indeks] ?? "").trim()),
   };
 }

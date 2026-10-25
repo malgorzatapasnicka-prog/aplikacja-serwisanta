@@ -32,4 +32,5 @@ export type Protokol = {
   dataKolejnegoPrzegladu?: string;
   uwagi?: string;
   zdjecia?: string[];
+  podpisyZdjec?: string[];
 };
