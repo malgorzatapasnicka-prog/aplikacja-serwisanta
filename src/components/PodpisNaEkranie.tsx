@@ -3,16 +3,10 @@
 import { PointerEvent, useEffect, useRef, useState } from "react";
 
 type PodpisNaEkranieProps = {
-  tytul?: string;
-  opis?: string;
   onChange: (podpis: string) => void;
 };
 
-export function PodpisNaEkranie({
-  tytul = "Podpis klienta",
-  opis = "Opcjonalnie. Podaj telefon klientowi, żeby podpisał się palcem. Podpis trafi nad kreskę w protokole.",
-  onChange,
-}: PodpisNaEkranieProps) {
+export function PodpisNaEkranie({ onChange }: PodpisNaEkranieProps) {
   const plotno = useRef<HTMLCanvasElement>(null);
   const rysuje = useRef(false);
   const ostatni = useRef({ x: 0, y: 0 });
@@ -103,11 +97,13 @@ export function PodpisNaEkranie({
 
   return (
     <div>
-      <h3 className="mt-6 text-sm font-semibold tracking-wide text-slate-900 uppercase">{tytul}</h3>
-      <p className="mt-1 text-xs text-slate-500">{opis}</p>
+      <h3 className="mt-6 text-sm font-semibold tracking-wide text-slate-900 uppercase">Podpis klienta</h3>
+      <p className="mt-1 text-xs text-slate-500">
+        Opcjonalnie. Podaj telefon klientowi, żeby podpisał się palcem. Podpis trafi nad kreskę w protokole.
+      </p>
       <canvas
         ref={plotno}
-        aria-label={tytul}
+        aria-label="Miejsce na podpis klienta"
         className="mt-3 h-40 w-full touch-none rounded-lg border border-slate-300 bg-white"
         style={{
           backgroundImage: "linear-gradient(#cbd5e1, #cbd5e1)",

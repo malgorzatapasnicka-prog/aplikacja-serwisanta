@@ -78,7 +78,6 @@ export function trescLatex(
   dane: DaneProtokoluPdf,
   plikiZdjec: { plik: string; podpis: string }[] = [],
   plikPodpisuKlienta = "",
-  plikPodpisuSerwisanta = "",
 ) {
   const widok = widokProtokolu(dane);
   const adres = widok.klientLinie.map((linia) => tex(linia)).join("\\\\\n    ");
@@ -106,9 +105,6 @@ export function trescLatex(
 \\end{center}`;
   const miejscePodpisu = plikPodpisuKlienta
     ? `\\includegraphics[width=5.2cm,height=1.5cm,keepaspectratio]{${plikPodpisuKlienta}}\\\\[-1.5mm]`
-    : "\\vspace{1.2cm}";
-  const miejscePodpisuSerwisanta = plikPodpisuSerwisanta
-    ? `\\includegraphics[width=5.2cm,height=1.5cm,keepaspectratio]{${plikPodpisuSerwisanta}}\\\\[-1.5mm]`
     : "\\vspace{1.2cm}";
 
   return `\\documentclass[10pt, a4paper]{article}
@@ -244,7 +240,7 @@ ${analiza}
 \\hfill
 \\begin{minipage}[b]{0.45\\textwidth}
     \\centering
-    ${miejscePodpisuSerwisanta}
+    \\vspace{1.2cm}
     \\rule{5.5cm}{0.4pt}\\\\
     \\vspace{0.15cm}
     \\small Podpis i pieczęć serwisanta
@@ -286,21 +282,7 @@ export async function utworzPdfLatex(dane: DaneProtokoluPdf): Promise<Buffer | n
       );
     }
 
-    let plikPodpisuSerwisanta = "";
-    const dopasowanieSerwisanta = /^data:image\/png;base64,([A-Za-z0-9+/=\s]+)$/i.exec(widok.podpisSerwisanta);
-    if (dopasowanieSerwisanta) {
-      plikPodpisuSerwisanta = "podpis-serwisanta.png";
-      await writeFile(
-        join(katalog, plikPodpisuSerwisanta),
-        Buffer.from(dopasowanieSerwisanta[1].replace(/\s/g, ""), "base64"),
-      );
-    }
-
-    await writeFile(
-      join(katalog, "protokol.tex"),
-      trescLatex(dane, plikiZdjec, plikPodpisu, plikPodpisuSerwisanta),
-      "utf8",
-    );
+    await writeFile(join(katalog, "protokol.tex"), trescLatex(dane, plikiZdjec, plikPodpisu), "utf8");
     await uruchom(
       "lualatex",
       ["-no-shell-escape", "-interaction=nonstopmode", "-halt-on-error", "protokol.tex"],

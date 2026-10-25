@@ -34,7 +34,6 @@ export type WidokProtokolu = {
   zdjecia: string[];
   podpisyZdjec: string[];
   podpisKlienta: string;
-  podpisSerwisanta: string;
 };
 
 export function numerProtokoluZDaty(dataIso: string, kolejny: number) {
@@ -108,7 +107,6 @@ export function widokProtokolu(dane: DaneProtokoluPdf): WidokProtokolu {
     uwagi: (raport.uwagi ?? "").trim(),
     ...zdjeciaZPodpisami(raport.zdjecia, raport.podpisyZdjec),
     podpisKlienta: (raport.podpisKlienta ?? "").startsWith("data:image/png") ? raport.podpisKlienta ?? "" : "",
-    podpisSerwisanta: (raport.podpisSerwisanta ?? "").startsWith("data:image/png") ? raport.podpisSerwisanta ?? "" : "",
   };
 }
 

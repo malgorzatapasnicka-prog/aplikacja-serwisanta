@@ -324,34 +324,6 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
       // Kreska zostaje pusta, gdy obrazu podpisu nie da się odczytać.
     }
   }
-  if (widok.podpisSerwisanta.startsWith("data:image/png")) {
-    try {
-      const poleSzerokosc = 50;
-      const poleWysokosc = 14;
-      let szerokoscPodpisu = poleSzerokosc;
-      let wysokoscPodpisu = poleWysokosc;
-      const wlasciwosci = doc.getImageProperties(widok.podpisSerwisanta);
-      if (wlasciwosci.width > 0 && wlasciwosci.height > 0) {
-        const proporcja = wlasciwosci.width / wlasciwosci.height;
-        szerokoscPodpisu = poleWysokosc * proporcja;
-        wysokoscPodpisu = poleWysokosc;
-        if (szerokoscPodpisu > poleSzerokosc) {
-          szerokoscPodpisu = poleSzerokosc;
-          wysokoscPodpisu = poleSzerokosc / proporcja;
-        }
-      }
-      doc.addImage(
-        widok.podpisSerwisanta,
-        "PNG",
-        lewy + szerokosc - 55 + (55 - szerokoscPodpisu) / 2,
-        liniaPodpisu - wysokoscPodpisu - 0.8,
-        szerokoscPodpisu,
-        wysokoscPodpisu,
-      );
-    } catch {
-      // Kreska zostaje pusta, gdy obrazu podpisu nie da się odczytać.
-    }
-  }
   doc.setFontSize(9);
   doc.setTextColor(15, 23, 42);
   tekst("Podpis klienta", lewy + 27.5, liniaPodpisu + 5, { align: "center" });
