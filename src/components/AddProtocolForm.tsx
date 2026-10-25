@@ -60,8 +60,10 @@ function komunikatBledu(error: unknown) {
   return "Nie udało się zapisać protokołu.";
 }
 
+const LIMIT_ZDJECIA = 10;
+
 function rysujNaPlotnie(zrodlo: CanvasImageSource, szerokoscZrodla: number, wysokoscZrodla: number) {
-  const maks = 1200;
+  const maks = 900;
   const skala = Math.min(1, maks / Math.max(szerokoscZrodla, wysokoscZrodla));
   const szerokosc = Math.max(1, Math.round(szerokoscZrodla * skala));
   const wysokosc = Math.max(1, Math.round(wysokoscZrodla * skala));
@@ -75,7 +77,7 @@ function rysujNaPlotnie(zrodlo: CanvasImageSource, szerokoscZrodla: number, wyso
   kontekst.fillStyle = "#ffffff";
   kontekst.fillRect(0, 0, szerokosc, wysokosc);
   kontekst.drawImage(zrodlo, 0, 0, szerokosc, wysokosc);
-  return plotno.toDataURL("image/jpeg", 0.72);
+  return plotno.toDataURL("image/jpeg", 0.55);
 }
 
 function wymiaryPrzezObraz(plik: Blob) {
@@ -117,7 +119,7 @@ async function kompresujZdjecie(plik: File) {
     return await wymiaryPrzezObraz(plik);
   } catch {
     const heic2any = (await import("heic2any")).default;
-    const wynik = await heic2any({ blob: plik, toType: "image/jpeg", quality: 0.72 });
+    const wynik = await heic2any({ blob: plik, toType: "image/jpeg", quality: 0.55 });
     const jpeg = Array.isArray(wynik) ? wynik[0] : wynik;
     return wymiaryPrzezObraz(jpeg);
   }
@@ -188,7 +190,7 @@ export function AddProtocolForm({
     dataKolejnegoPrzegladu: "",
     uwagi: "",
   });
-  const [zdjecie, setZdjecie] = useState("");
+  const [zdjecia, setZdjecia] = useState<string[]>([]);
   const [przetwarzamZdjecie, setPrzetwarzamZdjecie] = useState(false);
   const [zapisuje, setZapisuje] = useState(false);
   const [blad, setBlad] = useState("");
@@ -197,16 +199,31 @@ export function AddProtocolForm({
     setFormularz((aktualny) => ({ ...aktualny, [name]: value }));
   }
 
-  async function handleZdjecie(event: ChangeEvent<HTMLInputElement>) {
-    const plik = event.target.files?.[0];
+  async function handleZdjecia(event: ChangeEvent<HTMLInputElement>) {
+    const pliki = [...(event.target.files ?? [])];
     event.target.value = "";
-    if (!plik) {
+    if (pliki.length === 0) {
       return;
     }
+
+    const wolne = LIMIT_ZDJECIA - zdjecia.length;
+    if (wolne <= 0) {
+      setBlad("Można dodać najwyżej 10 zdjęć.");
+      return;
+    }
+
+    const wybrane = pliki.slice(0, wolne);
     setPrzetwarzamZdjecie(true);
     setBlad("");
     try {
-      setZdjecie(await kompresujZdjecie(plik));
+      const nowe: string[] = [];
+      for (const plik of wybrane) {
+        nowe.push(await kompresujZdjecie(plik));
+      }
+      setZdjecia((aktualne) => [...aktualne, ...nowe].slice(0, LIMIT_ZDJECIA));
+      if (pliki.length > wolne) {
+        setBlad(`Wybrano za dużo plików. Dodano ${wybrane.length}, limit to 10 zdjęć.`);
+      }
     } catch {
       setBlad("Nie udało się odczytać zdjęcia. Wybierz JPEG, PNG albo HEIC z iPhone’a.");
     } finally {
@@ -257,7 +274,7 @@ export function AddProtocolForm({
           inneCzynnosci: formularz.inneCzynnosci.trim(),
           dataKolejnegoPrzegladu: formularz.dataKolejnegoPrzegladu,
           uwagi: formularz.uwagi.trim(),
-          zdjecia: zdjecie ? [zdjecie] : [],
+          zdjecia: zdjecia.slice(0, LIMIT_ZDJECIA),
         }),
       });
       onClose();
@@ -451,30 +468,37 @@ export function AddProtocolForm({
 
         <h3 className="mt-6 text-sm font-semibold tracking-wide text-slate-900 uppercase">5. Analiza spalin</h3>
         <p className="mt-1 text-xs text-slate-500">
-          Jedno zdjęcie z analizatora albo aparatu. Pliki HEIC z iPhone’a są zapisywane jako JPEG.
+          Do 10 zdjęć z analizatora albo aparatu. W galerii można zaznaczyć kilka naraz. Pliki HEIC z iPhone’a są zapisywane jako JPEG.
+        </p>
+        <p className="mt-1 text-sm font-medium text-slate-700">
+          {zdjecia.length} / {LIMIT_ZDJECIA}
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
           <label className="inline-flex cursor-pointer items-center rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white">
             Zrób zdjęcie
-            <input type="file" accept="image/*,.heic,.heif" capture="environment" className="hidden" onChange={handleZdjecie} />
+            <input type="file" accept="image/*,.heic,.heif" capture="environment" className="hidden" onChange={handleZdjecia} />
           </label>
           <label className="inline-flex cursor-pointer items-center rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700">
             Wybierz z galerii
-            <input type="file" accept="image/*,.heic,.heif" className="hidden" onChange={handleZdjecie} />
+            <input type="file" accept="image/*,.heic,.heif" multiple className="hidden" onChange={handleZdjecia} />
           </label>
         </div>
-        {przetwarzamZdjecie ? <p className="mt-3 text-sm text-slate-600">Przetwarzanie zdjęcia…</p> : null}
-        {zdjecie ? (
-          <div className="relative mt-3 w-40">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={zdjecie} alt="Analiza spalin" className="h-28 w-full rounded-lg border border-slate-200 object-cover" />
-            <button
-              type="button"
-              onClick={() => setZdjecie("")}
-              className="absolute top-1 right-1 rounded-full bg-red-600 px-2 py-0.5 text-xs font-bold text-white"
-            >
-              ✕
-            </button>
+        {przetwarzamZdjecie ? <p className="mt-3 text-sm text-slate-600">Przetwarzanie zdjęć…</p> : null}
+        {zdjecia.length > 0 ? (
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            {zdjecia.map((adres, indeks) => (
+              <div key={`${indeks}-${adres.slice(0, 32)}`} className="relative">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={adres} alt={`Analiza spalin ${indeks + 1}`} className="h-24 w-full rounded-lg border border-slate-200 object-cover" />
+                <button
+                  type="button"
+                  onClick={() => setZdjecia((aktualne) => aktualne.filter((_, numer) => numer !== indeks))}
+                  className="absolute top-1 right-1 rounded-full bg-red-600 px-2 py-0.5 text-xs font-bold text-white"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
           </div>
         ) : null}
 

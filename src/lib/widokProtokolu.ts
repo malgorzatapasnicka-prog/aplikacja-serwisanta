@@ -103,6 +103,6 @@ export function widokProtokolu(dane: DaneProtokoluPdf): WidokProtokolu {
     inneCzynnosci: (raport.inneCzynnosci ?? "").trim(),
     dataKolejnegoPrzegladu: dataZRoku(raport.dataKolejnegoPrzegladu ?? ""),
     uwagi: (raport.uwagi ?? "").trim(),
-    zdjecia: (raport.zdjecia ?? []).filter((zdjecie) => zdjecie.startsWith("data:image/")).slice(0, 1),
+    zdjecia: (raport.zdjecia ?? []).filter((zdjecie) => zdjecie.startsWith("data:image/")).slice(0, 10),
   };
 }

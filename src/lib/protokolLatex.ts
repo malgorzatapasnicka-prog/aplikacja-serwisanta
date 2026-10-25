@@ -38,7 +38,7 @@ function cisnienie(wartosc: string) {
   return wartosc.trim() ? tex(wartosc) : "\\dotfill~bar";
 }
 
-export function trescLatex(dane: DaneProtokoluPdf, plikZdjecia?: string) {
+export function trescLatex(dane: DaneProtokoluPdf, plikiZdjec: string[] = []) {
   const widok = widokProtokolu(dane);
   const adres = widok.klientLinie.map((linia) => tex(linia)).join("\\\\\n    ");
   const status = widok.status
@@ -54,9 +54,31 @@ export function trescLatex(dane: DaneProtokoluPdf, plikZdjecia?: string) {
   const uwagi = widok.uwagi
     ? `\\vspace{0.3cm}\n${tex(widok.uwagi).replaceAll("\n", "\\\\\n")}\n\\vspace{0.4cm}`
     : "\\vspace{12cm}\n~";
-  const analiza = plikZdjecia
-    ? `\\vspace{0.3cm}\n\\includegraphics[width=0.92\\textwidth,height=4.6cm,keepaspectratio]{${plikZdjecia}}\\\\\n\\vspace{0.3cm}`
-    : `\\vspace{1.5cm}\n\\textit{[Tu system automatycznie wklei zdjęcie z analizatora spalin / aparatu]}\\\\\n\\vspace{1.5cm}`;
+  const analiza =
+    plikiZdjec.length > 0
+      ? plikiZdjec
+          .map(
+            (plik) => `\\noindent
+\\fbox{%
+\\begin{minipage}{0.98\\textwidth}
+\\centering
+\\vspace{0.3cm}
+\\includegraphics[width=0.92\\textwidth,height=4.6cm,keepaspectratio]{${plik}}\\\\
+\\vspace{0.3cm}
+\\end{minipage}
+}
+\\vspace{0.35cm}`,
+          )
+          .join("\n")
+      : `\\noindent
+\\fbox{%
+\\begin{minipage}{0.98\\textwidth}
+\\centering
+\\vspace{1.5cm}
+\\textit{[Tu system automatycznie wklei zdjęcie z analizatora spalin / aparatu]}\\\\
+\\vspace{1.5cm}
+\\end{minipage}
+}`;
 
   return `\\documentclass[10pt, a4paper]{article}
 
@@ -176,13 +198,7 @@ ${uwagi}
 \\vspace{0.5cm}
 
 \\section*{5. Analiza spalin}
-\\noindent
-\\fbox{%
-\\begin{minipage}{0.98\\textwidth}
-\\centering
 ${analiza}
-\\end{minipage}
-}
 
 \\vfill
 
@@ -216,18 +232,19 @@ export async function utworzPdfLatex(dane: DaneProtokoluPdf): Promise<Buffer | n
       join(katalog, "NotoSans-Regular.ttf"),
     );
 
-    let plikZdjecia: string | undefined;
-    const adres = widokProtokolu(dane).zdjecia[0];
-    const dopasowanie = adres
-      ? /^data:image\/(png|jpeg|jpg);base64,([A-Za-z0-9+/=\s]+)$/i.exec(adres)
-      : null;
-    if (dopasowanie) {
+    const plikiZdjec: string[] = [];
+    for (const adres of widokProtokolu(dane).zdjecia.slice(0, 10)) {
+      const dopasowanie = /^data:image\/(png|jpeg|jpg);base64,([A-Za-z0-9+/=\s]+)$/i.exec(adres);
+      if (!dopasowanie) {
+        continue;
+      }
       const rozszerzenie = dopasowanie[1].toLowerCase() === "png" ? "png" : "jpg";
-      plikZdjecia = `analiza.${rozszerzenie}`;
-      await writeFile(join(katalog, plikZdjecia), Buffer.from(dopasowanie[2].replace(/\s/g, ""), "base64"));
+      const nazwa = `analiza-${plikiZdjec.length + 1}.${rozszerzenie}`;
+      await writeFile(join(katalog, nazwa), Buffer.from(dopasowanie[2].replace(/\s/g, ""), "base64"));
+      plikiZdjec.push(nazwa);
     }
 
-    await writeFile(join(katalog, "protokol.tex"), trescLatex(dane, plikZdjecia), "utf8");
+    await writeFile(join(katalog, "protokol.tex"), trescLatex(dane, plikiZdjec), "utf8");
     await uruchom(
       "lualatex",
       ["-no-shell-escape", "-interaction=nonstopmode", "-halt-on-error", "protokol.tex"],

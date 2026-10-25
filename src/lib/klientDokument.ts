@@ -16,7 +16,7 @@ function zdjeciaZDokumentu(wartosc: unknown) {
   }
   return wartosc
     .filter((pozycja): pozycja is string => typeof pozycja === "string" && pozycja.startsWith("data:image/"))
-    .slice(0, 1);
+    .slice(0, 10);
 }
 
 function adresZDokumentu(data: DocumentData) {

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { jsPDF } from "jspdf";
 import type { DaneProtokoluPdf } from "@/lib/daneProtokolu";
-import { widokProtokolu, type WidokProtokolu } from "@/lib/widokProtokolu";
+import { widokProtokolu } from "@/lib/widokProtokolu";
 
 let czcionka: string | null = null;
 
@@ -226,10 +226,18 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
   doc.setTextColor(15, 23, 42);
   tekst("5. Analiza spalin", lewy, y);
   y += 4;
-  const wysokoscZdjecia = 42;
-  doc.rect(lewy, y, szerokosc, wysokoscZdjecia);
-  wstawZdjecie(doc, widok, lewy + 3, y + 3, szerokosc - 6, wysokoscZdjecia - 6);
-  y += wysokoscZdjecia + 10;
+  const zdjecia = widok.zdjecia.slice(0, 10);
+  const ramki = zdjecia.length > 0 ? zdjecia : [""];
+  ramki.forEach((adres) => {
+    zapewnij(48);
+    const wysokoscZdjecia = 42;
+    doc.setDrawColor(15, 23, 42);
+    doc.setLineWidth(0.3);
+    doc.rect(lewy, y, szerokosc, wysokoscZdjecia);
+    wstawZdjecie(doc, adres, lewy + 3, y + 3, szerokosc - 6, wysokoscZdjecia - 6);
+    y += wysokoscZdjecia + 4;
+  });
+  y += 6;
 
   zapewnij(28);
   const podpisY = Math.max(y + 14, 262);
@@ -249,8 +257,7 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
   return Buffer.from(doc.output("arraybuffer"));
 }
 
-function wstawZdjecie(doc: jsPDF, widok: WidokProtokolu, x: number, y: number, szerokosc: number, wysokosc: number) {
-  const adres = widok.zdjecia[0];
+function wstawZdjecie(doc: jsPDF, adres: string, x: number, y: number, szerokosc: number, wysokosc: number) {
   if (!adres) {
     doc.setFontSize(9);
     doc.setTextColor(100, 116, 139);
