@@ -426,7 +426,7 @@ export function AddProtocolForm({
             zaznaczone={formularz.zaworKociol}
             onChange={(zaznaczone) => zmienPole("zaworKociol", zaznaczone)}
           />
-          <Pole etykieta="Ciśnienie naczynia wzbiorczego (bar)" wymagane={false}>
+          <Pole etykieta="Ciśnienie wstępne w naczyniu wzbiorczym (bar)" wymagane={false}>
             <input
               value={formularz.cisnienieNaczynia}
               onChange={(event) => zmienPole("cisnienieNaczynia", event.target.value)}

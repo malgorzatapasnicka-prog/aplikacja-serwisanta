@@ -59,16 +59,6 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
     doc.setLineDashPattern([], 0);
   }
 
-  function wartoscAlboKropki(wartosc: string, x: number, szer: number, czerwony = false) {
-    if (!wartosc.trim()) {
-      kropki(x, szer);
-      return;
-    }
-    doc.setTextColor(czerwony ? 220 : 15, czerwony ? 38 : 23, czerwony ? 38 : 42);
-    tekst(wartosc, x, y, { maxWidth: szer });
-    doc.setTextColor(15, 23, 42);
-  }
-
   function tabela(
     naglowki: [string, string, string, string],
     wiersze: Array<[string, string, string, string, boolean?]>,
@@ -88,27 +78,55 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
     linia(lewy, lewy + szerokosc, 0.25);
 
     wiersze.forEach((wiersz, indeksWiersza) => {
-      if (indeksWiersza % 2 === 0) {
-        doc.setFillColor(248, 250, 252);
-        doc.rect(lewy, y, szerokosc, 8, "F");
-      }
-      y += 5.2;
-      x = lewy;
-      wiersz.slice(0, 4).forEach((komorkaSurowa, indeks) => {
+      const komorki = wiersz.slice(0, 4).map((komorkaSurowa, indeks) => {
         const komorka = typeof komorkaSurowa === "string" ? komorkaSurowa : "";
         const sasiad = String(wiersz[indeks % 2 === 0 ? indeks + 1 : indeks - 1] ?? "");
         const pustaPara = !komorka.trim() && !sasiad.trim();
-        const czerwony = Boolean(wiersz[4]) && indeks === 1;
-        if (komorka === "bar") {
-          kropki(x + 1, kolumny[indeks] - 12);
-          doc.setTextColor(15, 23, 42);
-          tekst("bar", x + kolumny[indeks] - 9, y);
-        } else if (!pustaPara) {
-          wartoscAlboKropki(komorka, x + 1, kolumny[indeks] - 2, czerwony);
-        }
-        x += kolumny[indeks];
+        const szer = kolumny[indeks] - 2;
+        const linie =
+          !pustaPara && komorka !== "bar" && komorka.trim()
+            ? (doc.splitTextToSize(komorka, szer) as string[])
+            : [];
+        return {
+          komorka,
+          pustaPara,
+          szer,
+          linie,
+          czerwony: Boolean(wiersz[4]) && indeks === 1,
+        };
       });
-      y += 2.8;
+      const maxLinii = Math.max(1, ...komorki.map((komorka) => komorka.linie.length));
+      const wysokosc = Math.max(8, 3.4 + maxLinii * 4);
+      zapewnij(wysokosc + 2);
+      if (indeksWiersza % 2 === 0) {
+        doc.setFillColor(248, 250, 252);
+        doc.rect(lewy, y, szerokosc, wysokosc, "F");
+      }
+      const baseline = y + 4.4;
+      let xKomorki = lewy;
+      komorki.forEach((komorka, indeks) => {
+        if (komorka.komorka === "bar") {
+          doc.setDrawColor(100, 116, 139);
+          doc.setLineDashPattern([0.3, 0.9], 0);
+          doc.setLineWidth(0.2);
+          doc.line(xKomorki + 1, baseline - 0.6, xKomorki + kolumny[indeks] - 11, baseline - 0.6);
+          doc.setLineDashPattern([], 0);
+          doc.setTextColor(15, 23, 42);
+          tekst("bar", xKomorki + kolumny[indeks] - 9, baseline);
+        } else if (komorka.linie.length > 0) {
+          doc.setTextColor(komorka.czerwony ? 220 : 15, komorka.czerwony ? 38 : 23, komorka.czerwony ? 38 : 42);
+          doc.text(komorka.linie, xKomorki + 1, baseline);
+          doc.setTextColor(15, 23, 42);
+        } else if (!komorka.pustaPara) {
+          doc.setDrawColor(100, 116, 139);
+          doc.setLineDashPattern([0.3, 0.9], 0);
+          doc.setLineWidth(0.2);
+          doc.line(xKomorki + 1, baseline - 0.6, xKomorki + 1 + komorka.szer, baseline - 0.6);
+          doc.setLineDashPattern([], 0);
+        }
+        xKomorki += kolumny[indeks];
+      });
+      y += wysokosc;
     });
     linia(lewy, lewy + szerokosc, 0.45);
     y += 6;
@@ -176,7 +194,7 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
       [
         "Zawór - kocioł",
         kratka(widok.zaworKociol),
-        "Ciśnienie naczynia wzbiorczego",
+        "Ciśnienie wstępne w naczyniu wzbiorczym",
         widok.cisnienieNaczynia || "bar",
       ],
     ],

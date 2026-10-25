@@ -190,7 +190,7 @@ Status urządzenia & ${status} & & \\\\
 \\textbf{Kryterium kontrolne} & \\textbf{Status} & \\textbf{Parametr} & \\textbf{Wartość} \\\\
 \\midrule
 Szczelność instalacji gazowej & ${kratka(widok.szczelnoscGazowa, "Pozytywny")} & Ciśnienie w instalacji C.O. & ${cisnienie(widok.cisnienieCO)} \\\\
-Zawór - kocioł & ${kratka(widok.zaworKociol)} & Ciśnienie naczynia wzbiorczego & ${cisnienie(widok.cisnienieNaczynia)} \\\\
+Zawór - kocioł & ${kratka(widok.zaworKociol)} & \\begin{minipage}[t]{4.6cm}\\raggedright Ciśnienie wstępne w naczyniu wzbiorczym\\strut\\end{minipage} & ${cisnienie(widok.cisnienieNaczynia)} \\\\[1.6mm]
 \\bottomrule
 \\end{tabularx}
 
