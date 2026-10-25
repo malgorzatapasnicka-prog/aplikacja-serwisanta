@@ -19,6 +19,10 @@ function zdjeciaZDokumentu(wartosc: unknown) {
     .slice(0, 10);
 }
 
+function obrazPodpisu(wartosc: unknown) {
+  return typeof wartosc === "string" && wartosc.startsWith("data:image/png") ? wartosc : "";
+}
+
 function podpisyZDokumentu(wartosc: unknown, ile: number) {
   const zrodlo = Array.isArray(wartosc) ? wartosc : [];
   return Array.from({ length: ile }, (_, indeks) => tekst(zrodlo[indeks]));
@@ -79,6 +83,7 @@ export function protokolyZDokumentu(wartosc: unknown): Protokol[] {
         uwagi: tekst(raport.uwagi),
         zdjecia: zdjeciaZDokumentu(raport.zdjecia),
         podpisyZdjec: podpisyZDokumentu(raport.podpisyZdjec, zdjeciaZDokumentu(raport.zdjecia).length),
+        podpisKlienta: obrazPodpisu(raport.podpisKlienta),
         maZalacznikPdf: tak(raport.maZalacznikPdf),
       },
     ];

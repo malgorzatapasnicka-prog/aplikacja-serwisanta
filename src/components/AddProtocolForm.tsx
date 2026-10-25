@@ -6,6 +6,7 @@ import { ChangeEvent, FormEvent, useState, type ReactNode } from "react";
 import { KOLEKCJE } from "@/lib/collections";
 import { getDb } from "@/lib/firebase";
 import { numerProtokoluZDaty } from "@/lib/widokProtokolu";
+import { PodpisNaEkranie } from "@/components/PodpisNaEkranie";
 import { ETYKIETY_CZYNNOSCI, type CzynnoscProtokolu } from "@/types/protokol";
 
 type AddProtocolFormProps = {
@@ -198,6 +199,7 @@ export function AddProtocolForm({
   const [zdjecia, setZdjecia] = useState<ZdjecieFormularza[]>([]);
   const [zalacznikPdf, setZalacznikPdf] = useState("");
   const [nazwaZalacznika, setNazwaZalacznika] = useState("");
+  const [podpisKlienta, setPodpisKlienta] = useState("");
   const [przetwarzamZdjecie, setPrzetwarzamZdjecie] = useState(false);
   const [zapisuje, setZapisuje] = useState(false);
   const [blad, setBlad] = useState("");
@@ -322,6 +324,7 @@ export function AddProtocolForm({
           uwagi: formularz.uwagi.trim(),
           zdjecia: zdjecia.slice(0, LIMIT_ZDJECIA).map((zdjecie) => zdjecie.src),
           podpisyZdjec: zdjecia.slice(0, LIMIT_ZDJECIA).map((zdjecie) => zdjecie.podpis.trim()),
+          ...(podpisKlienta ? { podpisKlienta } : {}),
           maZalacznikPdf: Boolean(zalacznikPdf),
         }),
       });
@@ -595,6 +598,8 @@ export function AddProtocolForm({
             </button>
           </div>
         ) : null}
+
+        <PodpisNaEkranie onChange={setPodpisKlienta} />
 
         {blad ? (
           <p role="alert" className="mt-4 text-sm font-medium text-red-700">

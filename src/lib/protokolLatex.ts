@@ -74,7 +74,11 @@ ${prawaRamka}
   return wiersze.join("\n");
 }
 
-export function trescLatex(dane: DaneProtokoluPdf, plikiZdjec: { plik: string; podpis: string }[] = []) {
+export function trescLatex(
+  dane: DaneProtokoluPdf,
+  plikiZdjec: { plik: string; podpis: string }[] = [],
+  plikPodpisuKlienta = "",
+) {
   const widok = widokProtokolu(dane);
   const adres = widok.klientLinie.map((linia) => tex(linia)).join("\\\\\n    ");
   const status = widok.status
@@ -99,6 +103,9 @@ export function trescLatex(dane: DaneProtokoluPdf, plikiZdjec: { plik: string; p
 \\textit{[Tu system automatycznie wklei zdjęcie z analizatora spalin / aparatu]}
 \\vspace{0.4cm}
 \\end{center}`;
+  const miejscePodpisu = plikPodpisuKlienta
+    ? `\\includegraphics[width=5.2cm,height=1.5cm,keepaspectratio]{${plikPodpisuKlienta}}\\\\[-1.5mm]`
+    : "\\vspace{1.2cm}";
 
   return `\\documentclass[10pt, a4paper]{article}
 
@@ -223,15 +230,15 @@ ${analiza}
 \\vfill
 
 \\noindent
-\\begin{minipage}[t]{0.45\\textwidth}
+\\begin{minipage}[b]{0.45\\textwidth}
     \\centering
-    \\vspace{1.2cm}
+    ${miejscePodpisu}
     \\rule{5.5cm}{0.4pt}\\\\
     \\vspace{0.15cm}
     \\small Podpis klienta
 \\end{minipage}
 \\hfill
-\\begin{minipage}[t]{0.45\\textwidth}
+\\begin{minipage}[b]{0.45\\textwidth}
     \\centering
     \\vspace{1.2cm}
     \\rule{5.5cm}{0.4pt}\\\\
@@ -265,7 +272,17 @@ export async function utworzPdfLatex(dane: DaneProtokoluPdf): Promise<Buffer | n
       plikiZdjec.push({ plik: nazwa, podpis: widok.podpisyZdjec[indeks] ?? "" });
     }
 
-    await writeFile(join(katalog, "protokol.tex"), trescLatex(dane, plikiZdjec), "utf8");
+    let plikPodpisu = "";
+    const dopasowaniePodpisu = /^data:image\/png;base64,([A-Za-z0-9+/=\s]+)$/i.exec(widok.podpisKlienta);
+    if (dopasowaniePodpisu) {
+      plikPodpisu = "podpis-klienta.png";
+      await writeFile(
+        join(katalog, plikPodpisu),
+        Buffer.from(dopasowaniePodpisu[1].replace(/\s/g, ""), "base64"),
+      );
+    }
+
+    await writeFile(join(katalog, "protokol.tex"), trescLatex(dane, plikiZdjec, plikPodpisu), "utf8");
     await uruchom(
       "lualatex",
       ["-no-shell-escape", "-interaction=nonstopmode", "-halt-on-error", "protokol.tex"],
