@@ -160,7 +160,7 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
   y += 5;
   tekst(`Tel: ${widok.serwisantTelefon}`, lewy, y);
   y += 5;
-  tekst(`e-mail:${widok.serwisantEmail}`, lewy, y);
+  tekst(`e-mail: ${widok.serwisantEmail}`, lewy, y);
 
   let yPrawy = startKolumn;
   const prawy = lewy + 90;
@@ -251,13 +251,7 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
   y += 6;
   const zdjecia = widok.zdjecia.slice(0, 10);
   if (zdjecia.length === 0) {
-    doc.setFontSize(9);
-    doc.setTextColor(100, 116, 139);
-    tekst("Tu system automatycznie wklei zdjęcie z analizatora spalin / aparatu", lewy, y, {
-      maxWidth: szerokosc,
-    });
-    doc.setTextColor(15, 23, 42);
-    y += 10;
+    y += 4;
   } else if (zdjecia.length === 1) {
     const wysokoscZdjecia = 78;
     zapewnij(wysokoscZdjecia + 16);
@@ -389,13 +383,6 @@ function dopiszPodpis(doc: jsPDF, podpis: string | undefined, x: number, y: numb
 
 function wstawZdjecie(doc: jsPDF, adres: string, x: number, y: number, szerokosc: number, wysokosc: number) {
   if (!adres) {
-    doc.setFontSize(9);
-    doc.setTextColor(100, 116, 139);
-    doc.text("Tu system automatycznie wklei zdjęcie z analizatora spalin / aparatu", x + szerokosc / 2, y + wysokosc / 2, {
-      align: "center",
-      maxWidth: szerokosc - 8,
-    });
-    doc.setTextColor(15, 23, 42);
     return;
   }
 

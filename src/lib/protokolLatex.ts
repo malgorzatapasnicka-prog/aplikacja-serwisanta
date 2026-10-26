@@ -100,15 +100,7 @@ export function trescLatex(
   const uwagi = widok.uwagi
     ? `\\vspace{0.3cm}\n${tex(widok.uwagi).replaceAll("\n", "\\\\\n")}\n\\vspace{0.4cm}`
     : "\\vspace{12cm}\n~";
-  const analiza =
-    plikiZdjec.length > 0
-      ? ukladZdjec(plikiZdjec)
-      : `\\noindent
-\\begin{center}
-\\vspace{0.4cm}
-\\textit{[Tu system automatycznie wklei zdjęcie z analizatora spalin / aparatu]}
-\\vspace{0.4cm}
-\\end{center}`;
+  const analiza = plikiZdjec.length > 0 ? ukladZdjec(plikiZdjec) : "";
   const miejscePodpisu = plikPodpisuKlienta
     ? `\\includegraphics[width=5.2cm,height=1.5cm,keepaspectratio]{${plikPodpisuKlienta}}\\\\[-1.5mm]`
     : "\\vspace{1.2cm}";
@@ -172,7 +164,7 @@ export function trescLatex(
     \\textbf{Serwisant}\\\\
     ${tex(widok.serwisantNazwa)}\\\\
     Tel: ${tex(widok.serwisantTelefon)}\\\\
-    e-mail:${tex(widok.serwisantEmail)}
+    e-mail: ${tex(widok.serwisantEmail)}
 \\end{minipage}
 \\hfill
 \\begin{minipage}[t]{0.48\\textwidth}
