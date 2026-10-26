@@ -364,7 +364,6 @@ export function AddProtocolForm({
         <div className="mt-5 grid gap-4">
           <Pole etykieta="Nazwa raportu">
             <input
-              required
               value={formularz.nazwaRaportu}
               onChange={(event) => zmienPole("nazwaRaportu", event.target.value)}
               className={klasaPola}
@@ -374,7 +373,6 @@ export function AddProtocolForm({
           <Pole etykieta="Data przeglądu">
             <input
               type="date"
-              required
               value={formularz.dataPrzegladu}
               onChange={(event) => zmienPole("dataPrzegladu", event.target.value)}
               className={klasaPola}
@@ -408,14 +406,13 @@ export function AddProtocolForm({
         </h3>
         <div className="mt-3 grid gap-4 sm:grid-cols-2">
           <Pole etykieta="Model kotła">
-            <input required value={formularz.modelKotla} onChange={(event) => zmienPole("modelKotla", event.target.value)} className={klasaPola} />
+            <input value={formularz.modelKotla} onChange={(event) => zmienPole("modelKotla", event.target.value)} className={klasaPola} />
           </Pole>
           <Pole etykieta="Numer kotła">
-            <input required value={formularz.numerKotla} onChange={(event) => zmienPole("numerKotla", event.target.value)} className={klasaPola} />
+            <input value={formularz.numerKotla} onChange={(event) => zmienPole("numerKotla", event.target.value)} className={klasaPola} />
           </Pole>
           <Pole etykieta="Moc nominalna">
             <input
-              required
               value={formularz.mocNominalna}
               onChange={(event) => zmienPole("mocNominalna", event.target.value)}
               className={klasaPola}
@@ -424,7 +421,6 @@ export function AddProtocolForm({
           </Pole>
           <Pole etykieta="Typ sterownika">
             <input
-              required
               value={formularz.sterownik}
               onChange={(event) => zmienPole("sterownik", event.target.value)}
               className={klasaPola}
@@ -433,7 +429,6 @@ export function AddProtocolForm({
           </Pole>
           <Pole etykieta="Zadana temp. grzania">
             <input
-              required
               value={formularz.zadanaTemperaturaGrzania}
               onChange={(event) => zmienPole("zadanaTemperaturaGrzania", event.target.value)}
               className={klasaPola}
@@ -442,7 +437,6 @@ export function AddProtocolForm({
           </Pole>
           <Pole etykieta="Maks. temp. zasilania">
             <input
-              required
               value={formularz.maksymalnaTemperaturaZasilania}
               onChange={(event) => zmienPole("maksymalnaTemperaturaZasilania", event.target.value)}
               className={klasaPola}
@@ -451,7 +445,6 @@ export function AddProtocolForm({
           </Pole>
           <Pole etykieta="Status urządzenia">
             <input
-              required
               value={formularz.status}
               onChange={(event) => zmienPole("status", event.target.value)}
               className={klasaPola}
