@@ -1,6 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import {
+  Calendar,
+  ClipboardList,
+  Download,
+  FileDown,
+  Flame,
+  Mail,
+  MapPin,
+  Pencil,
+  Phone,
+  Trash2,
+  User,
+  X,
+} from "lucide-react";
 import {
   collection,
   deleteDoc,
@@ -51,18 +65,17 @@ function KomorkaDanych({
 }: {
   etykieta: string;
   wartosc?: string;
-  ikona?: string;
+  ikona?: ReactNode;
 }) {
   if (!wartosc || wartosc.trim() === "") return null;
 
   return (
-    <div className="flex flex-col rounded-lg border border-stone-200 bg-stone-50/70 p-3">
-      <span className="text-[11px] font-semibold uppercase tracking-wider text-stone-500">
-        {ikona ? `${ikona} ` : ""}{etykieta}
-      </span>
-      <span className="mt-1 text-sm font-medium text-stone-900 break-words">
-        {wartosc}
-      </span>
+    <div className="flex gap-3">
+      {ikona ? <span className="mt-0.5 text-gray-400">{ikona}</span> : null}
+      <div className="min-w-0">
+        <span className="text-xs font-semibold uppercase text-gray-500">{etykieta}</span>
+        <span className="mt-1 block break-words text-sm font-medium text-gray-900">{wartosc}</span>
+      </div>
     </div>
   );
 }
@@ -325,7 +338,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
 
   if (laduje) {
     return (
-      <div className="rounded-xl border border-stone-200 bg-white p-8 text-center text-sm text-stone-500">
+      <div className="rounded-xl border border-gray-100 bg-white p-8 text-center text-sm text-gray-500 shadow-sm">
         Ładowanie listy klientów...
       </div>
     );
@@ -333,7 +346,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
 
   if (klienci.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-stone-300 p-8 text-center text-sm text-stone-500">
+      <div className="rounded-xl border border-dashed border-gray-200 bg-white p-8 text-center text-sm text-gray-500">
         {opisPustej || "Brak zapisanych klientów w bazie."}
       </div>
     );
@@ -362,15 +375,16 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
           value={szukaj}
           onChange={(e) => setSzukaj(e.target.value)}
           placeholder="Szukaj klienta (imię, nazwisko, telefon, adres, numer kotła)..."
-          className="flex-1 rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm text-stone-900 shadow-sm outline-none transition focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+          className="flex-1 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm outline-none transition focus:border-gray-400"
         />
         <button
           type="button"
           onClick={handleEksportCSV}
-          className="inline-flex items-center justify-center gap-2 rounded-xl border border-stone-200 bg-white px-4 py-2.5 text-sm font-semibold text-stone-700 shadow-sm transition hover:bg-stone-50 hover:text-stone-900"
+          className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50"
           title="Pobierz bazę do arkusza kalkulacyjnego"
         >
-          📥 Pobierz CSV
+          <Download className="h-4 w-4 text-gray-400" aria-hidden />
+          Pobierz CSV
         </button>
       </div>
 
@@ -387,10 +401,10 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
               <form
                 key={klient.id}
                 onSubmit={handleZapiszEdycje}
-                className="rounded-xl border-2 border-amber-400 bg-amber-50/20 p-5 shadow-sm space-y-4"
+                className="space-y-4 rounded-xl border border-gray-100 bg-white p-5 shadow-sm"
               >
-                <div className="flex items-center justify-between border-b border-amber-200 pb-2">
-                  <span className="text-sm font-bold text-stone-900">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold text-gray-900">
                     Edycja danych klienta
                   </span>
                   {blad && <span className="text-xs text-red-600">{blad}</span>}
@@ -398,7 +412,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
                   <div>
-                    <label className="text-[11px] font-semibold uppercase text-stone-600">
+                    <label className="text-xs font-semibold uppercase text-gray-500">
                       Imię
                     </label>
                     <input
@@ -407,12 +421,12 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                       onChange={(e) =>
                         setFormEdycji({ ...formEdycji, imie: e.target.value })
                       }
-                      className="mt-1 w-full rounded-lg border border-stone-300 bg-white p-2 text-sm outline-none focus:border-amber-400"
+                      className="mt-1 w-full rounded-lg border border-gray-200 bg-white p-2 text-sm text-gray-900 outline-none focus:border-gray-400"
                     />
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-semibold uppercase text-stone-600">
+                    <label className="text-xs font-semibold uppercase text-gray-500">
                       Nazwisko
                     </label>
                     <input
@@ -421,12 +435,12 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                       onChange={(e) =>
                         setFormEdycji({ ...formEdycji, nazwisko: e.target.value })
                       }
-                      className="mt-1 w-full rounded-lg border border-stone-300 bg-white p-2 text-sm outline-none focus:border-amber-400"
+                      className="mt-1 w-full rounded-lg border border-gray-200 bg-white p-2 text-sm text-gray-900 outline-none focus:border-gray-400"
                     />
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-semibold uppercase text-stone-600">
+                    <label className="text-xs font-semibold uppercase text-gray-500">
                       Telefon
                     </label>
                     <input
@@ -435,12 +449,12 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                       onChange={(e) =>
                         setFormEdycji({ ...formEdycji, telefon: e.target.value })
                       }
-                      className="mt-1 w-full rounded-lg border border-stone-300 bg-white p-2 text-sm outline-none focus:border-amber-400"
+                      className="mt-1 w-full rounded-lg border border-gray-200 bg-white p-2 text-sm text-gray-900 outline-none focus:border-gray-400"
                     />
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-semibold uppercase text-stone-600">
+                    <label className="text-xs font-semibold uppercase text-gray-500">
                       E-mail
                     </label>
                     <input
@@ -449,12 +463,12 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                       onChange={(e) =>
                         setFormEdycji({ ...formEdycji, email: e.target.value })
                       }
-                      className="mt-1 w-full rounded-lg border border-stone-300 bg-white p-2 text-sm outline-none focus:border-amber-400"
+                      className="mt-1 w-full rounded-lg border border-gray-200 bg-white p-2 text-sm text-gray-900 outline-none focus:border-gray-400"
                     />
                   </div>
 
                   <div className="sm:col-span-2">
-                    <label className="text-[11px] font-semibold uppercase text-stone-600">
+                    <label className="text-xs font-semibold uppercase text-gray-500">
                       Adres
                     </label>
                     <input
@@ -463,12 +477,12 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                       onChange={(e) =>
                         setFormEdycji({ ...formEdycji, adres: e.target.value })
                       }
-                      className="mt-1 w-full rounded-lg border border-stone-300 bg-white p-2 text-sm outline-none focus:border-amber-400"
+                      className="mt-1 w-full rounded-lg border border-gray-200 bg-white p-2 text-sm text-gray-900 outline-none focus:border-gray-400"
                     />
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-semibold uppercase text-stone-600">
+                    <label className="text-xs font-semibold uppercase text-gray-500">
                       Numer kotła
                     </label>
                     <input
@@ -477,12 +491,12 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                       onChange={(e) =>
                         setFormEdycji({ ...formEdycji, numerKotla: e.target.value })
                       }
-                      className="mt-1 w-full rounded-lg border border-stone-300 bg-white p-2 text-sm outline-none focus:border-amber-400"
+                      className="mt-1 w-full rounded-lg border border-gray-200 bg-white p-2 text-sm text-gray-900 outline-none focus:border-gray-400"
                     />
                   </div>
 
                   <div>
-                    <label className="text-[11px] font-semibold uppercase text-stone-600">
+                    <label className="text-xs font-semibold uppercase text-gray-500">
                       Data ostatniego przeglądu
                     </label>
                     <input
@@ -494,7 +508,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                           dataOstatniegoPrzegladu: e.target.value,
                         })
                       }
-                      className="mt-1 w-full rounded-lg border border-stone-300 bg-white p-2 text-sm outline-none focus:border-amber-400"
+                      className="mt-1 w-full rounded-lg border border-gray-200 bg-white p-2 text-sm text-gray-900 outline-none focus:border-gray-400"
                     />
                   </div>
                 </div>
@@ -503,14 +517,14 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                   <button
                     type="button"
                     onClick={handleAnulujEdycje}
-                    className="rounded-lg border border-stone-300 px-3 py-1.5 text-xs font-semibold text-stone-700 hover:bg-stone-100"
+                    className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
                   >
                     Anuluj
                   </button>
                   <button
                     type="submit"
                     disabled={zapisujeEdycje}
-                    className="rounded-lg bg-amber-500 px-4 py-1.5 text-xs font-semibold text-stone-950 hover:bg-amber-400 disabled:opacity-50"
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
                   >
                     {zapisujeEdycje ? "Zapisywanie..." : "Zapisz zmiany"}
                   </button>
@@ -522,74 +536,76 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
           return (
             <div
               key={klient.id}
-              className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm transition hover:shadow-md"
+              className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm"
             >
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-100 pb-3">
-                <h3 className="text-lg font-bold text-stone-900">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h3 className="text-lg font-semibold text-gray-900">
                   {pelnaNazwa}
                 </h3>
 
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
                   <button
                     type="button"
                     onClick={() => setProtokolKlient(klient)}
-                    className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 transition hover:bg-blue-100"
+                    className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
                   >
-                    📋 Raport z wizyty
+                    <ClipboardList className="h-4 w-4" aria-hidden />
+                    Raport z wizyty
                   </button>
                   <button
                     type="button"
                     onClick={() => handleStartEdycja(klient)}
-                    className="rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs font-medium text-stone-700 transition hover:bg-amber-50 hover:text-amber-800 hover:border-amber-300"
+                    className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                   >
-                    ✏️ Edytuj
+                    <Pencil className="h-4 w-4 text-gray-400" aria-hidden />
+                    Edytuj
                   </button>
                   <button
                     type="button"
                     onClick={() => handleUsun(klient.id, pelnaNazwa)}
-                    className="rounded-lg border border-red-100 bg-red-50/50 px-3 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-100 hover:text-red-700"
+                    className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                   >
-                    🗑️ Usuń
+                    <Trash2 className="h-4 w-4 text-gray-400" aria-hidden />
+                    Usuń
                   </button>
                 </div>
               </div>
 
-              {/* Rozdzielone komórki Imię i Nazwisko oraz pozostałe dane */}
-              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
-                <KomorkaDanych etykieta="Imię" wartosc={imie} ikona="👤" />
-                <KomorkaDanych etykieta="Nazwisko" wartosc={nazwisko} ikona="👤" />
-                <KomorkaDanych etykieta="Telefon" wartosc={klient.telefon} ikona="📞" />
-                <KomorkaDanych etykieta="E-mail" wartosc={klient.email} ikona="✉️" />
-                <KomorkaDanych etykieta="Adres" wartosc={klient.adres} ikona="📍" />
-                <KomorkaDanych etykieta="Numer kotła" wartosc={klient.numerKotla} ikona="🔥" />
+              <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
+                <KomorkaDanych etykieta="Imię" wartosc={imie} ikona={<User className="h-4 w-4" aria-hidden />} />
+                <KomorkaDanych etykieta="Nazwisko" wartosc={nazwisko} ikona={<User className="h-4 w-4" aria-hidden />} />
+                <KomorkaDanych etykieta="Telefon" wartosc={klient.telefon} ikona={<Phone className="h-4 w-4" aria-hidden />} />
+                <KomorkaDanych etykieta="E-mail" wartosc={klient.email} ikona={<Mail className="h-4 w-4" aria-hidden />} />
+                <KomorkaDanych etykieta="Adres" wartosc={klient.adres} ikona={<MapPin className="h-4 w-4" aria-hidden />} />
+                <KomorkaDanych etykieta="Numer kotła" wartosc={klient.numerKotla} ikona={<Flame className="h-4 w-4" aria-hidden />} />
                 <KomorkaDanych
                   etykieta="Data ostatniego przeglądu"
                   wartosc={klient.dataOstatniegoPrzegladu}
-                  ikona="📅"
+                  ikona={<Calendar className="h-4 w-4" aria-hidden />}
                 />
               </div>
 
               {/* Lista wystawionych raportów z wizyty / protokołów */}
               {klient.protokoly && klient.protokoly.length > 0 && (
-                <div className="mt-4 border-t border-stone-100 pt-3">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-stone-500">
+                <div className="mt-5">
+                  <span className="text-xs font-semibold uppercase text-gray-500">
                     Wystawione protokoły ({klient.protokoly.length}):
                   </span>
-                  <div className="mt-2 space-y-2">
+                  <div className="mt-3 space-y-3">
                     {klient.protokoly.map((protokol) => (
                       <div
                         key={protokol.id}
-                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-stone-50 border border-stone-200 px-3 py-2 text-xs"
+                        className="flex flex-wrap items-center justify-between gap-2 text-sm"
                       >
                         <div>
-                          <strong className="text-stone-900">{protokol.nazwaRaportu}</strong>
-                          <span className="ml-2 text-stone-500">({protokol.dataWypelnienia})</span>
-                          <span className="ml-2 rounded bg-amber-100 px-2 py-0.5 text-amber-800 font-medium">
+                          <strong className="font-medium text-gray-900">{protokol.nazwaRaportu}</strong>
+                          <span className="ml-2 text-gray-500">({protokol.dataWypelnienia})</span>
+                          <span className="ml-2 text-sm font-medium text-gray-900">
                             {protokol.czynnosci}
                           </span>
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="ml-auto flex items-center gap-3">
                           <button
                             type="button"
                             disabled={pobieramPdfId === protokol.id}
@@ -600,11 +616,12 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                                 protokol.nazwaRaportu
                               )
                             }
-                            className="font-semibold text-blue-600 hover:text-blue-800 underline disabled:opacity-50"
+                            className="inline-flex items-center gap-2 text-sm font-medium text-gray-900 hover:text-gray-700 disabled:opacity-50"
                           >
+                            <FileDown className="h-4 w-4 text-gray-400" aria-hidden />
                             {pobieramPdfId === protokol.id
                               ? "Generowanie..."
-                              : "📄 Pobierz PDF"}
+                              : "Pobierz PDF"}
                           </button>
                           <button
                             type="button"
@@ -615,10 +632,10 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                                 protokol.nazwaRaportu
                               )
                             }
-                            className="rounded p-1 text-stone-400 hover:bg-red-50 hover:text-red-600 transition"
+                            className="rounded p-1 text-gray-400 hover:bg-gray-50 hover:text-gray-600"
                             title="Usuń ten raport"
                           >
-                            ✕
+                            <X className="h-4 w-4" aria-hidden />
                           </button>
                         </div>
                       </div>
@@ -631,7 +648,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
         })}
 
         {przefiltrowani.length === 0 && (
-          <div className="rounded-xl border border-dashed border-stone-200 p-6 text-center text-sm text-stone-500">
+          <div className="rounded-xl border border-dashed border-gray-200 bg-white p-6 text-center text-sm text-gray-500">
             Brak klientów pasujących do frazy &quot;{szukaj}&quot;.
           </div>
         )}

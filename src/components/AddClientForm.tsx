@@ -105,12 +105,12 @@ export function AddClientForm() {
   return (
     <form
       onSubmit={zapiszKlienta}
-      className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm"
+      className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm"
     >
-      <h2 className="text-base font-semibold text-stone-900">Nowy klient</h2>
+      <h2 className="text-base font-semibold text-gray-900">Nowy klient</h2>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
         {POLA.map((pole) => (
-          <label key={pole.name} className="block text-sm font-medium text-stone-700">
+          <label key={pole.name} className="block text-xs font-semibold uppercase text-gray-500">
             {pole.label}
             <input
               name={pole.name}
@@ -118,7 +118,7 @@ export function AddClientForm() {
               autoComplete={pole.autoComplete}
               value={formularz[pole.name]}
               onChange={(event) => zmienPole(pole.name, event.target.value)}
-              className="mt-1.5 w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-normal text-stone-900 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-200"
+              className="mt-1.5 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-900 outline-none focus:border-gray-400"
             />
           </label>
         ))}
@@ -127,7 +127,7 @@ export function AddClientForm() {
         <button
           type="submit"
           disabled={zapisuje}
-          className="rounded-lg bg-stone-950 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-stone-800 disabled:cursor-not-allowed disabled:bg-stone-400"
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
         >
           {zapisuje ? "Zapisywanie…" : "Dodaj"}
         </button>

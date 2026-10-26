@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { LogOut } from "lucide-react";
 import { getAuth, signOut } from "firebase/auth";
 import { getFirebaseApp } from "@/lib/firebase";
 
@@ -27,7 +28,7 @@ export function AppNav() {
   };
 
   return (
-    <aside className="border-b border-stone-800 bg-stone-950 text-stone-100 md:sticky md:top-0 md:flex md:h-screen md:w-64 md:shrink-0 md:flex-col md:border-b-0 md:border-r">
+    <aside className="border-b border-slate-800 bg-slate-900 text-slate-100 md:sticky md:top-0 md:flex md:h-screen md:w-64 md:shrink-0 md:flex-col md:border-b-0 md:border-r">
       {/* Nagłówek menu */}
       <div className="px-5 py-5">
         <p className="text-xs font-medium uppercase tracking-[0.18em] text-amber-400">
@@ -64,7 +65,7 @@ export function AppNav() {
           onClick={handleLogout}
           className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-red-400 transition-colors hover:bg-red-500/10 hover:text-red-300"
         >
-          <span>🚪</span>
+          <LogOut className="h-4 w-4 text-gray-400" aria-hidden />
           <span>Wyloguj się</span>
         </button>
       </div>
