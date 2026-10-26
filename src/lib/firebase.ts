@@ -1,7 +1,7 @@
 "use client";
 
 import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
-import { getFirestore, type Firestore } from "firebase/firestore";
+import { initializeFirestore, persistentLocalCache, type Firestore } from "firebase/firestore";
 import { firebaseConfig, isFirebaseConfigured } from "@/lib/firebaseConfig";
 
 let firestore: Firestore | null = null;
@@ -25,7 +25,9 @@ export function getDb(): Firestore | null {
     if (!app) {
       return null;
     }
-    firestore = getFirestore(app);
+    firestore = initializeFirestore(app, {
+      localCache: persistentLocalCache(),
+    });
   }
 
   return firestore;

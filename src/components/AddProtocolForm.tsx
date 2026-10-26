@@ -2,9 +2,10 @@
 
 import { FirebaseError } from "firebase/app";
 import { arrayUnion, deleteDoc, doc, setDoc, updateDoc } from "firebase/firestore";
-import { ChangeEvent, FormEvent, useState, type ReactNode } from "react";
+import { ChangeEvent, FormEvent, useEffect, useState, type ReactNode } from "react";
 import { KOLEKCJE } from "@/lib/collections";
 import { getDb } from "@/lib/firebase";
+import { zapiszKopieProtokoluNaTelefonie } from "@/lib/kopiaProtokolu";
 import { nastepnyNumerProtokolu } from "@/lib/widokProtokolu";
 import { PodpisNaEkranie } from "@/components/PodpisNaEkranie";
 import { ETYKIETY_CZYNNOSCI, type CzynnoscProtokolu, type WynikKontroli } from "@/types/protokol";
@@ -240,10 +241,64 @@ export function AddProtocolForm({
   const [przetwarzamZdjecie, setPrzetwarzamZdjecie] = useState(false);
   const [zapisuje, setZapisuje] = useState(false);
   const [blad, setBlad] = useState("");
+  const [brakSieci, setBrakSieci] = useState(false);
+  const [kopiaZapisana, setKopiaZapisana] = useState(false);
+  const [zapisanoWAplikacji, setZapisanoWAplikacji] = useState(false);
   const numerProtokolu = nastepnyNumerProtokolu(formularz.dataPrzegladu, numeryProtokolow);
+
+  useEffect(() => {
+    const aktualizuj = () => setBrakSieci(navigator.onLine === false);
+    aktualizuj();
+    window.addEventListener("online", aktualizuj);
+    window.addEventListener("offline", aktualizuj);
+    return () => {
+      window.removeEventListener("online", aktualizuj);
+      window.removeEventListener("offline", aktualizuj);
+    };
+  }, []);
 
   function zmienPole<K extends keyof FormularzProtokolu>(name: K, value: FormularzProtokolu[K]) {
     setFormularz((aktualny) => ({ ...aktualny, [name]: value }));
+  }
+
+  async function zapiszKopieNaTelefonie() {
+    setBlad("");
+    try {
+      await zapiszKopieProtokoluNaTelefonie({
+        imieNazwisko,
+        numerProtokolu,
+        nazwaRaportu: formularz.nazwaRaportu,
+        dataPrzegladu: formularz.dataPrzegladu,
+        czynnosci: formularz.czynnosci,
+        modelKotla: formularz.modelKotla,
+        numerKotla: formularz.numerKotla,
+        mocNominalna: formularz.mocNominalna,
+        sterownik: formularz.sterownik,
+        zadanaTemperaturaGrzania: formularz.zadanaTemperaturaGrzania,
+        maksymalnaTemperaturaZasilania: formularz.maksymalnaTemperaturaZasilania,
+        status: formularz.status,
+        wynikSzczelnosci: formularz.wynikSzczelnosci,
+        cisnienieCO: formularz.cisnienieCO,
+        wynikLancucha: formularz.wynikLancucha,
+        cisnienieNaczynia: formularz.cisnienieNaczynia,
+        czyszczenieWymiennika: formularz.czyszczenieWymiennika,
+        czyszczeniePalnika: formularz.czyszczeniePalnika,
+        sprawdzenieSyfonu: formularz.sprawdzenieSyfonu,
+        inneCzynnosci: formularz.inneCzynnosci,
+        dataKolejnegoPrzegladu: formularz.dataKolejnegoPrzegladu,
+        uwagi: formularz.uwagi,
+        zdjecia,
+        podpisKlienta,
+        podpisSerwisanta,
+        nazwaZalacznika,
+      });
+      setKopiaZapisana(true);
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+      setBlad("Nie udało się zapisać kopii protokołu na telefonie.");
+    }
   }
 
   async function handleZdjecia(event: ChangeEvent<HTMLInputElement>) {
@@ -369,6 +424,10 @@ export function AddProtocolForm({
           maZalacznikPdf: Boolean(zalacznikPdf),
         }),
       });
+      if (navigator.onLine === false) {
+        setZapisanoWAplikacji(true);
+        return;
+      }
       onClose();
     } catch (error) {
       if (zalacznikPdf) {
@@ -642,6 +701,23 @@ export function AddProtocolForm({
         />
         <PodpisNaEkranie onChange={setPodpisKlienta} />
 
+        {brakSieci || zapisanoWAplikacji ? (
+          <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
+            <p>Brak internetu. Zapisz kopię protokołu na telefonie. Plik powstanie z danych wpisanych w formularzu.</p>
+            {zapisanoWAplikacji ? (
+              <p className="mt-1">Protokół czeka w aplikacji i wyśle się po odzyskaniu sieci.</p>
+            ) : null}
+            {kopiaZapisana ? <p className="mt-1">Kopia została przekazana do zapisania w telefonie.</p> : null}
+            <button
+              type="button"
+              onClick={zapiszKopieNaTelefonie}
+              className="mt-3 rounded-lg bg-amber-800 px-3 py-2 text-sm font-medium text-white"
+            >
+              Zapisz kopię na telefonie
+            </button>
+          </div>
+        ) : null}
+
         {blad ? (
           <p role="alert" className="mt-4 text-sm font-medium text-red-700">
             {blad}
@@ -651,7 +727,7 @@ export function AddProtocolForm({
         <div className="mt-5 flex gap-3">
           <button
             type="submit"
-            disabled={zapisuje || przetwarzamZdjecie}
+            disabled={zapisuje || przetwarzamZdjecie || zapisanoWAplikacji}
             className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800 disabled:bg-slate-400"
           >
             {zapisuje ? "Zapisywanie…" : "Zapisz protokół"}
