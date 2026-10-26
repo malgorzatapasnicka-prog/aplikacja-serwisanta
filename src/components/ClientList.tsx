@@ -94,6 +94,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
   // Stan modala protokołu oraz pobierania PDF
   const [protokolKlient, setProtokolKlient] = useState<KlientDokument | null>(null);
   const [pobieramPdfId, setPobieramPdfId] = useState<string | null>(null);
+  const [wysylamEmailId, setWysylamEmailId] = useState<string | null>(null);
 
   useEffect(() => {
     const db = getDb();
@@ -228,6 +229,80 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
       alert(msg);
     } finally {
       setPobieramPdfId(null);
+    }
+  };
+
+  const handleWyslijEmail = async (klient: KlientDokument, protokolId: string, nazwaRaportu: string) => {
+    const db = getDb();
+    if (!db) {
+      return;
+    }
+
+    let adres = klient.email?.trim() || "";
+    if (!adres) {
+      const podany = window.prompt("Podaj adres e-mail klienta, na który wysłać raport:");
+      if (podany === null) {
+        return;
+      }
+      adres = podany.trim();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adres)) {
+        alert("Podaj prawidłowy adres e-mail.");
+        return;
+      }
+      try {
+        await updateDoc(doc(db, KOLEKCJE.klienci, klient.id), { email: adres });
+      } catch (err) {
+        console.error("Błąd zapisu adresu e-mail:", err);
+        alert("Nie udało się zapisać adresu e-mail klienta.");
+        return;
+      }
+    }
+
+    try {
+      setWysylamEmailId(protokolId);
+
+      const res = await fetch("/api/protokol/pdf", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ klientId: klient.id, protokolId }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.blad || `Błąd pobierania (${res.status})`);
+      }
+
+      const bajty = new Uint8Array(await res.arrayBuffer());
+      let binarny = "";
+      for (let i = 0; i < bajty.length; i += 0x8000) {
+        binarny += String.fromCharCode(...bajty.subarray(i, i + 0x8000));
+      }
+
+      const wysylka = await fetch("/api/send-report", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: adres,
+          pdfBase64: btoa(binarny),
+          nazwaRaportu,
+        }),
+      });
+
+      if (!wysylka.ok) {
+        const errData = await wysylka.json().catch(() => ({}));
+        throw new Error(errData.blad || `Błąd wysyłki (${wysylka.status})`);
+      }
+
+      alert(`Raport został wysłany na adres ${adres}.`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Nie udało się wysłać raportu.";
+      alert(msg);
+    } finally {
+      setWysylamEmailId(null);
     }
   };
 
@@ -554,6 +629,22 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                   </button>
                   <button
                     type="button"
+                    disabled={wysylamEmailId !== null && wysylamEmailId === klient.protokoly?.[klient.protokoly.length - 1]?.id}
+                    onClick={() => {
+                      const ostatni = klient.protokoly?.[klient.protokoly.length - 1];
+                      if (!ostatni) {
+                        alert("Najpierw zapisz raport z wizyty. Potem można wysłać go na e-mail.");
+                        return;
+                      }
+                      handleWyslijEmail(klient, ostatni.id, ostatni.nazwaRaportu);
+                    }}
+                    className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    <Mail className="h-4 w-4 text-gray-400" aria-hidden />
+                    Wyślij na e-mail
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => handleStartEdycja(klient)}
                     className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                   >
@@ -622,6 +713,17 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                             {pobieramPdfId === protokol.id
                               ? "Generowanie..."
                               : "Pobierz PDF"}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={wysylamEmailId === protokol.id}
+                            onClick={() =>
+                              handleWyslijEmail(klient, protokol.id, protokol.nazwaRaportu)
+                            }
+                            className="inline-flex items-center gap-2 text-sm font-medium text-gray-900 hover:text-gray-700 disabled:opacity-50"
+                          >
+                            <Mail className="h-4 w-4 text-gray-400" aria-hidden />
+                            {wysylamEmailId === protokol.id ? "Wysyłanie..." : "Wyślij na e-mail"}
                           </button>
                           <button
                             type="button"
