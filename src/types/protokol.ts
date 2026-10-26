@@ -1,5 +1,14 @@
 export type CzynnoscProtokolu = "przeglad" | "awaria";
 
+export type WynikKontroli = "" | "pozytywny" | "negatywny";
+
+export function wynikKontroli(wartosc: unknown, staryPozytywny = false): WynikKontroli {
+  if (wartosc === "pozytywny" || wartosc === "negatywny") {
+    return wartosc;
+  }
+  return staryPozytywny ? "pozytywny" : "";
+}
+
 export const ETYKIETY_CZYNNOSCI: Record<CzynnoscProtokolu, string> = {
   przeglad: "Przegląd okresowy",
   awaria: "Awaria",
@@ -22,8 +31,10 @@ export type Protokol = {
   numerKotla?: string;
   zadanaTemperaturaGrzania?: string;
   szczelnoscGazowa?: boolean;
+  wynikSzczelnosci?: WynikKontroli;
   cisnienieCO?: string;
   zaworKociol?: boolean;
+  wynikLancucha?: WynikKontroli;
   cisnienieNaczynia?: string;
   czyszczenieWymiennika?: boolean;
   czyszczeniePalnika?: boolean;

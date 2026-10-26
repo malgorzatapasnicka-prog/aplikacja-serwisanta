@@ -7,7 +7,7 @@ import { KOLEKCJE } from "@/lib/collections";
 import { getDb } from "@/lib/firebase";
 import { nastepnyNumerProtokolu } from "@/lib/widokProtokolu";
 import { PodpisNaEkranie } from "@/components/PodpisNaEkranie";
-import { ETYKIETY_CZYNNOSCI, type CzynnoscProtokolu } from "@/types/protokol";
+import { ETYKIETY_CZYNNOSCI, type CzynnoscProtokolu, type WynikKontroli } from "@/types/protokol";
 
 type AddProtocolFormProps = {
   klientId: string;
@@ -29,9 +29,9 @@ type FormularzProtokolu = {
   zadanaTemperaturaGrzania: string;
   maksymalnaTemperaturaZasilania: string;
   status: string;
-  szczelnoscGazowa: boolean;
+  wynikSzczelnosci: WynikKontroli;
   cisnienieCO: string;
-  zaworKociol: boolean;
+  wynikLancucha: WynikKontroli;
   cisnienieNaczynia: string;
   czyszczenieWymiennika: boolean;
   czyszczeniePalnika: boolean;
@@ -166,6 +166,42 @@ function Kratka({
   );
 }
 
+const OPCJE_WYNIKU = [
+  { wartosc: "pozytywny", etykieta: "Pozytywny" },
+  { wartosc: "negatywny", etykieta: "Negatywny" },
+] as const;
+
+function WynikKontroliPole({
+  nazwa,
+  etykieta,
+  wartosc,
+  onChange,
+}: {
+  nazwa: string;
+  etykieta: string;
+  wartosc: WynikKontroli;
+  onChange: (wartosc: WynikKontroli) => void;
+}) {
+  return (
+    <fieldset className="rounded-lg border border-slate-200 px-3 py-2">
+      <legend className="px-1 text-sm font-medium text-slate-700">{etykieta}</legend>
+      <div className="mt-1 flex flex-wrap gap-x-6 gap-y-2">
+        {OPCJE_WYNIKU.map((opcja) => (
+          <label key={opcja.wartosc} className="flex min-h-11 items-center gap-2 text-sm text-slate-800">
+            <input
+              type="radio"
+              name={nazwa}
+              checked={wartosc === opcja.wartosc}
+              onChange={() => onChange(opcja.wartosc)}
+            />
+            {opcja.etykieta}
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
 export function AddProtocolForm({
   klientId,
   imieNazwisko,
@@ -185,9 +221,9 @@ export function AddProtocolForm({
     zadanaTemperaturaGrzania: "",
     maksymalnaTemperaturaZasilania: "",
     status: "",
-    szczelnoscGazowa: false,
+    wynikSzczelnosci: "",
     cisnienieCO: "",
-    zaworKociol: false,
+    wynikLancucha: "",
     cisnienieNaczynia: "",
     czyszczenieWymiennika: false,
     czyszczeniePalnika: false,
@@ -314,9 +350,11 @@ export function AddProtocolForm({
           modelKotla: model,
           numerKotla: numer,
           zadanaTemperaturaGrzania: temperatura,
-          szczelnoscGazowa: formularz.szczelnoscGazowa,
+          szczelnoscGazowa: formularz.wynikSzczelnosci === "pozytywny",
+          wynikSzczelnosci: formularz.wynikSzczelnosci,
           cisnienieCO: formularz.cisnienieCO.trim(),
-          zaworKociol: formularz.zaworKociol,
+          zaworKociol: formularz.wynikSzczelnosci === "pozytywny",
+          wynikLancucha: formularz.wynikLancucha,
           cisnienieNaczynia: formularz.cisnienieNaczynia.trim(),
           czyszczenieWymiennika: formularz.czyszczenieWymiennika,
           czyszczeniePalnika: formularz.czyszczeniePalnika,
@@ -457,18 +495,20 @@ export function AddProtocolForm({
           2. Test bezpieczeństwa i szczelności
         </h3>
         <div className="mt-3 grid gap-4">
-          <Kratka
-            etykieta="Szczelność instalacji gazowej — pozytywny"
-            zaznaczone={formularz.szczelnoscGazowa}
-            onChange={(zaznaczone) => zmienPole("szczelnoscGazowa", zaznaczone)}
+          <WynikKontroliPole
+            nazwa="wynik-szczelnosci"
+            etykieta="Szczelność instalacji gazowej (zawór-kocioł)"
+            wartosc={formularz.wynikSzczelnosci}
+            onChange={(wartosc) => zmienPole("wynikSzczelnosci", wartosc)}
           />
           <Pole etykieta="Ciśnienie w instalacji C.O. (bar)" wymagane={false}>
             <input value={formularz.cisnienieCO} onChange={(event) => zmienPole("cisnienieCO", event.target.value)} className={klasaPola} />
           </Pole>
-          <Kratka
-            etykieta="Zawór - kocioł"
-            zaznaczone={formularz.zaworKociol}
-            onChange={(zaznaczone) => zmienPole("zaworKociol", zaznaczone)}
+          <WynikKontroliPole
+            nazwa="wynik-lancucha"
+            etykieta="Test łańcucha zabezpieczeń"
+            wartosc={formularz.wynikLancucha}
+            onChange={(wartosc) => zmienPole("wynikLancucha", wartosc)}
           />
           <Pole etykieta="Ciśnienie wstępne w naczyniu wzbiorczym (bar)" wymagane={false}>
             <input

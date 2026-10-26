@@ -1,6 +1,6 @@
 import type { DocumentData } from "firebase/firestore";
 import type { DaneProtokoluPdf } from "@/lib/daneProtokolu";
-import type { CzynnoscProtokolu, Protokol } from "@/types/protokol";
+import { wynikKontroli, type CzynnoscProtokolu, type Protokol } from "@/types/protokol";
 
 function tekst(wartosc: unknown) {
   return typeof wartosc === "string" ? wartosc.trim() : "";
@@ -72,8 +72,13 @@ export function protokolyZDokumentu(wartosc: unknown): Protokol[] {
         numerKotla: tekst(raport.numerKotla),
         zadanaTemperaturaGrzania: tekst(raport.zadanaTemperaturaGrzania),
         szczelnoscGazowa: tak(raport.szczelnoscGazowa),
+        wynikSzczelnosci: wynikKontroli(
+          raport.wynikSzczelnosci,
+          tak(raport.szczelnoscGazowa) || tak(raport.zaworKociol),
+        ),
         cisnienieCO: tekst(raport.cisnienieCO),
         zaworKociol: tak(raport.zaworKociol),
+        wynikLancucha: wynikKontroli(raport.wynikLancucha),
         cisnienieNaczynia: tekst(raport.cisnienieNaczynia),
         czyszczenieWymiennika: tak(raport.czyszczenieWymiennika),
         czyszczeniePalnika: tak(raport.czyszczeniePalnika),

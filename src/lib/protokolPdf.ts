@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { jsPDF } from "jspdf";
 import type { DaneProtokoluPdf } from "@/lib/daneProtokolu";
 import { widokProtokolu } from "@/lib/widokProtokolu";
+import type { WynikKontroli } from "@/types/protokol";
 
 let czcionka: string | null = null;
 
@@ -16,6 +17,10 @@ function czcionkaBase64() {
 function kratka(zaznaczone: boolean, dopisek = "") {
   const pudelko = zaznaczone ? "[×]" : "[  ]";
   return dopisek ? `${pudelko} ${dopisek}` : pudelko;
+}
+
+function statusWyniku(wynik: WynikKontroli) {
+  return `${kratka(wynik === "pozytywny", "Pozytywny")}\n${kratka(wynik === "negatywny", "Negatywny")}`;
 }
 
 export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
@@ -186,14 +191,14 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
     ["Kryterium kontrolne", "Status", "Parametr", "Wartość"],
     [
       [
-        "Szczelność instalacji gazowej",
-        kratka(widok.szczelnoscGazowa, "Pozytywny"),
+        "Szczelność instalacji gazowej (zawór-kocioł)",
+        statusWyniku(widok.wynikSzczelnosci),
         "Ciśnienie w instalacji C.O.",
         widok.cisnienieCO || "bar",
       ],
       [
-        "Zawór - kocioł",
-        kratka(widok.zaworKociol),
+        "Test łańcucha zabezpieczeń",
+        statusWyniku(widok.wynikLancucha),
         "Ciśnienie wstępne w naczyniu wzbiorczym",
         widok.cisnienieNaczynia || "bar",
       ],

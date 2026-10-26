@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import type { DaneProtokoluPdf } from "@/lib/daneProtokolu";
 import { widokProtokolu } from "@/lib/widokProtokolu";
+import type { WynikKontroli } from "@/types/protokol";
 
 const uruchom = promisify(execFile);
 
@@ -32,6 +33,10 @@ function pole(wartosc: string) {
 function kratka(zaznaczone: boolean, dopisek = "") {
   const pudelko = zaznaczone ? "\\mbox{[\\,$\\times$\\,]}" : "\\mbox{[\\hspace{0.3cm}]}";
   return dopisek ? `${pudelko} ${tex(dopisek)}` : pudelko;
+}
+
+function statusWyniku(wynik: WynikKontroli) {
+  return `\\begin{minipage}[t]{3.5cm}\\raggedright ${kratka(wynik === "pozytywny", "Pozytywny")}\\\\[0.4mm] ${kratka(wynik === "negatywny", "Negatywny")}\\end{minipage}`;
 }
 
 function cisnienie(wartosc: string) {
@@ -200,8 +205,8 @@ Status urządzenia & ${status} & & \\\\
 \\toprule
 \\textbf{Kryterium kontrolne} & \\textbf{Status} & \\textbf{Parametr} & \\textbf{Wartość} \\\\
 \\midrule
-Szczelność instalacji gazowej & ${kratka(widok.szczelnoscGazowa, "Pozytywny")} & Ciśnienie w instalacji C.O. & ${cisnienie(widok.cisnienieCO)} \\\\
-Zawór - kocioł & ${kratka(widok.zaworKociol)} & \\begin{minipage}[t]{4.6cm}\\raggedright Ciśnienie wstępne w naczyniu wzbiorczym\\strut\\end{minipage} & ${cisnienie(widok.cisnienieNaczynia)} \\\\[1.6mm]
+\\begin{minipage}[t]{4.6cm}\\raggedright Szczelność instalacji gazowej (zawór-kocioł)\\strut\\end{minipage} & ${statusWyniku(widok.wynikSzczelnosci)} & Ciśnienie w instalacji C.O. & ${cisnienie(widok.cisnienieCO)} \\\\[1.6mm]
+Test łańcucha zabezpieczeń & ${statusWyniku(widok.wynikLancucha)} & \\begin{minipage}[t]{4.6cm}\\raggedright Ciśnienie wstępne w naczyniu wzbiorczym\\strut\\end{minipage} & ${cisnienie(widok.cisnienieNaczynia)} \\\\[1.6mm]
 \\bottomrule
 \\end{tabularx}
 

@@ -1,5 +1,6 @@
 import { formatujDateIso, type DaneProtokoluPdf } from "@/lib/daneProtokolu";
 import { FIRMA } from "@/lib/firma";
+import { wynikKontroli, type WynikKontroli } from "@/types/protokol";
 
 export type PozycjaListy = {
   etykieta: string;
@@ -23,9 +24,9 @@ export type WidokProtokolu = {
   maksTemperatura: string;
   status: string;
   statusAwaria: boolean;
-  szczelnoscGazowa: boolean;
+  wynikSzczelnosci: WynikKontroli;
   cisnienieCO: string;
-  zaworKociol: boolean;
+  wynikLancucha: WynikKontroli;
   cisnienieNaczynia: string;
   czynnosci: PozycjaListy[];
   inneCzynnosci: string;
@@ -108,9 +109,12 @@ export function widokProtokolu(dane: DaneProtokoluPdf): WidokProtokolu {
     maksTemperatura: temperatura(raport.maksymalnaTemperaturaZasilania),
     status,
     statusAwaria: raport.czynnosci === "awaria" || /error|usterk|awaria|uszkodz/i.test(status),
-    szczelnoscGazowa: raport.szczelnoscGazowa === true,
+    wynikSzczelnosci: wynikKontroli(
+      raport.wynikSzczelnosci,
+      raport.szczelnoscGazowa === true || raport.zaworKociol === true,
+    ),
     cisnienieCO: cisnienie(raport.cisnienieCO ?? ""),
-    zaworKociol: raport.zaworKociol === true,
+    wynikLancucha: wynikKontroli(raport.wynikLancucha),
     cisnienieNaczynia: cisnienie(raport.cisnienieNaczynia ?? ""),
     czynnosci: [
       { etykieta: "Czyszczenie wymiennika ciepła", wykonano: raport.czyszczenieWymiennika === true },
