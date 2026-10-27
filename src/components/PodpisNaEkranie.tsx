@@ -132,7 +132,6 @@ export function PodpisNaEkranie({
     </div>
   );
 }
-
 function wytnijPodpis(canvas: HTMLCanvasElement) {
   const ctx = canvas.getContext("2d");
   if (!ctx) {
@@ -173,3 +172,4 @@ function wytnijPodpis(canvas: HTMLCanvasElement) {
   wycinek.getContext("2d")?.drawImage(canvas, minX, minY, szerokosc, wysokosc, 0, 0, szerokosc, wysokosc);
   return wycinek.toDataURL("image/png");
 }
+
