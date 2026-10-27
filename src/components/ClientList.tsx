@@ -602,6 +602,23 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                     </div>
                   ))}
 
+                  {(formEdycji.numeryKotlow || [formEdycji.numerKotla || ""]).length < 5 ? (
+                    <div className="flex items-end">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setFormEdycji({
+                            ...formEdycji,
+                            numeryKotlow: [...(formEdycji.numeryKotlow || [formEdycji.numerKotla || ""]), ""],
+                          })
+                        }
+                        className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      >
+                        Dodaj kolejny kocioł
+                      </button>
+                    </div>
+                  ) : null}
+
                   <div>
                     <label className="text-xs font-semibold uppercase text-gray-500">
                       Data ostatniego przeglądu
