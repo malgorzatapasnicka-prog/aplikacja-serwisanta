@@ -6,6 +6,8 @@ import { FormEvent, useState } from "react";
 import { KOLEKCJE } from "@/lib/collections";
 import { getDb } from "@/lib/firebase";
 
+const MAKS_KOTLOW = 5;
+
 type FormularzKlienta = {
   imie: string;
   nazwisko: string;
@@ -13,8 +15,10 @@ type FormularzKlienta = {
   email: string;
   adres: string;
   dataOstatniegoPrzegladu: string;
-  numerKotla: string;
+  numeryKotlow: string[];
 };
+
+type PoleTekstowe = Exclude<keyof FormularzKlienta, "numeryKotlow">;
 
 const PUSTY_FORMULARZ: FormularzKlienta = {
   imie: "",
@@ -23,11 +27,11 @@ const PUSTY_FORMULARZ: FormularzKlienta = {
   email: "",
   adres: "",
   dataOstatniegoPrzegladu: "",
-  numerKotla: "",
+  numeryKotlow: [""],
 };
 
 const POLA: {
-  name: keyof FormularzKlienta;
+  name: PoleTekstowe;
   label: string;
   type: string;
   autoComplete?: string;
@@ -38,7 +42,6 @@ const POLA: {
   { name: "email", label: "E-mail", type: "email", autoComplete: "email" },
   { name: "adres", label: "Adres", type: "text", autoComplete: "street-address" },
   { name: "dataOstatniegoPrzegladu", label: "Data ostatniego przeglądu", type: "date" },
-  { name: "numerKotla", label: "Numer kotła", type: "text" },
 ];
 
 function komunikatBledu(error: unknown): string {
@@ -59,8 +62,35 @@ export function AddClientForm() {
   const [sukces, setSukces] = useState("");
   const [blad, setBlad] = useState("");
 
-  function zmienPole(name: keyof FormularzKlienta, value: string) {
+  function zmienPole(name: PoleTekstowe, value: string) {
     setFormularz((aktualny) => ({ ...aktualny, [name]: value }));
+    setSukces("");
+  }
+
+  function zmienKociol(indeks: number, value: string) {
+    setFormularz((aktualny) => {
+      const numeryKotlow = [...aktualny.numeryKotlow];
+      numeryKotlow[indeks] = value;
+      return { ...aktualny, numeryKotlow };
+    });
+    setSukces("");
+  }
+
+  function dodajKociol() {
+    setFormularz((aktualny) => {
+      if (aktualny.numeryKotlow.length >= MAKS_KOTLOW) {
+        return aktualny;
+      }
+      return { ...aktualny, numeryKotlow: [...aktualny.numeryKotlow, ""] };
+    });
+    setSukces("");
+  }
+
+  function usunKociol(indeks: number) {
+    setFormularz((aktualny) => ({
+      ...aktualny,
+      numeryKotlow: aktualny.numeryKotlow.filter((_, pozycja) => pozycja !== indeks),
+    }));
     setSukces("");
   }
 
@@ -80,6 +110,10 @@ export function AddClientForm() {
     try {
       const imieTrim = formularz.imie.trim();
       const nazwiskoTrim = formularz.nazwisko.trim();
+      const numeryKotlow = formularz.numeryKotlow.map((numer) => numer.trim()).slice(0, MAKS_KOTLOW);
+      while (numeryKotlow.length > 0 && numeryKotlow[numeryKotlow.length - 1] === "") {
+        numeryKotlow.pop();
+      }
 
       await addDoc(collection(db, KOLEKCJE.klienci), {
         imie: imieTrim,
@@ -90,7 +124,8 @@ export function AddClientForm() {
         email: formularz.email.trim(),
         adres: formularz.adres.trim(),
         dataOstatniegoPrzegladu: formularz.dataOstatniegoPrzegladu,
-        numerKotla: formularz.numerKotla.trim(),
+        numeryKotlow,
+        numerKotla: numeryKotlow.find((numer) => numer !== "") || "",
         utworzono: serverTimestamp(),
       });
       setFormularz(PUSTY_FORMULARZ);
@@ -122,7 +157,39 @@ export function AddClientForm() {
             />
           </label>
         ))}
+        {formularz.numeryKotlow.map((numer, indeks) => (
+          <label key={`kociol-${indeks}`} className="block text-xs font-semibold uppercase text-gray-500">
+            <span className="flex items-center justify-between gap-2">
+              Numer kotła {indeks + 1}
+              {indeks > 0 ? (
+                <button
+                  type="button"
+                  onClick={() => usunKociol(indeks)}
+                  className="text-[11px] font-medium normal-case text-gray-500 hover:text-gray-800"
+                >
+                  Usuń
+                </button>
+              ) : null}
+            </span>
+            <input
+              name={`numerKotla${indeks + 1}`}
+              type="text"
+              value={numer}
+              onChange={(event) => zmienKociol(indeks, event.target.value)}
+              className="mt-1.5 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-900 outline-none focus:border-gray-400"
+            />
+          </label>
+        ))}
       </div>
+      {formularz.numeryKotlow.length < MAKS_KOTLOW ? (
+        <button
+          type="button"
+          onClick={dodajKociol}
+          className="mt-4 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+        >
+          Dodaj kolejny kocioł
+        </button>
+      ) : null}
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <button
           type="submit"
