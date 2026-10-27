@@ -1,10 +1,10 @@
 import { formatujDateIso, type DaneProtokoluPdf } from "@/lib/daneProtokolu";
 import { FIRMA } from "@/lib/firma";
-import { wynikKontroli, type WynikKontroli } from "@/types/protokol";
+import { stanCzynnosci, wynikKontroli, type StanCzynnosci, type WynikKontroli } from "@/types/protokol";
 
 export type PozycjaListy = {
   etykieta: string;
-  wykonano: boolean;
+  stan: StanCzynnosci;
 };
 
 export type WidokProtokolu = {
@@ -26,11 +26,15 @@ export type WidokProtokolu = {
   statusAwaria: boolean;
   wynikSzczelnosci: WynikKontroli;
   cisnienieCO: string;
+  cisnienieCONieDotyczy: boolean;
   wynikLancucha: WynikKontroli;
   cisnienieNaczynia: string;
+  cisnienieNaczyniaNieDotyczy: boolean;
   czynnosci: PozycjaListy[];
   inneCzynnosci: string;
+  inneNieDotyczy: boolean;
   dataKolejnegoPrzegladu: string;
+  kolejnyPrzegladNieDotyczy: boolean;
   uwagi: string;
   zdjecia: string[];
   podpisyZdjec: string[];
@@ -83,6 +87,13 @@ function cisnienie(wartosc: string) {
   return `${czysta} bar`;
 }
 
+function zapisanePole(zapisane: string | undefined, zapas = "") {
+  if (typeof zapisane === "string") {
+    return zapisane.trim();
+  }
+  return zapas.trim();
+}
+
 function dataZRoku(iso: string) {
   const sformatowana = formatujDateIso(iso);
   return /^\d{2}\.\d{2}\.\d{4}$/.test(sformatowana) ? `${sformatowana} r.` : "";
@@ -101,8 +112,8 @@ export function widokProtokolu(dane: DaneProtokoluPdf): WidokProtokolu {
     serwisantEmail: FIRMA.email,
     klientNazwa: dane.imieNazwisko.trim(),
     klientLinie: linieAdresu(dane.adres),
-    modelKotla: (raport.modelKotla || raport.typKotla || dane.nazwaKotla).trim(),
-    numerKotla: (raport.numerKotla || dane.numerKotla || raport.numerSeryjny).trim(),
+    modelKotla: zapisanePole(raport.modelKotla ?? raport.typKotla, dane.nazwaKotla),
+    numerKotla: zapisanePole(raport.numerKotla ?? raport.numerSeryjny, dane.numerKotla),
     mocNominalna: raport.mocNominalna.trim(),
     sterownik: raport.sterownik.trim(),
     zadanaTemperatura: temperatura(raport.zadanaTemperaturaGrzania || raport.grzanie),
@@ -114,15 +125,19 @@ export function widokProtokolu(dane: DaneProtokoluPdf): WidokProtokolu {
       raport.szczelnoscGazowa === true || raport.zaworKociol === true,
     ),
     cisnienieCO: cisnienie(raport.cisnienieCO ?? ""),
+    cisnienieCONieDotyczy: raport.cisnienieCONieDotyczy === true,
     wynikLancucha: wynikKontroli(raport.wynikLancucha),
     cisnienieNaczynia: cisnienie(raport.cisnienieNaczynia ?? ""),
+    cisnienieNaczyniaNieDotyczy: raport.cisnienieNaczyniaNieDotyczy === true,
     czynnosci: [
-      { etykieta: "Czyszczenie wymiennika ciepła", wykonano: raport.czyszczenieWymiennika === true },
-      { etykieta: "Czyszczenie palnika i elektrod", wykonano: raport.czyszczeniePalnika === true },
-      { etykieta: "Sprawdzenie syfonu kondensatu", wykonano: raport.sprawdzenieSyfonu === true },
+      { etykieta: "Czyszczenie wymiennika ciepła", stan: stanCzynnosci(raport.czyszczenieWymiennika) },
+      { etykieta: "Czyszczenie palnika i elektrod", stan: stanCzynnosci(raport.czyszczeniePalnika) },
+      { etykieta: "Sprawdzenie syfonu kondensatu", stan: stanCzynnosci(raport.sprawdzenieSyfonu) },
     ],
     inneCzynnosci: (raport.inneCzynnosci ?? "").trim(),
+    inneNieDotyczy: raport.inneNieDotyczy === true,
     dataKolejnegoPrzegladu: dataZRoku(raport.dataKolejnegoPrzegladu ?? ""),
+    kolejnyPrzegladNieDotyczy: raport.kolejnyPrzegladNieDotyczy === true,
     uwagi: (raport.uwagi ?? "").trim(),
     ...zdjeciaZPodpisami(raport.zdjecia, raport.podpisyZdjec),
     podpisKlienta: (raport.podpisKlienta ?? "").startsWith("data:image/png") ? raport.podpisKlienta ?? "" : "",

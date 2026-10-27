@@ -20,7 +20,18 @@ function kratka(zaznaczone: boolean, dopisek = "") {
 }
 
 function statusWyniku(wynik: WynikKontroli) {
-  return `${kratka(wynik === "pozytywny", "Pozytywny")}\n${kratka(wynik === "negatywny", "Negatywny")}`;
+  return [
+    kratka(wynik === "pozytywny", "Pozytywny"),
+    kratka(wynik === "negatywny", "Negatywny"),
+    kratka(wynik === "nie_dotyczy", "Nie dotyczy"),
+  ].join("\n");
+}
+
+function wartoscLubNieDotyczy(nieDotyczy: boolean, wartosc: string, pusta: string) {
+  if (nieDotyczy) {
+    return "Nie dotyczy";
+  }
+  return wartosc.trim() || pusta;
 }
 
 export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
@@ -174,36 +185,30 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
   doc.setFontSize(12);
   tekst("1. Identyfikacja i ustawienia urządzenia", lewy, y);
   y += 4;
-  tabela(
-    ["Parametr", "Wartość", "Parametr", "Wartość"],
-    [
-      ["Model kotła", widok.modelKotla, "Numer kotła", widok.numerKotla],
-      ["Moc nominalna", widok.mocNominalna, "Typ sterownika", widok.sterownik],
-      ["Zadana temp. grzania", widok.zadanaTemperatura, "Maks. temp. zasilania", widok.maksTemperatura],
-      ["Status urządzenia", widok.status, "", "", widok.statusAwaria],
-    ],
-  );
+  tabela(["Parametr", "Wartość", "Parametr", "Wartość"], [
+    ["Model kotła", widok.modelKotla, "Numer kotła", widok.numerKotla],
+    ["Moc nominalna", widok.mocNominalna, "Typ sterownika", widok.sterownik],
+    ["Zadana temp. grzania", widok.zadanaTemperatura, "Maks. temp. zasilania", widok.maksTemperatura],
+    ["Status urządzenia", widok.status, "", "", widok.statusAwaria],
+  ]);
 
   doc.setFontSize(12);
   tekst("2. Test bezpieczeństwa i szczelności", lewy, y);
   y += 4;
-  tabela(
-    ["Kryterium kontrolne", "Status", "Parametr", "Wartość"],
+  tabela(["Kryterium kontrolne", "Status", "Parametr", "Wartość"], [
     [
-      [
-        "Szczelność instalacji gazowej (zawór-kocioł)",
-        statusWyniku(widok.wynikSzczelnosci),
-        "Ciśnienie w instalacji C.O.",
-        widok.cisnienieCO || "bar",
-      ],
-      [
-        "Test łańcucha zabezpieczeń",
-        statusWyniku(widok.wynikLancucha),
-        "Ciśnienie wstępne w naczyniu wzbiorczym",
-        widok.cisnienieNaczynia || "bar",
-      ],
+      "Szczelność instalacji gazowej (zawór-kocioł)",
+      statusWyniku(widok.wynikSzczelnosci),
+      "Ciśnienie w instalacji C.O.",
+      wartoscLubNieDotyczy(widok.cisnienieCONieDotyczy, widok.cisnienieCO, "bar"),
     ],
-  );
+    [
+      "Test łańcucha zabezpieczeń",
+      statusWyniku(widok.wynikLancucha),
+      "Ciśnienie wstępne w naczyniu wzbiorczym",
+      wartoscLubNieDotyczy(widok.cisnienieNaczyniaNieDotyczy, widok.cisnienieNaczynia, "bar"),
+    ],
+  ]);
 
   doc.setFontSize(12);
   tekst("3. Lista kontrolna wykonanych czynności", lewy, y);
@@ -211,17 +216,27 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
   doc.setFontSize(10);
   for (const pozycja of widok.czynnosci) {
     zapewnij(7);
-    tekst(`${kratka(pozycja.wykonano)}  ${pozycja.etykieta}`, lewy, y);
+    tekst(
+      `${kratka(pozycja.stan === "wykonano")}  ${pozycja.etykieta}    ${kratka(pozycja.stan === "nie_dotyczy", "Nie dotyczy")}`,
+      lewy,
+      y,
+    );
     y += 6;
   }
   zapewnij(12);
-  tekst(`${kratka(Boolean(widok.inneCzynnosci))}  Inne: ${widok.inneCzynnosci}`, lewy, y);
-  if (!widok.inneCzynnosci) {
+  tekst(
+    `${kratka(!widok.inneNieDotyczy && Boolean(widok.inneCzynnosci))}  Inne: ${widok.inneNieDotyczy ? "" : widok.inneCzynnosci}    ${kratka(widok.inneNieDotyczy, "Nie dotyczy")}`,
+    lewy,
+    y,
+  );
+  if (!widok.inneNieDotyczy && !widok.inneCzynnosci) {
     kropki(lewy + 28, 50);
   }
   y += 7;
   tekst("Data kolejnego przeglądu:", lewy, y);
-  if (widok.dataKolejnegoPrzegladu) {
+  if (widok.kolejnyPrzegladNieDotyczy) {
+    tekst("Nie dotyczy", lewy + 52, y);
+  } else if (widok.dataKolejnegoPrzegladu) {
     tekst(widok.dataKolejnegoPrzegladu, lewy + 52, y);
   } else {
     kropki(lewy + 52, 40);
@@ -253,36 +268,36 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
   if (zdjecia.length === 0) {
     y += 4;
   } else if (zdjecia.length === 1) {
-    const wysokoscZdjecia = 78;
-    zapewnij(wysokoscZdjecia + 16);
-    const szerokoscZdjecia = 130;
-    const x = lewy + (szerokosc - szerokoscZdjecia) / 2;
-    wstawZdjecie(doc, zdjecia[0], x, y, szerokoscZdjecia, wysokoscZdjecia);
-    y += wysokoscZdjecia + 4;
-    y = dopiszPodpis(doc, widok.podpisyZdjec[0], x, y, szerokoscZdjecia);
-    y += 6;
-  } else {
-    const szerokoscKolumny = 80;
-    const odstep = 10;
-    const wysokoscZdjecia = 68;
-    for (let indeks = 0; indeks < zdjecia.length; indeks += 2) {
-      const praweJest = indeks + 1 < zdjecia.length;
-      const podpisLewy = widok.podpisyZdjec[indeks]?.trim() ?? "";
-      const podpisPrawy = praweJest ? (widok.podpisyZdjec[indeks + 1]?.trim() ?? "") : "";
-      const dodatkowyOpis = Math.max(wysokoscPodpisu(doc, podpisLewy, szerokoscKolumny), wysokoscPodpisu(doc, podpisPrawy, szerokoscKolumny));
-      zapewnij(wysokoscZdjecia + dodatkowyOpis + 8);
-      const start = y;
-      wstawZdjecie(doc, zdjecia[indeks], lewy, start, szerokoscKolumny, wysokoscZdjecia);
-      if (praweJest) {
-        wstawZdjecie(doc, zdjecia[indeks + 1], lewy + szerokoscKolumny + odstep, start, szerokoscKolumny, wysokoscZdjecia);
+      const wysokoscZdjecia = 78;
+      zapewnij(wysokoscZdjecia + 16);
+      const szerokoscZdjecia = 130;
+      const x = lewy + (szerokosc - szerokoscZdjecia) / 2;
+      wstawZdjecie(doc, zdjecia[0], x, y, szerokoscZdjecia, wysokoscZdjecia);
+      y += wysokoscZdjecia + 4;
+      y = dopiszPodpis(doc, widok.podpisyZdjec[0], x, y, szerokoscZdjecia);
+      y += 6;
+    } else {
+      const szerokoscKolumny = 80;
+      const odstep = 10;
+      const wysokoscZdjecia = 68;
+      for (let indeks = 0; indeks < zdjecia.length; indeks += 2) {
+        const praweJest = indeks + 1 < zdjecia.length;
+        const podpisLewy = widok.podpisyZdjec[indeks]?.trim() ?? "";
+        const podpisPrawy = praweJest ? (widok.podpisyZdjec[indeks + 1]?.trim() ?? "") : "";
+        const dodatkowyOpis = Math.max(wysokoscPodpisu(doc, podpisLewy, szerokoscKolumny), wysokoscPodpisu(doc, podpisPrawy, szerokoscKolumny));
+        zapewnij(wysokoscZdjecia + dodatkowyOpis + 8);
+        const start = y;
+        wstawZdjecie(doc, zdjecia[indeks], lewy, start, szerokoscKolumny, wysokoscZdjecia);
+        if (praweJest) {
+          wstawZdjecie(doc, zdjecia[indeks + 1], lewy + szerokoscKolumny + odstep, start, szerokoscKolumny, wysokoscZdjecia);
+        }
+        const yPodpisu = start + wysokoscZdjecia + 4;
+        dopiszPodpis(doc, podpisLewy, lewy, yPodpisu, szerokoscKolumny);
+        if (praweJest) {
+          dopiszPodpis(doc, podpisPrawy, lewy + szerokoscKolumny + odstep, yPodpisu, szerokoscKolumny);
+        }
+        y = yPodpisu + dodatkowyOpis + 4;
       }
-      const yPodpisu = start + wysokoscZdjecia + 4;
-      dopiszPodpis(doc, podpisLewy, lewy, yPodpisu, szerokoscKolumny);
-      if (praweJest) {
-        dopiszPodpis(doc, podpisPrawy, lewy + szerokoscKolumny + odstep, yPodpisu, szerokoscKolumny);
-      }
-      y = yPodpisu + dodatkowyOpis + 4;
-    }
   }
 
   zapewnij(28);

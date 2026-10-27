@@ -36,11 +36,38 @@ function kratka(zaznaczone: boolean, dopisek = "") {
 }
 
 function statusWyniku(wynik: WynikKontroli) {
-  return `\\begin{minipage}[t]{3.5cm}\\raggedright ${kratka(wynik === "pozytywny", "Pozytywny")}\\\\[0.4mm] ${kratka(wynik === "negatywny", "Negatywny")}\\end{minipage}`;
+  return `\\begin{minipage}[t]{4.2cm}\\raggedright ${kratka(wynik === "pozytywny", "Pozytywny")}\\\\[0.4mm] ${kratka(wynik === "negatywny", "Negatywny")}\\\\[0.4mm] ${kratka(wynik === "nie_dotyczy", "Nie dotyczy")}\\end{minipage}`;
 }
 
-function cisnienie(wartosc: string) {
-  return wartosc.trim() ? tex(wartosc) : "\\dotfill~bar";
+function wartoscLubNieDotyczy(nieDotyczy: boolean, wartosc: string, pusta: string) {
+  if (nieDotyczy) {
+    return tex("Nie dotyczy");
+  }
+  return wartosc.trim() ? tex(wartosc) : pusta;
+}
+
+function tabelaPol(wiersze: Array<[string, string]>) {
+  if (wiersze.length === 0) {
+    return "";
+  }
+  const tresc = wiersze.map(([etykieta, wartosc]) => `${tex(etykieta)} & ${wartosc} \\\\`).join("\n");
+  return `\\rowcolors{2}{RowEven}{white}
+\\noindent
+\\begin{tabularx}{\\textwidth}{X l}
+\\toprule
+\\textbf{Parametr} & \\textbf{Wartość} \\\\
+\\midrule
+${tresc}
+\\bottomrule
+\\end{tabularx}`;
+}
+
+function sekcja(tytul: string, tresc: string) {
+  const czysta = tresc.trim();
+  if (!czysta) {
+    return "";
+  }
+  return `\\section*{${tytul}}\n${czysta}\n\\vspace{0.5cm}\n`;
 }
 
 function kolumnaZdjecia(plik: string, podpis: string, szerokosc: string, wysokosc: string) {
@@ -87,20 +114,48 @@ export function trescLatex(
 ) {
   const widok = widokProtokolu(dane);
   const adres = widok.klientLinie.map((linia) => tex(linia)).join("\\\\\n    ");
-  const status = widok.status
-    ? widok.statusAwaria
-      ? `\\textbf{\\textcolor{StatusErr}{${tex(widok.status)}}}`
-      : `\\textbf{${tex(widok.status)}}`
-    : "\\dotfill";
-  const czynnosci = widok.czynnosci
-    .map((pozycja) => `    \\item ${kratka(pozycja.wykonano)} ${tex(pozycja.etykieta)}`)
-    .join("\n");
-  const inne = widok.inneCzynnosci ? tex(widok.inneCzynnosci) : "\\dotfill";
-  const kolejny = widok.dataKolejnegoPrzegladu ? tex(widok.dataKolejnegoPrzegladu) : "\\dotfill";
+  const status = widok.statusAwaria
+    ? `\\textbf{\\textcolor{StatusErr}{${tex(widok.status)}}}`
+    : `\\textbf{${tex(widok.status)}}`;
+  const identyfikacja: Array<[string, string]> = [
+    ["Model kotła", pole(widok.modelKotla)],
+    ["Numer kotła", pole(widok.numerKotla)],
+    ["Moc nominalna", pole(widok.mocNominalna)],
+    ["Typ sterownika", pole(widok.sterownik)],
+    ["Zadana temp. grzania", pole(widok.zadanaTemperatura)],
+    ["Maks. temp. zasilania", pole(widok.maksTemperatura)],
+    ["Status urządzenia", widok.status.trim() ? status : "\\dotfill"],
+  ];
+  const bezpieczenstwo: Array<[string, string]> = [
+    ["Szczelność instalacji gazowej (zawór-kocioł)", statusWyniku(widok.wynikSzczelnosci)],
+    ["Ciśnienie w instalacji C.O.", wartoscLubNieDotyczy(widok.cisnienieCONieDotyczy, widok.cisnienieCO, "\\dotfill~bar")],
+    ["Test łańcucha zabezpieczeń", statusWyniku(widok.wynikLancucha)],
+    [
+      "Ciśnienie wstępne w naczyniu wzbiorczym",
+      wartoscLubNieDotyczy(widok.cisnienieNaczyniaNieDotyczy, widok.cisnienieNaczynia, "\\dotfill~bar"),
+    ],
+  ];
+  const pozycjeListy = widok.czynnosci.map(
+    (pozycja) =>
+      `    \\item ${kratka(pozycja.stan === "wykonano")} ${tex(pozycja.etykieta)}\\quad ${kratka(pozycja.stan === "nie_dotyczy", "Nie dotyczy")}`,
+  );
+  const inne = widok.inneNieDotyczy ? "" : widok.inneCzynnosci ? tex(widok.inneCzynnosci) : "\\dotfill";
+  const kolejny = widok.kolejnyPrzegladNieDotyczy
+    ? tex("Nie dotyczy")
+    : widok.dataKolejnegoPrzegladu
+      ? tex(widok.dataKolejnegoPrzegladu)
+      : "\\dotfill";
+  const listaCzynnosci = `\\noindent
+\\begin{itemize}[label={}, leftmargin=1.6em]
+${pozycjeListy.join("\n")}
+    \\item ${kratka(!widok.inneNieDotyczy && Boolean(widok.inneCzynnosci))} Inne: ${inne}\\quad ${kratka(widok.inneNieDotyczy, "Nie dotyczy")}
+\\end{itemize}
+\\vspace{0.2cm}
+\\noindent \\textbf{Data kolejnego przeglądu:} ${kolejny}`;
   const uwagi = widok.uwagi
-    ? `\\vspace{0.3cm}\n${tex(widok.uwagi).replaceAll("\n", "\\\\\n")}\n\\vspace{0.4cm}`
-    : "\\vspace{12cm}\n~";
-  const analiza = plikiZdjec.length > 0 ? ukladZdjec(plikiZdjec) : "";
+    ? `\\noindent\n\\fbox{%\n\\begin{minipage}{0.98\\textwidth}\n\\vspace{0.3cm}\n${tex(widok.uwagi).replaceAll("\n", "\\\\\n")}\n\\vspace{0.4cm}\n\\end{minipage}\n}`
+    : `\\noindent\n\\fbox{%\n\\begin{minipage}{0.98\\textwidth}\n\\vspace{3cm}\n~\n\\end{minipage}\n}`;
+  const analiza = plikiZdjec.length > 0 ? ukladZdjec(plikiZdjec) : "~";
   const miejscePodpisu = plikPodpisuKlienta
     ? `\\includegraphics[width=5.2cm,height=1.5cm,keepaspectratio]{${plikPodpisuKlienta}}\\\\[-1.5mm]`
     : "\\vspace{1.2cm}";
@@ -174,60 +229,11 @@ export function trescLatex(
 
 \\vspace{0.6cm}
 
-\\section*{1. Identyfikacja i ustawienia urządzenia}
-\\rowcolors{2}{RowEven}{white}
-\\noindent
-\\begin{tabularx}{\\textwidth}{X l X l}
-\\toprule
-\\textbf{Parametr} & \\textbf{Wartość} & \\textbf{Parametr} & \\textbf{Wartość} \\\\
-\\midrule
-Model kotła & ${pole(widok.modelKotla)} & Numer kotła & ${pole(widok.numerKotla)} \\\\
-Moc nominalna & ${pole(widok.mocNominalna)} & Typ sterownika & ${pole(widok.sterownik)} \\\\
-Zadana temp. grzania & ${pole(widok.zadanaTemperatura)} & Maks. temp. zasilania & ${pole(widok.maksTemperatura)} \\\\
-Status urządzenia & ${status} & & \\\\
-\\bottomrule
-\\end{tabularx}
-
-\\vspace{0.5cm}
-
-\\section*{2. Test bezpieczeństwa i szczelności}
-\\rowcolors{2}{RowEven}{white}
-\\noindent
-\\begin{tabularx}{\\textwidth}{X l X l}
-\\toprule
-\\textbf{Kryterium kontrolne} & \\textbf{Status} & \\textbf{Parametr} & \\textbf{Wartość} \\\\
-\\midrule
-\\begin{minipage}[t]{4.6cm}\\raggedright Szczelność instalacji gazowej (zawór-kocioł)\\strut\\end{minipage} & ${statusWyniku(widok.wynikSzczelnosci)} & Ciśnienie w instalacji C.O. & ${cisnienie(widok.cisnienieCO)} \\\\[1.6mm]
-Test łańcucha zabezpieczeń & ${statusWyniku(widok.wynikLancucha)} & \\begin{minipage}[t]{4.6cm}\\raggedright Ciśnienie wstępne w naczyniu wzbiorczym\\strut\\end{minipage} & ${cisnienie(widok.cisnienieNaczynia)} \\\\[1.6mm]
-\\bottomrule
-\\end{tabularx}
-
-\\vspace{0.5cm}
-
-\\section*{3. Lista kontrolna wykonanych czynności}
-\\noindent
-\\begin{itemize}[label={}, leftmargin=1.6em]
-${czynnosci}
-    \\item ${kratka(Boolean(widok.inneCzynnosci))} Inne: ${inne}
-\\end{itemize}
-\\vspace{0.2cm}
-\\noindent \\textbf{Data kolejnego przeglądu:} ${kolejny}
-
-\\vspace{0.5cm}
-
-\\section*{4. Uwagi serwisanta i zdiagnozowane usterki}
-\\noindent
-\\fbox{%
-\\begin{minipage}{0.98\\textwidth}
-${uwagi}
-\\end{minipage}
-}
-
-\\vspace{0.5cm}
-
-\\section*{5. Załączniki}
-${analiza}
-
+${sekcja("1. Identyfikacja i ustawienia urządzenia", tabelaPol(identyfikacja))}
+${sekcja("2. Test bezpieczeństwa i szczelności", tabelaPol(bezpieczenstwo))}
+${sekcja("3. Lista kontrolna wykonanych czynności", listaCzynnosci)}
+${sekcja("4. Uwagi serwisanta i zdiagnozowane usterki", uwagi)}
+${sekcja("5. Załączniki", analiza)}
 \\vfill
 
 \\noindent

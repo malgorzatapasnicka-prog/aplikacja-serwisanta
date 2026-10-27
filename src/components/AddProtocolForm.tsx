@@ -8,7 +8,7 @@ import { getDb } from "@/lib/firebase";
 import { zapiszKopieProtokoluNaTelefonie } from "@/lib/kopiaProtokolu";
 import { nastepnyNumerProtokolu } from "@/lib/widokProtokolu";
 import { PodpisNaEkranie } from "@/components/PodpisNaEkranie";
-import { ETYKIETY_CZYNNOSCI, type CzynnoscProtokolu, type WynikKontroli } from "@/types/protokol";
+import { ETYKIETY_CZYNNOSCI, type CzynnoscProtokolu, type StanCzynnosci, type WynikKontroli } from "@/types/protokol";
 
 type AddProtocolFormProps = {
   klientId: string;
@@ -33,13 +33,17 @@ type FormularzProtokolu = {
   status: string;
   wynikSzczelnosci: WynikKontroli;
   cisnienieCO: string;
+  cisnienieCONieDotyczy: boolean;
   wynikLancucha: WynikKontroli;
   cisnienieNaczynia: string;
-  czyszczenieWymiennika: boolean;
-  czyszczeniePalnika: boolean;
-  sprawdzenieSyfonu: boolean;
+  cisnienieNaczyniaNieDotyczy: boolean;
+  czyszczenieWymiennika: StanCzynnosci;
+  czyszczeniePalnika: StanCzynnosci;
+  sprawdzenieSyfonu: StanCzynnosci;
   inneCzynnosci: string;
+  inneNieDotyczy: boolean;
   dataKolejnegoPrzegladu: string;
+  kolejnyPrzegladNieDotyczy: boolean;
   uwagi: string;
 };
 
@@ -151,26 +155,51 @@ function Pole({
   );
 }
 
-function Kratka({
+function zapisCzynnosci(stan: StanCzynnosci): boolean | "nie_dotyczy" {
+  if (stan === "wykonano") {
+    return true;
+  }
+  if (stan === "nie_dotyczy") {
+    return "nie_dotyczy";
+  }
+  return false;
+}
+
+function CzynnoscPole({
   etykieta,
-  zaznaczone,
+  stan,
   onChange,
 }: {
   etykieta: string;
-  zaznaczone: boolean;
-  onChange: (zaznaczone: boolean) => void;
+  stan: StanCzynnosci;
+  onChange: (stan: StanCzynnosci) => void;
 }) {
   return (
-    <label className="flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800">
-      <input type="checkbox" checked={zaznaczone} onChange={(event) => onChange(event.target.checked)} />
-      {etykieta}
-    </label>
+    <div className="flex min-h-11 flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800">
+      <label className="flex min-h-11 items-center gap-2">
+        <input
+          type="checkbox"
+          checked={stan === "wykonano"}
+          onChange={(event) => onChange(event.target.checked ? "wykonano" : "")}
+        />
+        {etykieta}
+      </label>
+      <label className="flex min-h-11 items-center gap-2">
+        <input
+          type="checkbox"
+          checked={stan === "nie_dotyczy"}
+          onChange={(event) => onChange(event.target.checked ? "nie_dotyczy" : "")}
+        />
+        Nie dotyczy
+      </label>
+    </div>
   );
 }
 
 const OPCJE_WYNIKU = [
   { wartosc: "pozytywny", etykieta: "Pozytywny" },
   { wartosc: "negatywny", etykieta: "Negatywny" },
+  { wartosc: "nie_dotyczy", etykieta: "Nie dotyczy" },
 ] as const;
 
 function WynikKontroliPole({
@@ -223,13 +252,17 @@ export function AddProtocolForm({
     status: "",
     wynikSzczelnosci: "",
     cisnienieCO: "",
+    cisnienieCONieDotyczy: false,
     wynikLancucha: "",
     cisnienieNaczynia: "",
-    czyszczenieWymiennika: false,
-    czyszczeniePalnika: false,
-    sprawdzenieSyfonu: false,
+    cisnienieNaczyniaNieDotyczy: false,
+    czyszczenieWymiennika: "",
+    czyszczeniePalnika: "",
+    sprawdzenieSyfonu: "",
     inneCzynnosci: "",
+    inneNieDotyczy: false,
     dataKolejnegoPrzegladu: "",
+    kolejnyPrzegladNieDotyczy: false,
     uwagi: "",
   });
 
@@ -278,14 +311,18 @@ export function AddProtocolForm({
         maksymalnaTemperaturaZasilania: formularz.maksymalnaTemperaturaZasilania,
         status: formularz.status,
         wynikSzczelnosci: formularz.wynikSzczelnosci,
-        cisnienieCO: formularz.cisnienieCO,
+        cisnienieCO: formularz.cisnienieCONieDotyczy ? "" : formularz.cisnienieCO,
+        cisnienieCONieDotyczy: formularz.cisnienieCONieDotyczy,
         wynikLancucha: formularz.wynikLancucha,
-        cisnienieNaczynia: formularz.cisnienieNaczynia,
+        cisnienieNaczynia: formularz.cisnienieNaczyniaNieDotyczy ? "" : formularz.cisnienieNaczynia,
+        cisnienieNaczyniaNieDotyczy: formularz.cisnienieNaczyniaNieDotyczy,
         czyszczenieWymiennika: formularz.czyszczenieWymiennika,
         czyszczeniePalnika: formularz.czyszczeniePalnika,
         sprawdzenieSyfonu: formularz.sprawdzenieSyfonu,
-        inneCzynnosci: formularz.inneCzynnosci,
-        dataKolejnegoPrzegladu: formularz.dataKolejnegoPrzegladu,
+        inneCzynnosci: formularz.inneNieDotyczy ? "" : formularz.inneCzynnosci,
+        inneNieDotyczy: formularz.inneNieDotyczy,
+        dataKolejnegoPrzegladu: formularz.kolejnyPrzegladNieDotyczy ? "" : formularz.dataKolejnegoPrzegladu,
+        kolejnyPrzegladNieDotyczy: formularz.kolejnyPrzegladNieDotyczy,
         uwagi: formularz.uwagi,
         zdjecia,
         podpisKlienta,
@@ -407,15 +444,19 @@ export function AddProtocolForm({
           zadanaTemperaturaGrzania: temperatura,
           szczelnoscGazowa: formularz.wynikSzczelnosci === "pozytywny",
           wynikSzczelnosci: formularz.wynikSzczelnosci,
-          cisnienieCO: formularz.cisnienieCO.trim(),
+          cisnienieCO: formularz.cisnienieCONieDotyczy ? "" : formularz.cisnienieCO.trim(),
+          cisnienieCONieDotyczy: formularz.cisnienieCONieDotyczy,
           zaworKociol: formularz.wynikSzczelnosci === "pozytywny",
           wynikLancucha: formularz.wynikLancucha,
-          cisnienieNaczynia: formularz.cisnienieNaczynia.trim(),
-          czyszczenieWymiennika: formularz.czyszczenieWymiennika,
-          czyszczeniePalnika: formularz.czyszczeniePalnika,
-          sprawdzenieSyfonu: formularz.sprawdzenieSyfonu,
-          inneCzynnosci: formularz.inneCzynnosci.trim(),
-          dataKolejnegoPrzegladu: formularz.dataKolejnegoPrzegladu,
+          cisnienieNaczynia: formularz.cisnienieNaczyniaNieDotyczy ? "" : formularz.cisnienieNaczynia.trim(),
+          cisnienieNaczyniaNieDotyczy: formularz.cisnienieNaczyniaNieDotyczy,
+          czyszczenieWymiennika: zapisCzynnosci(formularz.czyszczenieWymiennika),
+          czyszczeniePalnika: zapisCzynnosci(formularz.czyszczeniePalnika),
+          sprawdzenieSyfonu: zapisCzynnosci(formularz.sprawdzenieSyfonu),
+          inneCzynnosci: formularz.inneNieDotyczy ? "" : formularz.inneCzynnosci.trim(),
+          inneNieDotyczy: formularz.inneNieDotyczy,
+          dataKolejnegoPrzegladu: formularz.kolejnyPrzegladNieDotyczy ? "" : formularz.dataKolejnegoPrzegladu,
+          kolejnyPrzegladNieDotyczy: formularz.kolejnyPrzegladNieDotyczy,
           uwagi: formularz.uwagi.trim(),
           zdjecia: zdjecia.slice(0, LIMIT_ZDJECIA).map((zdjecie) => zdjecie.src),
           podpisyZdjec: zdjecia.slice(0, LIMIT_ZDJECIA).map((zdjecie) => zdjecie.podpis.trim()),
@@ -575,7 +616,28 @@ export function AddProtocolForm({
             onChange={(wartosc) => zmienPole("wynikSzczelnosci", wartosc)}
           />
           <Pole etykieta="Ciśnienie w instalacji C.O. (bar)" wymagane={false}>
-            <input value={formularz.cisnienieCO} onChange={(event) => zmienPole("cisnienieCO", event.target.value)} className={klasaPola} />
+            <input
+              value={formularz.cisnienieCONieDotyczy ? "" : formularz.cisnienieCO}
+              disabled={formularz.cisnienieCONieDotyczy}
+              onChange={(event) => {
+                zmienPole("cisnienieCO", event.target.value);
+                zmienPole("cisnienieCONieDotyczy", false);
+              }}
+              className={klasaPola}
+            />
+            <span className="mt-2 flex min-h-11 items-center gap-2 text-sm font-normal text-slate-800">
+              <input
+                type="checkbox"
+                checked={formularz.cisnienieCONieDotyczy}
+                onChange={(event) => {
+                  zmienPole("cisnienieCONieDotyczy", event.target.checked);
+                  if (event.target.checked) {
+                    zmienPole("cisnienieCO", "");
+                  }
+                }}
+              />
+              Nie dotyczy
+            </span>
           </Pole>
           <WynikKontroliPole
             etykieta="Test łańcucha zabezpieczeń"
@@ -584,10 +646,27 @@ export function AddProtocolForm({
           />
           <Pole etykieta="Ciśnienie wstępne w naczyniu wzbiorczym (bar)" wymagane={false}>
             <input
-              value={formularz.cisnienieNaczynia}
-              onChange={(event) => zmienPole("cisnienieNaczynia", event.target.value)}
+              value={formularz.cisnienieNaczyniaNieDotyczy ? "" : formularz.cisnienieNaczynia}
+              disabled={formularz.cisnienieNaczyniaNieDotyczy}
+              onChange={(event) => {
+                zmienPole("cisnienieNaczynia", event.target.value);
+                zmienPole("cisnienieNaczyniaNieDotyczy", false);
+              }}
               className={klasaPola}
             />
+            <span className="mt-2 flex min-h-11 items-center gap-2 text-sm font-normal text-slate-800">
+              <input
+                type="checkbox"
+                checked={formularz.cisnienieNaczyniaNieDotyczy}
+                onChange={(event) => {
+                  zmienPole("cisnienieNaczyniaNieDotyczy", event.target.checked);
+                  if (event.target.checked) {
+                    zmienPole("cisnienieNaczynia", "");
+                  }
+                }}
+              />
+              Nie dotyczy
+            </span>
           </Pole>
         </div>
 
@@ -595,31 +674,69 @@ export function AddProtocolForm({
           3. Lista kontrolna wykonanych czynności
         </h3>
         <div className="mt-3 grid gap-3">
-          <Kratka
+          <CzynnoscPole
             etykieta="Czyszczenie wymiennika ciepła"
-            zaznaczone={formularz.czyszczenieWymiennika}
-            onChange={(zaznaczone) => zmienPole("czyszczenieWymiennika", zaznaczone)}
+            stan={formularz.czyszczenieWymiennika}
+            onChange={(stan) => zmienPole("czyszczenieWymiennika", stan)}
           />
-          <Kratka
+          <CzynnoscPole
             etykieta="Czyszczenie palnika i elektrod"
-            zaznaczone={formularz.czyszczeniePalnika}
-            onChange={(zaznaczone) => zmienPole("czyszczeniePalnika", zaznaczone)}
+            stan={formularz.czyszczeniePalnika}
+            onChange={(stan) => zmienPole("czyszczeniePalnika", stan)}
           />
-          <Kratka
+          <CzynnoscPole
             etykieta="Sprawdzenie syfonu kondensatu"
-            zaznaczone={formularz.sprawdzenieSyfonu}
-            onChange={(zaznaczone) => zmienPole("sprawdzenieSyfonu", zaznaczone)}
+            stan={formularz.sprawdzenieSyfonu}
+            onChange={(stan) => zmienPole("sprawdzenieSyfonu", stan)}
           />
           <Pole etykieta="Inne" wymagane={false}>
-            <input value={formularz.inneCzynnosci} onChange={(event) => zmienPole("inneCzynnosci", event.target.value)} className={klasaPola} />
+            <input
+              value={formularz.inneNieDotyczy ? "" : formularz.inneCzynnosci}
+              disabled={formularz.inneNieDotyczy}
+              onChange={(event) => {
+                zmienPole("inneCzynnosci", event.target.value);
+                zmienPole("inneNieDotyczy", false);
+              }}
+              className={klasaPola}
+            />
+            <span className="mt-2 flex min-h-11 items-center gap-2 text-sm font-normal text-slate-800">
+              <input
+                type="checkbox"
+                checked={formularz.inneNieDotyczy}
+                onChange={(event) => {
+                  zmienPole("inneNieDotyczy", event.target.checked);
+                  if (event.target.checked) {
+                    zmienPole("inneCzynnosci", "");
+                  }
+                }}
+              />
+              Nie dotyczy
+            </span>
           </Pole>
           <Pole etykieta="Data kolejnego przeglądu" wymagane={false}>
             <input
               type="date"
-              value={formularz.dataKolejnegoPrzegladu}
-              onChange={(event) => zmienPole("dataKolejnegoPrzegladu", event.target.value)}
+              value={formularz.kolejnyPrzegladNieDotyczy ? "" : formularz.dataKolejnegoPrzegladu}
+              disabled={formularz.kolejnyPrzegladNieDotyczy}
+              onChange={(event) => {
+                zmienPole("dataKolejnegoPrzegladu", event.target.value);
+                zmienPole("kolejnyPrzegladNieDotyczy", false);
+              }}
               className={klasaPola}
             />
+            <span className="mt-2 flex min-h-11 items-center gap-2 text-sm font-normal text-slate-800">
+              <input
+                type="checkbox"
+                checked={formularz.kolejnyPrzegladNieDotyczy}
+                onChange={(event) => {
+                  zmienPole("kolejnyPrzegladNieDotyczy", event.target.checked);
+                  if (event.target.checked) {
+                    zmienPole("dataKolejnegoPrzegladu", "");
+                  }
+                }}
+              />
+              Nie dotyczy
+            </span>
           </Pole>
         </div>
 

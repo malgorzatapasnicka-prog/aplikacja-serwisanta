@@ -1,6 +1,6 @@
 import { FIRMA } from "@/lib/firma";
 import { formatujDateIso } from "@/lib/daneProtokolu";
-import { ETYKIETY_CZYNNOSCI, type CzynnoscProtokolu, type WynikKontroli } from "@/types/protokol";
+import { ETYKIETY_CZYNNOSCI, type CzynnoscProtokolu, type StanCzynnosci, type WynikKontroli } from "@/types/protokol";
 
 export type KopiaProtokolu = {
   imieNazwisko: string;
@@ -17,13 +17,17 @@ export type KopiaProtokolu = {
   status: string;
   wynikSzczelnosci: WynikKontroli;
   cisnienieCO: string;
+  cisnienieCONieDotyczy: boolean;
   wynikLancucha: WynikKontroli;
   cisnienieNaczynia: string;
-  czyszczenieWymiennika: boolean;
-  czyszczeniePalnika: boolean;
-  sprawdzenieSyfonu: boolean;
+  cisnienieNaczyniaNieDotyczy: boolean;
+  czyszczenieWymiennika: StanCzynnosci;
+  czyszczeniePalnika: StanCzynnosci;
+  sprawdzenieSyfonu: StanCzynnosci;
   inneCzynnosci: string;
+  inneNieDotyczy: boolean;
   dataKolejnegoPrzegladu: string;
+  kolejnyPrzegladNieDotyczy: boolean;
   uwagi: string;
   zdjecia: { src: string; podpis: string }[];
   podpisKlienta: string;
@@ -44,11 +48,6 @@ function pole(wartosc: string) {
   return czysta ? tekst(czysta) : "—";
 }
 
-function data(wartosc: string) {
-  const czysta = wartosc.trim();
-  return czysta ? tekst(formatujDateIso(czysta)) : "—";
-}
-
 function wynik(wartosc: WynikKontroli) {
   if (wartosc === "pozytywny") {
     return "Pozytywny";
@@ -56,11 +55,27 @@ function wynik(wartosc: WynikKontroli) {
   if (wartosc === "negatywny") {
     return "Negatywny";
   }
+  if (wartosc === "nie_dotyczy") {
+    return "Nie dotyczy";
+  }
   return "—";
 }
 
-function takNie(wartosc: boolean) {
-  return wartosc ? "Tak" : "Nie";
+function stan(wartosc: StanCzynnosci) {
+  if (wartosc === "wykonano") {
+    return "Tak";
+  }
+  if (wartosc === "nie_dotyczy") {
+    return "Nie dotyczy";
+  }
+  return "Nie";
+}
+
+function poleAlboNieDotyczy(wartosc: string, nieDotyczy: boolean) {
+  if (nieDotyczy) {
+    return "Nie dotyczy";
+  }
+  return wartosc.trim() ? wartosc.trim() : "—";
 }
 
 function obraz(adres: string) {
@@ -76,6 +91,15 @@ function nazwaPliku(kopia: KopiaProtokolu) {
     .replace(/^-|-$/g, "")
     .toLowerCase();
   return `protokol-${czysta || "serwisowy"}.html`;
+}
+
+function tabelaPelna(wiersze: Array<[string, string]>) {
+  return `<table>${wiersze.map(([etykieta, wartosc]) => wiersz(etykieta, tekst(wartosc.trim() || "—"))).join("")}</table>`;
+}
+
+function sekcja(tytul: string, tresc: string) {
+  const czysta = tresc.trim();
+  return czysta ? `<h2>${tekst(tytul)}</h2>\n  ${czysta}` : "";
 }
 
 function wiersz(etykieta: string, wartosc: string) {
@@ -96,6 +120,10 @@ export function dokumentKopiiProtokolu(kopia: KopiaProtokolu) {
     .join("");
   const podpisKlienta = obraz(kopia.podpisKlienta);
   const podpisSerwisanta = obraz(kopia.podpisSerwisanta);
+  const podpisy = [
+    podpisKlienta ? `<div><p>Podpis klienta</p><img src="${podpisKlienta}" alt="Podpis klienta"></div>` : "",
+    podpisSerwisanta ? `<div><p>Podpis serwisanta</p><img src="${podpisSerwisanta}" alt="Podpis serwisanta"></div>` : "",
+  ].join("");
 
   return `<!DOCTYPE html>
 <html lang="pl">
@@ -127,46 +155,57 @@ export function dokumentKopiiProtokolu(kopia: KopiaProtokolu) {
   <p>${tekst(ETYKIETY_CZYNNOSCI[kopia.czynnosci])}</p>
   <p>Nr protokołu: ${pole(kopia.numerProtokolu)}</p>
   <p>Klient: ${pole(kopia.imieNazwisko)}</p>
-  <h2>Dane raportu</h2>
-  <table>
-    ${wiersz("Nazwa raportu", pole(kopia.nazwaRaportu))}
-    ${wiersz("Data przeglądu", data(kopia.dataPrzegladu))}
-  </table>
-  <h2>1. Identyfikacja i ustawienia urządzenia</h2>
-  <table>
-    ${wiersz("Model kotła", pole(kopia.modelKotla))}
-    ${wiersz("Numer kotła", pole(kopia.numerKotla))}
-    ${wiersz("Moc nominalna", pole(kopia.mocNominalna))}
-    ${wiersz("Typ sterownika", pole(kopia.sterownik))}
-    ${wiersz("Zadana temp. grzania", pole(kopia.zadanaTemperaturaGrzania))}
-    ${wiersz("Maks. temp. zasilania", pole(kopia.maksymalnaTemperaturaZasilania))}
-    ${wiersz("Status urządzenia", pole(kopia.status))}
-  </table>
-  <h2>2. Test bezpieczeństwa i szczelności</h2>
-  <table>
-    ${wiersz("Szczelność instalacji gazowej (zawór-kocioł)", wynik(kopia.wynikSzczelnosci))}
-    ${wiersz("Ciśnienie w instalacji C.O.", pole(kopia.cisnienieCO))}
-    ${wiersz("Test łańcucha zabezpieczeń", wynik(kopia.wynikLancucha))}
-    ${wiersz("Ciśnienie wstępne w naczyniu wzbiorczym", pole(kopia.cisnienieNaczynia))}
-  </table>
-  <h2>3. Lista kontrolna wykonanych czynności</h2>
-  <table>
-    ${wiersz("Czyszczenie wymiennika ciepła", takNie(kopia.czyszczenieWymiennika))}
-    ${wiersz("Czyszczenie palnika i elektrod", takNie(kopia.czyszczeniePalnika))}
-    ${wiersz("Sprawdzenie syfonu kondensatu", takNie(kopia.sprawdzenieSyfonu))}
-    ${wiersz("Inne", pole(kopia.inneCzynnosci))}
-    ${wiersz("Data kolejnego przeglądu", data(kopia.dataKolejnegoPrzegladu))}
-  </table>
-  <h2>4. Uwagi serwisanta i zdiagnozowane usterki</h2>
-  <p>${pole(kopia.uwagi).replaceAll("\n", "<br>")}</p>
-  <h2>5. Załączniki</h2>
-  ${zdjecia || "<p>—</p>"}
-  ${kopia.nazwaZalacznika.trim() ? `<p>Załącznik PDF: ${tekst(kopia.nazwaZalacznika.trim())}</p>` : ""}
-  <h2>Podpisy</h2>
-  <div class="podpisy">
-    <div><p>Podpis klienta</p>${podpisKlienta ? `<img src="${podpisKlienta}" alt="Podpis klienta">` : "<p>—</p>"}</div>
-    <div><p>Podpis serwisanta</p>${podpisSerwisanta ? `<img src="${podpisSerwisanta}" alt="Podpis serwisanta">` : "<p>—</p>"}</div>
-  </div>
+  ${sekcja(
+    "Dane raportu",
+    tabelaPelna([
+      ["Nazwa raportu", kopia.nazwaRaportu],
+      ["Data przeglądu", kopia.dataPrzegladu.trim() ? formatujDateIso(kopia.dataPrzegladu) : ""],
+    ]),
+  )}
+  ${sekcja(
+    "1. Identyfikacja i ustawienia urządzenia",
+    tabelaPelna([
+      ["Model kotła", kopia.modelKotla],
+      ["Numer kotła", kopia.numerKotla],
+      ["Moc nominalna", kopia.mocNominalna],
+      ["Typ sterownika", kopia.sterownik],
+      ["Zadana temp. grzania", kopia.zadanaTemperaturaGrzania],
+      ["Maks. temp. zasilania", kopia.maksymalnaTemperaturaZasilania],
+      ["Status urządzenia", kopia.status],
+    ]),
+  )}
+  ${sekcja(
+    "2. Test bezpieczeństwa i szczelności",
+    tabelaPelna([
+      ["Szczelność instalacji gazowej (zawór-kocioł)", wynik(kopia.wynikSzczelnosci)],
+      ["Ciśnienie w instalacji C.O.", poleAlboNieDotyczy(kopia.cisnienieCO, kopia.cisnienieCONieDotyczy)],
+      ["Test łańcucha zabezpieczeń", wynik(kopia.wynikLancucha)],
+      ["Ciśnienie wstępne w naczyniu wzbiorczym", poleAlboNieDotyczy(kopia.cisnienieNaczynia, kopia.cisnienieNaczyniaNieDotyczy)],
+    ]),
+  )}
+  ${sekcja(
+    "3. Lista kontrolna wykonanych czynności",
+    tabelaPelna([
+      ["Czyszczenie wymiennika ciepła", stan(kopia.czyszczenieWymiennika)],
+      ["Czyszczenie palnika i elektrod", stan(kopia.czyszczeniePalnika)],
+      ["Sprawdzenie syfonu kondensatu", stan(kopia.sprawdzenieSyfonu)],
+      ["Inne", poleAlboNieDotyczy(kopia.inneCzynnosci, kopia.inneNieDotyczy)],
+      [
+        "Data kolejnego przeglądu",
+        kopia.kolejnyPrzegladNieDotyczy
+          ? "Nie dotyczy"
+          : kopia.dataKolejnegoPrzegladu.trim()
+            ? formatujDateIso(kopia.dataKolejnegoPrzegladu)
+            : "",
+      ],
+    ]),
+  )}
+  ${sekcja("4. Uwagi serwisanta i zdiagnozowane usterki", `<p>${kopia.uwagi.trim() ? tekst(kopia.uwagi).replaceAll("\n", "<br>") : "—"}</p>`)}
+  ${sekcja(
+    "5. Załączniki",
+    `${zdjecia || "<p>—</p>"}${kopia.nazwaZalacznika.trim() ? `<p>Załącznik PDF: ${tekst(kopia.nazwaZalacznika.trim())}</p>` : ""}`,
+  )}
+  ${sekcja("Podpisy", podpisy ? `<div class="podpisy">${podpisy}</div>` : "<p>—</p>")}
 </body>
 </html>`;
 }
