@@ -174,12 +174,10 @@ const OPCJE_WYNIKU = [
 ] as const;
 
 function WynikKontroliPole({
-  nazwa,
   etykieta,
   wartosc,
   onChange,
 }: {
-  nazwa: string;
   etykieta: string;
   wartosc: WynikKontroli;
   onChange: (wartosc: WynikKontroli) => void;
@@ -191,16 +189,9 @@ function WynikKontroliPole({
         {OPCJE_WYNIKU.map((opcja) => (
           <label key={opcja.wartosc} className="flex min-h-11 items-center gap-2 text-sm text-slate-800">
             <input
-              type="radio"
-              name={nazwa}
+              type="checkbox"
               checked={wartosc === opcja.wartosc}
-              onChange={() => onChange(opcja.wartosc)}
-              onClick={(event) => {
-                if (wartosc === opcja.wartosc) {
-                  event.preventDefault();
-                  onChange("");
-                }
-              }}
+              onChange={(event) => onChange(event.target.checked ? opcja.wartosc : "")}
             />
             {opcja.etykieta}
           </label>
@@ -579,7 +570,6 @@ export function AddProtocolForm({
         </h3>
         <div className="mt-3 grid gap-4">
           <WynikKontroliPole
-            nazwa="wynik-szczelnosci"
             etykieta="Szczelność instalacji gazowej (zawór-kocioł)"
             wartosc={formularz.wynikSzczelnosci}
             onChange={(wartosc) => zmienPole("wynikSzczelnosci", wartosc)}
@@ -588,7 +578,6 @@ export function AddProtocolForm({
             <input value={formularz.cisnienieCO} onChange={(event) => zmienPole("cisnienieCO", event.target.value)} className={klasaPola} />
           </Pole>
           <WynikKontroliPole
-            nazwa="wynik-lancucha"
             etykieta="Test łańcucha zabezpieczeń"
             wartosc={formularz.wynikLancucha}
             onChange={(wartosc) => zmienPole("wynikLancucha", wartosc)}
