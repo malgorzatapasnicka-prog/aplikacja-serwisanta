@@ -207,11 +207,11 @@ export function AddProtocolForm({
   klientId,
   imieNazwisko,
   numerKotla = "",
+  numeryKotlow = [],
   nazwaKotla = "",
   numeryProtokolow = [],
   onClose,
 }: AddProtocolFormProps) {
-  const [formularz, setFormularz] = useState<FormularzProtokolu>({
     nazwaRaportu: "",
     dataPrzegladu: dzis(),
     czynnosci: "przeglad",
@@ -505,8 +505,8 @@ export function AddProtocolForm({
           <Pole etykieta="Model kotła">
             <input value={formularz.modelKotla} onChange={(event) => zmienPole("modelKotla", event.target.value)} className={klasaPola} />
           </Pole>
-          <Pole etykieta="Numer kotła">
             <input value={formularz.numerKotla} onChange={(event) => zmienPole("numerKotla", event.target.value)} className={klasaPola} />
+          </Pole>
           </Pole>
           <Pole etykieta="Moc nominalna">
             <input
