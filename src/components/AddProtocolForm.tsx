@@ -14,6 +14,7 @@ type AddProtocolFormProps = {
   klientId: string;
   imieNazwisko: string;
   numerKotla?: string;
+  numeryKotlow?: string[];
   nazwaKotla?: string;
   numeryProtokolow?: string[];
   onClose: () => void;
@@ -212,11 +213,12 @@ export function AddProtocolForm({
   numeryProtokolow = [],
   onClose,
 }: AddProtocolFormProps) {
+  const [formularz, setFormularz] = useState<FormularzProtokolu>({
     nazwaRaportu: "",
     dataPrzegladu: dzis(),
     czynnosci: "przeglad",
     modelKotla: nazwaKotla,
-    numerKotla,
+    numerKotla: numerKotla || (numeryKotlow[0] ?? ""),
     mocNominalna: "",
     sterownik: "",
     zadanaTemperaturaGrzania: "",
@@ -233,6 +235,7 @@ export function AddProtocolForm({
     dataKolejnegoPrzegladu: "",
     uwagi: "",
   });
+
   const [zdjecia, setZdjecia] = useState<ZdjecieFormularza[]>([]);
   const [zalacznikPdf, setZalacznikPdf] = useState("");
   const [nazwaZalacznika, setNazwaZalacznika] = useState("");
@@ -505,9 +508,24 @@ export function AddProtocolForm({
           <Pole etykieta="Model kotła">
             <input value={formularz.modelKotla} onChange={(event) => zmienPole("modelKotla", event.target.value)} className={klasaPola} />
           </Pole>
-            <input value={formularz.numerKotla} onChange={(event) => zmienPole("numerKotla", event.target.value)} className={klasaPola} />
+
+          <Pole etykieta="Numer kotła">
+            <input
+              list="lista-kotlow-podpowiedz"
+              value={formularz.numerKotla}
+              onChange={(event) => zmienPole("numerKotla", event.target.value)}
+              className={klasaPola}
+              placeholder="Wpisz lub wybierz"
+            />
+            {numeryKotlow.length > 0 && (
+              <datalist id="lista-kotlow-podpowiedz">
+                {numeryKotlow.map((nr) => (
+                  <option key={nr} value={nr} />
+                ))}
+              </datalist>
+            )}
           </Pole>
-          </Pole>
+
           <Pole etykieta="Moc nominalna">
             <input
               value={formularz.mocNominalna}
