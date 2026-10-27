@@ -195,6 +195,12 @@ function WynikKontroliPole({
               name={nazwa}
               checked={wartosc === opcja.wartosc}
               onChange={() => onChange(opcja.wartosc)}
+              onClick={(event) => {
+                if (wartosc === opcja.wartosc) {
+                  event.preventDefault();
+                  onChange("");
+                }
+              }}
             />
             {opcja.etykieta}
           </label>
