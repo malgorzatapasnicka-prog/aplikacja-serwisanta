@@ -633,7 +633,7 @@ export function AddProtocolForm({
         </h3>
         <textarea value={formularz.uwagi} onChange={(event) => zmienPole("uwagi", event.target.value)} rows={5} className={`${klasaPola} mt-3`} />
 
-        <h3 className="mt-6 text-sm font-semibold tracking-wide text-slate-900 uppercase">5. Analiza spalin</h3>
+        <h3 className="mt-6 text-sm font-semibold tracking-wide text-slate-900 uppercase">5. Załączniki</h3>
         <p className="mt-1 text-xs text-slate-500">
           Do 10 zdjęć z analizatora albo aparatu. W galerii można zaznaczyć kilka naraz. Pliki HEIC z iPhone’a są zapisywane jako JPEG.
         </p>

@@ -159,7 +159,7 @@ export function dokumentKopiiProtokolu(kopia: KopiaProtokolu) {
   </table>
   <h2>4. Uwagi serwisanta i zdiagnozowane usterki</h2>
   <p>${pole(kopia.uwagi).replaceAll("\n", "<br>")}</p>
-  <h2>5. Analiza spalin</h2>
+  <h2>5. Załączniki</h2>
   ${zdjecia || "<p>—</p>"}
   ${kopia.nazwaZalacznika.trim() ? `<p>Załącznik PDF: ${tekst(kopia.nazwaZalacznika.trim())}</p>` : ""}
   <h2>Podpisy</h2>

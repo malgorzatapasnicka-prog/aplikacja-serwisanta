@@ -225,7 +225,7 @@ ${uwagi}
 
 \\vspace{0.5cm}
 
-\\section*{5. Analiza spalin}
+\\section*{5. Załączniki}
 ${analiza}
 
 \\vfill

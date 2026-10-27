@@ -247,7 +247,7 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
   zapewnij(50);
   doc.setFontSize(12);
   doc.setTextColor(15, 23, 42);
-  tekst("5. Analiza spalin", lewy, y);
+  tekst("5. Załączniki", lewy, y);
   y += 6;
   const zdjecia = widok.zdjecia.slice(0, 10);
   if (zdjecia.length === 0) {
