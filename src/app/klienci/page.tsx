@@ -8,13 +8,13 @@ export default function KlienciPage() {
     <div>
       <PageHeader
         title="Baza klientów"
-        description="Tutaj widać zapisanych klientów. Formularz dodawania jest pod listą."
+        description="Tutaj widać zapisanych klientów. Formularz dodawania jest nad listą."
       />
-      <Suspense fallback={<div>Ładowanie danych...</div>}>
-        <ClientList opisPustej="Dodaj pierwszego klienta formularzem poniżej." />
-      </Suspense>
+      <AddClientForm />
       <div className="mt-8">
-        <AddClientForm />
+        <Suspense fallback={<div>Ładowanie danych...</div>}>
+          <ClientList opisPustej="Dodaj pierwszego klienta formularzem powyżej." />
+        </Suspense>
       </div>
     </div>
   );
