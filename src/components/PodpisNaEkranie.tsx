@@ -1,6 +1,7 @@
 "use client";
 
-import { PointerEvent, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import SignatureCanvas from "react-signature-canvas";
 
 type PodpisNaEkranieProps = {
   tytul?: string;
@@ -8,168 +9,244 @@ type PodpisNaEkranieProps = {
   onChange: (podpis: string) => void;
 };
 
+type PunktPodpisu = { x: number; y: number; time: number; color?: string };
+
+type PlotnoPodpisu = {
+  minWidth: number;
+  maxWidth: number;
+  _canvas: HTMLCanvasElement;
+  _ctx: CanvasRenderingContext2D;
+  _createPoint: (x: number, y: number, time?: number) => PunktPodpisu;
+  _punktZrodlowy?: PlotnoPodpisu["_createPoint"];
+};
+
+function czyPoziomo() {
+  return window.innerWidth > window.innerHeight;
+}
+
+function podlaczPalec(pad: PlotnoPodpisu) {
+  if (!pad._punktZrodlowy) {
+    pad._punktZrodlowy = pad._createPoint;
+  }
+  const zrodlo = pad._punktZrodlowy;
+  pad._createPoint = function (this: PlotnoPodpisu, x: number, y: number, time?: number) {
+    const canvas = this._canvas;
+    const rect = canvas.getBoundingClientRect();
+    const skalaX = rect.width > 0 ? canvas.width / rect.width : 1;
+    const skalaY = rect.height > 0 ? canvas.height / rect.height : 1;
+    this._ctx.setTransform(1, 0, 0, 1, 0, 0);
+    return zrodlo.call(this, (x - rect.left) * skalaX + rect.left, (y - rect.top) * skalaY + rect.top, time);
+  };
+}
+
+function dopasujPlotno(pad: SignatureCanvas) {
+  const wewnetrzny = pad.getSignaturePad() as unknown as PlotnoPodpisu;
+  const canvas = wewnetrzny._canvas;
+  const rect = canvas.getBoundingClientRect();
+  if (rect.width < 2 || rect.height < 2) {
+    return;
+  }
+
+  const ratio = Math.max(window.devicePixelRatio || 1, 1);
+  const width = Math.max(1, Math.round(rect.width * ratio));
+  const height = Math.max(1, Math.round(rect.height * ratio));
+  const ctx = wewnetrzny._ctx;
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+  if (canvas.width !== width || canvas.height !== height) {
+    const stare = pad.toData();
+    const skalaX = canvas.width > 0 ? width / canvas.width : 1;
+    const skalaY = canvas.height > 0 ? height / canvas.height : 1;
+    canvas.width = width;
+    canvas.height = height;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    if (stare.length > 0) {
+      const przeskalowane = stare.map((grupa) =>
+        grupa.map((punkt) => ({
+          ...punkt,
+          x: punkt.x * skalaX,
+          y: punkt.y * skalaY,
+        })),
+      );
+      pad.fromData(przeskalowane as Parameters<SignatureCanvas["fromData"]>[0]);
+    }
+  }
+
+  wewnetrzny.minWidth = 1.6 * ratio;
+  wewnetrzny.maxWidth = 3.2 * ratio;
+  podlaczPalec(wewnetrzny);
+}
+
 export function PodpisNaEkranie({
   tytul = "Podpis klienta",
   opis = "Opcjonalnie. Podaj telefon klientowi, żeby podpisał się palcem. Podpis trafi nad kreskę w protokole.",
   onChange,
 }: PodpisNaEkranieProps) {
-  const plotno = useRef<HTMLCanvasElement>(null);
-  const rysuje = useRef(false);
-  const ostatni = useRef({ x: 0, y: 0 });
-  const [jestPodpis, setJestPodpis] = useState(false);
+  const plotno = useRef<SignatureCanvas>(null);
+  const ramka = useRef<HTMLDivElement>(null);
+  const [otwarty, setOtwarty] = useState(false);
+  const [poziomo, setPoziomo] = useState(false);
+  const [podpis, setPodpis] = useState("");
 
   useEffect(() => {
-    const canvas = plotno.current;
-    if (!canvas) {
+    if (!otwarty) {
       return;
     }
-    const skala = window.devicePixelRatio || 1;
-    canvas.width = Math.round(canvas.clientWidth * skala);
-    canvas.height = Math.round(160 * skala);
-    canvas.getContext("2d")?.scale(skala, skala);
-  }, []);
 
-  function punkt(event: PointerEvent<HTMLCanvasElement>) {
-    const ramka = event.currentTarget.getBoundingClientRect();
-    return { x: event.clientX - ramka.left, y: event.clientY - ramka.top };
+    const odswiez = () => setPoziomo(czyPoziomo());
+    odswiez();
+    window.addEventListener("resize", odswiez);
+    return () => window.removeEventListener("resize", odswiez);
+  }, [otwarty]);
+
+  useEffect(() => {
+    if (!otwarty) {
+      return;
+    }
+
+    const html = document.documentElement;
+    const poprzedniHtml = html.style.overflow;
+    const poprzedniBody = document.body.style.overflow;
+    html.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    return () => {
+      html.style.overflow = poprzedniHtml;
+      document.body.style.overflow = poprzedniBody;
+    };
+  }, [otwarty]);
+
+  useEffect(() => {
+    if (!otwarty || !poziomo) {
+      return;
+    }
+
+    const skaluj = () => {
+      const pad = plotno.current;
+      if (!pad) {
+        return;
+      }
+      dopasujPlotno(pad);
+    };
+
+    const klatka = requestAnimationFrame(skaluj);
+    window.addEventListener("resize", skaluj);
+    window.visualViewport?.addEventListener("resize", skaluj);
+    window.visualViewport?.addEventListener("scroll", skaluj);
+    const obserwator = new ResizeObserver(skaluj);
+    if (ramka.current) {
+      obserwator.observe(ramka.current);
+    }
+
+    return () => {
+      cancelAnimationFrame(klatka);
+      window.removeEventListener("resize", skaluj);
+      window.visualViewport?.removeEventListener("resize", skaluj);
+      window.visualViewport?.removeEventListener("scroll", skaluj);
+      obserwator.disconnect();
+    };
+  }, [otwarty, poziomo]);
+
+  function otworz() {
+    setPoziomo(czyPoziomo());
+    setOtwarty(true);
   }
 
-  function pedzel(canvas: HTMLCanvasElement) {
-    const ctx = canvas.getContext("2d");
-    if (!ctx) {
-      return null;
-    }
-    ctx.lineWidth = 2.4;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.strokeStyle = "#0f172a";
-    return ctx;
-  }
-
-  function start(event: PointerEvent<HTMLCanvasElement>) {
-    const ctx = pedzel(event.currentTarget);
-    if (!ctx) {
-      return;
-    }
-    event.currentTarget.setPointerCapture(event.pointerId);
-    rysuje.current = true;
-    ostatni.current = punkt(event);
-    ctx.beginPath();
-    ctx.moveTo(ostatni.current.x, ostatni.current.y);
-  }
-
-  function rusz(event: PointerEvent<HTMLCanvasElement>) {
-    if (!rysuje.current) {
-      return;
-    }
-    const ctx = pedzel(event.currentTarget);
-    if (!ctx) {
-      return;
-    }
-    const teraz = punkt(event);
-    ctx.beginPath();
-    ctx.moveTo(ostatni.current.x, ostatni.current.y);
-    ctx.lineTo(teraz.x, teraz.y);
-    ctx.stroke();
-    ostatni.current = teraz;
-  }
-
-  function koniec() {
-    if (!rysuje.current) {
-      return;
-    }
-    rysuje.current = false;
-    const canvas = plotno.current;
-    if (!canvas) {
-      return;
-    }
-    const podpis = wytnijPodpis(canvas);
-    setJestPodpis(Boolean(podpis));
-    onChange(podpis);
+  function zamknij() {
+    setOtwarty(false);
   }
 
   function wyczysc() {
-    const canvas = plotno.current;
-    const ctx = canvas?.getContext("2d");
-    if (!canvas || !ctx) {
+    plotno.current?.clear();
+  }
+
+  function zapisz() {
+    const pad = plotno.current;
+    if (!pad || pad.isEmpty()) {
+      setPodpis("");
+      onChange("");
+      setOtwarty(false);
       return;
     }
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
-    setJestPodpis(false);
-    onChange("");
+
+    const obraz = pad.getTrimmedCanvas().toDataURL("image/png");
+    setPodpis(obraz);
+    onChange(obraz);
+    setOtwarty(false);
   }
 
   return (
     <div>
       <h3 className="mt-6 text-sm font-semibold tracking-wide text-slate-900 uppercase">{tytul}</h3>
       <p className="mt-1 text-xs text-slate-500">{opis}</p>
-      <canvas
-        ref={plotno}
-        aria-label={tytul}
-        className="mt-3 h-40 w-full touch-none rounded-lg border border-slate-300 bg-white"
-        style={{
-          backgroundImage: "linear-gradient(#cbd5e1, #cbd5e1)",
-          backgroundSize: "100% 1px",
-          backgroundRepeat: "no-repeat",
-          backgroundPosition: "center bottom 28px",
-        }}
-        onPointerDown={start}
-        onPointerMove={rusz}
-        onPointerUp={koniec}
-        onPointerCancel={koniec}
-      />
-      {jestPodpis ? (
+      {podpis ? (
+        <img src={podpis} alt={tytul} className="mt-3 h-24 max-w-full rounded-lg border border-slate-300 bg-white object-contain" />
+      ) : null}
+      <div className="mt-3 flex flex-wrap gap-2">
         <button
           type="button"
-          onClick={wyczysc}
-          className="mt-3 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700"
+          onClick={otworz}
+          className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700"
         >
-          Wyczyść podpis
+          {podpis ? "Zmień podpis" : "Złóż podpis"}
         </button>
+        {podpis ? (
+          <button
+            type="button"
+            onClick={() => {
+              setPodpis("");
+              onChange("");
+            }}
+            className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700"
+          >
+            Wyczyść podpis
+          </button>
+        ) : null}
+      </div>
+
+      {otwarty ? (
+        <div role="dialog" aria-modal="true" aria-label={tytul} className="fixed inset-0 z-[9999] flex flex-col bg-white">
+          {poziomo ? (
+            <>
+              <div ref={ramka} className="relative min-h-0 flex-1 touch-none">
+                <SignatureCanvas
+                  ref={plotno}
+                  penColor="#0f172a"
+                  throttle={0}
+                  minDistance={0}
+                  velocityFilterWeight={0.2}
+                  clearOnResize={false}
+                  canvasProps={{
+                    className: "absolute inset-0 block h-full w-full touch-none",
+                    "aria-label": tytul,
+                  }}
+                />
+              </div>
+              <div className="flex gap-2 border-t border-slate-200 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))]">
+                <button type="button" onClick={wyczysc} className="min-h-11 flex-1 rounded-lg border border-slate-200 px-3 text-sm font-medium text-slate-700">
+                  Wyczyść
+                </button>
+                <button type="button" onClick={zamknij} className="min-h-11 flex-1 rounded-lg border border-slate-200 px-3 text-sm font-medium text-slate-700">
+                  Zamknij
+                </button>
+                <button type="button" onClick={zapisz} className="min-h-11 flex-1 rounded-lg bg-slate-900 px-3 text-sm font-medium text-white">
+                  Zapisz
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="flex h-full flex-col items-center justify-center gap-6 px-8 text-center">
+              <p className="text-lg font-medium text-slate-900">Aby złożyć podpis, obróć telefon poziomo</p>
+              <button
+                type="button"
+                onClick={zamknij}
+                className="min-h-11 rounded-lg border border-slate-200 px-5 text-sm font-medium text-slate-700"
+              >
+                Anuluj
+              </button>
+            </div>
+          )}
+        </div>
       ) : null}
     </div>
   );
 }
-function wytnijPodpis(canvas: HTMLCanvasElement) {
-  const ctx = canvas.getContext("2d");
-  if (!ctx) {
-    return "";
-  }
-  const { width, height } = canvas;
-  const piksele = ctx.getImageData(0, 0, width, height).data;
-  let minX = width;
-  let minY = height;
-  let maxX = 0;
-  let maxY = 0;
-  let jest = false;
-  for (let y = 0; y < height; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      if (piksele[(y * width + x) * 4 + 3] <= 10) {
-        continue;
-      }
-      jest = true;
-      minX = Math.min(minX, x);
-      minY = Math.min(minY, y);
-      maxX = Math.max(maxX, x);
-      maxY = Math.max(maxY, y);
-    }
-  }
-  if (!jest) {
-    return "";
-  }
-  const margines = 12;
-  minX = Math.max(0, minX - margines);
-  minY = Math.max(0, minY - margines);
-  maxX = Math.min(width - 1, maxX + margines);
-  maxY = Math.min(height - 1, maxY + margines);
-  const szerokosc = maxX - minX + 1;
-  const wysokosc = maxY - minY + 1;
-  const wycinek = document.createElement("canvas");
-  wycinek.width = szerokosc;
-  wycinek.height = wysokosc;
-  wycinek.getContext("2d")?.drawImage(canvas, minX, minY, szerokosc, wysokosc, 0, 0, szerokosc, wysokosc);
-  return wycinek.toDataURL("image/png");
-}
-
