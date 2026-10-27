@@ -54,6 +54,7 @@ type KlientDokument = {
   adres?: string;
   dataOstatniegoPrzegladu?: string;
   numerKotla?: string;
+  numeryKotlow?: string[];
   nazwaKotla?: string;
   protokoly?: Protokol[];
 };
@@ -78,6 +79,24 @@ function KomorkaDanych({
       </div>
     </div>
   );
+}
+
+function numeryKotlowKlienta(klient: { numerKotla?: string; numeryKotlow?: unknown }) {
+  if (Array.isArray(klient.numeryKotlow)) {
+    const lista = klient.numeryKotlow
+      .filter((wartosc): wartosc is string => typeof wartosc === "string")
+      .map((wartosc) => wartosc.trim())
+      .slice(0, 5);
+    while (lista.length > 0 && lista[lista.length - 1] === "") {
+      lista.pop();
+    }
+    if (lista.length > 0) {
+      return lista;
+    }
+  }
+
+  const jeden = (klient.numerKotla || "").trim();
+  return jeden ? [jeden] : [];
 }
 
 export function ClientList({ opisPustej }: { opisPustej?: string }) {
@@ -366,6 +385,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
       ...klient,
       imie: pobierzImie(klient),
       nazwisko: pobierzNazwisko(klient),
+      numeryKotlow: numeryKotlowKlienta(klient).length > 0 ? numeryKotlowKlienta(klient) : [""],
     });
     setBlad(null);
   };
@@ -391,6 +411,13 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
       const imieTrim = formEdycji.imie?.trim() || "";
       const nazwiskoTrim = formEdycji.nazwisko?.trim() || "";
 
+      const numeryKotlow = (formEdycji.numeryKotlow || [formEdycji.numerKotla || ""])
+        .map((numer) => numer.trim())
+        .slice(0, 5);
+      while (numeryKotlow.length > 0 && numeryKotlow[numeryKotlow.length - 1] === "") {
+        numeryKotlow.pop();
+      }
+
       await updateDoc(docRef, {
         imie: imieTrim,
         nazwisko: nazwiskoTrim,
@@ -399,7 +426,8 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
         email: formEdycji.email?.trim() || "",
         adres: formEdycji.adres?.trim() || "",
         dataOstatniegoPrzegladu: formEdycji.dataOstatniegoPrzegladu || "",
-        numerKotla: formEdycji.numerKotla?.trim() || "",
+        numeryKotlow,
+        numerKotla: numeryKotlow.find((numer) => numer !== "") || "",
       });
       setEdytowanyId(null);
       setFormEdycji(null);
@@ -437,7 +465,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
       calosc.includes(q) ||
       (k.telefon || "").toLowerCase().includes(q) ||
       (k.adres || "").toLowerCase().includes(q) ||
-      (k.numerKotla || "").toLowerCase().includes(q)
+      numeryKotlowKlienta(k).some((numer) => numer.toLowerCase().includes(q))
     );
   });
 
@@ -556,19 +584,23 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                     />
                   </div>
 
-                  <div>
-                    <label className="text-xs font-semibold uppercase text-gray-500">
-                      Numer kotła
-                    </label>
-                    <input
-                      type="text"
-                      value={formEdycji.numerKotla || ""}
-                      onChange={(e) =>
-                        setFormEdycji({ ...formEdycji, numerKotla: e.target.value })
-                      }
-                      className="mt-1 w-full rounded-lg border border-gray-200 bg-white p-2 text-sm text-gray-900 outline-none focus:border-gray-400"
-                    />
-                  </div>
+                  {(formEdycji.numeryKotlow || [formEdycji.numerKotla || ""]).map((numer, indeks) => (
+                    <div key={indeks}>
+                      <label className="text-xs font-semibold uppercase text-gray-500">
+                        Numer kotła {indeks + 1}
+                      </label>
+                      <input
+                        type="text"
+                        value={numer}
+                        onChange={(e) => {
+                          const numeryKotlow = [...(formEdycji.numeryKotlow || [formEdycji.numerKotla || ""])];
+                          numeryKotlow[indeks] = e.target.value;
+                          setFormEdycji({ ...formEdycji, numeryKotlow });
+                        }}
+                        className="mt-1 w-full rounded-lg border border-gray-200 bg-white p-2 text-sm text-gray-900 outline-none focus:border-gray-400"
+                      />
+                    </div>
+                  ))}
 
                   <div>
                     <label className="text-xs font-semibold uppercase text-gray-500">
@@ -668,7 +700,16 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                 <KomorkaDanych etykieta="Telefon" wartosc={klient.telefon} ikona={<Phone className="h-4 w-4" aria-hidden />} />
                 <KomorkaDanych etykieta="E-mail" wartosc={klient.email} ikona={<Mail className="h-4 w-4" aria-hidden />} />
                 <KomorkaDanych etykieta="Adres" wartosc={klient.adres} ikona={<MapPin className="h-4 w-4" aria-hidden />} />
-                <KomorkaDanych etykieta="Numer kotła" wartosc={klient.numerKotla} ikona={<Flame className="h-4 w-4" aria-hidden />} />
+                {numeryKotlowKlienta(klient).map((numer, indeks) =>
+                  numer ? (
+                    <KomorkaDanych
+                      key={`${klient.id}-kociol-${indeks}`}
+                      etykieta={`Numer kotła ${indeks + 1}`}
+                      wartosc={numer}
+                      ikona={<Flame className="h-4 w-4" aria-hidden />}
+                    />
+                  ) : null,
+                )}
                 <KomorkaDanych
                   etykieta="Data ostatniego przeglądu"
                   wartosc={klient.dataOstatniegoPrzegladu}
