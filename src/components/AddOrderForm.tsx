@@ -22,6 +22,9 @@ export function AddOrderForm() {
 
   // Rozdzielone imię i nazwisko nowego klienta
   const [nowyKlient, setNowyKlient] = useState({
+    rodzaj: "prywatna" as "prywatna" | "firma",
+    nazwaFirmy: "",
+    nip: "",
     imie: "",
     nazwisko: "",
     telefon: "",
@@ -99,6 +102,9 @@ export function AddOrderForm() {
         }
 
         const klientRef = await addDoc(collection(db, KOLEKCJE.klienci), {
+          rodzajKlienta: nowyKlient.rodzaj,
+          nazwaFirmy: nowyKlient.rodzaj === "firma" ? nowyKlient.nazwaFirmy.trim() : "",
+          nip: nowyKlient.rodzaj === "firma" ? nowyKlient.nip.replace(/\s/g, "") : "",
           imie: imieTrim,
           nazwisko: nazwiskoTrim,
           imieNazwisko: `${imieTrim} ${nazwiskoTrim}`.trim(),
@@ -141,7 +147,7 @@ export function AddOrderForm() {
 
       setOpisZlecenia("");
       setTerminRealizacji("");
-      setNowyKlient({ imie: "", nazwisko: "", telefon: "", adres: "", email: "", numerKotla: "" });
+      setNowyKlient({ rodzaj: "prywatna", nazwaFirmy: "", nip: "", imie: "", nazwisko: "", telefon: "", adres: "", email: "", numerKotla: "" });
       setSukces("Zlecenie zostało pomyślnie dodane!");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Wystąpił błąd zapisu.";
@@ -207,7 +213,51 @@ export function AddOrderForm() {
       ) : (
         <div className="rounded-lg border border-stone-200 bg-stone-50/50 p-4 space-y-3">
           <span className="text-xs font-bold uppercase tracking-wider text-amber-700">Dane nowego klienta</span>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setNowyKlient({ ...nowyKlient, rodzaj: "prywatna", nazwaFirmy: "", nip: "" })}
+              className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition ${
+                nowyKlient.rodzaj !== "firma" ? "bg-amber-500 text-stone-950" : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+              }`}
+            >
+              Osoba prywatna
+            </button>
+            <button
+              type="button"
+              onClick={() => setNowyKlient({ ...nowyKlient, rodzaj: "firma" })}
+              className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition ${
+                nowyKlient.rodzaj === "firma" ? "bg-amber-500 text-stone-950" : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+              }`}
+            >
+              Firma
+            </button>
+          </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {nowyKlient.rodzaj === "firma" ? (
+              <>
+                <div>
+                  <label className="block text-xs font-medium text-stone-700">Nazwa firmy</label>
+                  <input
+                    type="text"
+                    value={nowyKlient.nazwaFirmy}
+                    onChange={(e) => setNowyKlient({ ...nowyKlient, nazwaFirmy: e.target.value })}
+                    className="mt-1 w-full rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm outline-none focus:border-amber-400"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-stone-700">NIP</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={nowyKlient.nip}
+                    onChange={(e) => setNowyKlient({ ...nowyKlient, nip: e.target.value })}
+                    placeholder="10 cyfr"
+                    className="mt-1 w-full rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm outline-none focus:border-amber-400"
+                  />
+                </div>
+              </>
+            ) : null}
             <div>
               <label className="block text-xs font-medium text-stone-700">Imię *</label>
               <input

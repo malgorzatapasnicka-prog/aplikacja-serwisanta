@@ -8,7 +8,12 @@ import { getDb } from "@/lib/firebase";
 
 const MAKS_KOTLOW = 5;
 
+type RodzajKlienta = "prywatna" | "firma";
+
 type FormularzKlienta = {
+  rodzaj: RodzajKlienta;
+  nazwaFirmy: string;
+  nip: string;
   imie: string;
   nazwisko: string;
   telefon: string;
@@ -18,9 +23,12 @@ type FormularzKlienta = {
   numeryKotlow: string[];
 };
 
-type PoleTekstowe = Exclude<keyof FormularzKlienta, "numeryKotlow">;
+type PoleTekstowe = Exclude<keyof FormularzKlienta, "numeryKotlow" | "rodzaj">;
 
 const PUSTY_FORMULARZ: FormularzKlienta = {
+  rodzaj: "prywatna",
+  nazwaFirmy: "",
+  nip: "",
   imie: "",
   nazwisko: "",
   telefon: "",
@@ -44,6 +52,9 @@ const POLA: {
   { name: "dataOstatniegoPrzegladu", label: "Data ostatniego przeglądu", type: "date" },
 ];
 
+const klasaPola =
+  "mt-1.5 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-900 outline-none focus:border-gray-400";
+
 function komunikatBledu(error: unknown): string {
   if (error instanceof FirebaseError && error.code === "permission-denied") {
     return "Firestore odrzuciło zapis. W regułach kolekcji klienci zezwól na dodawanie dokumentów.";
@@ -64,6 +75,16 @@ export function AddClientForm() {
 
   function zmienPole(name: PoleTekstowe, value: string) {
     setFormularz((aktualny) => ({ ...aktualny, [name]: value }));
+    setSukces("");
+  }
+
+  function zmienRodzaj(rodzaj: RodzajKlienta) {
+    setFormularz((aktualny) => ({
+      ...aktualny,
+      rodzaj,
+      nazwaFirmy: rodzaj === "firma" ? aktualny.nazwaFirmy : "",
+      nip: rodzaj === "firma" ? aktualny.nip : "",
+    }));
     setSukces("");
   }
 
@@ -110,15 +131,18 @@ export function AddClientForm() {
     try {
       const imieTrim = formularz.imie.trim();
       const nazwiskoTrim = formularz.nazwisko.trim();
+      const firma = formularz.rodzaj === "firma";
       const numeryKotlow = formularz.numeryKotlow.map((numer) => numer.trim()).slice(0, MAKS_KOTLOW);
       while (numeryKotlow.length > 0 && numeryKotlow[numeryKotlow.length - 1] === "") {
         numeryKotlow.pop();
       }
 
       await addDoc(collection(db, KOLEKCJE.klienci), {
+        rodzajKlienta: formularz.rodzaj,
+        nazwaFirmy: firma ? formularz.nazwaFirmy.trim() : "",
+        nip: firma ? formularz.nip.replace(/\s/g, "") : "",
         imie: imieTrim,
         nazwisko: nazwiskoTrim,
-        // zapisujemy również imieNazwisko dla zgodności ze starszymi widokami
         imieNazwisko: `${imieTrim} ${nazwiskoTrim}`.trim(),
         telefon: formularz.telefon.trim(),
         email: formularz.email.trim(),
@@ -138,12 +162,60 @@ export function AddClientForm() {
   }
 
   return (
-    <form
-      onSubmit={zapiszKlienta}
-      className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm"
-    >
+    <form onSubmit={zapiszKlienta} className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
       <h2 className="text-base font-semibold text-gray-900">Nowy klient</h2>
+      <fieldset className="mt-4">
+        <legend className="text-xs font-semibold uppercase text-gray-500">Rodzaj klienta</legend>
+        <div className="mt-2 grid gap-3 sm:grid-cols-2">
+          <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-900">
+            <input
+              type="radio"
+              name="rodzajKlienta"
+              checked={formularz.rodzaj === "prywatna"}
+              onChange={() => zmienRodzaj("prywatna")}
+            />
+            Osoba prywatna
+          </label>
+          <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-900">
+            <input
+              type="radio"
+              name="rodzajKlienta"
+              checked={formularz.rodzaj === "firma"}
+              onChange={() => zmienRodzaj("firma")}
+            />
+            Firma
+          </label>
+        </div>
+      </fieldset>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        {formularz.rodzaj === "firma" ? (
+          <>
+            <label className="block text-xs font-semibold uppercase text-gray-500">
+              Nazwa firmy
+              <input
+                name="nazwaFirmy"
+                type="text"
+                autoComplete="organization"
+                value={formularz.nazwaFirmy}
+                onChange={(event) => zmienPole("nazwaFirmy", event.target.value)}
+                className={klasaPola}
+              />
+            </label>
+            <label className="block text-xs font-semibold uppercase text-gray-500">
+              NIP
+              <input
+                name="nip"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                value={formularz.nip}
+                onChange={(event) => zmienPole("nip", event.target.value)}
+                placeholder="10 cyfr"
+                className={klasaPola}
+              />
+            </label>
+          </>
+        ) : null}
         {POLA.map((pole) => (
           <label key={pole.name} className="block text-xs font-semibold uppercase text-gray-500">
             {pole.label}
@@ -153,7 +225,7 @@ export function AddClientForm() {
               autoComplete={pole.autoComplete}
               value={formularz[pole.name]}
               onChange={(event) => zmienPole(pole.name, event.target.value)}
-              className="mt-1.5 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-900 outline-none focus:border-gray-400"
+              className={klasaPola}
             />
           </label>
         ))}
@@ -176,7 +248,7 @@ export function AddClientForm() {
               type="text"
               value={numer}
               onChange={(event) => zmienKociol(indeks, event.target.value)}
-              className="mt-1.5 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-900 outline-none focus:border-gray-400"
+              className={klasaPola}
             />
           </label>
         ))}

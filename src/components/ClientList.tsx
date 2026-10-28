@@ -56,6 +56,9 @@ type KlientDokument = {
   numerKotla?: string;
   numeryKotlow?: string[];
   nazwaKotla?: string;
+  rodzajKlienta?: "prywatna" | "firma";
+  nazwaFirmy?: string;
+  nip?: string;
   protokoly?: Protokol[];
 };
 
@@ -173,6 +176,9 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
 
     const naglowki = [
       "ID",
+      "Rodzaj",
+      "Nazwa firmy",
+      "NIP",
       "Imię",
       "Nazwisko",
       "Telefon",
@@ -184,6 +190,9 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
 
     const wiersze = klienci.map((k) => [
       `"${(k.id || "").replace(/"/g, '""')}"`,
+      `"${(k.rodzajKlienta === "firma" ? "Firma" : "Osoba prywatna").replace(/"/g, '""')}"`,
+      `"${(k.nazwaFirmy || "").replace(/"/g, '""')}"`,
+      `"${(k.nip || "").replace(/"/g, '""')}"`,
       `"${pobierzImie(k).replace(/"/g, '""')}"`,
       `"${pobierzNazwisko(k).replace(/"/g, '""')}"`,
       `"${(k.telefon || "").replace(/"/g, '""')}"`,
@@ -419,6 +428,9 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
       }
 
       await updateDoc(docRef, {
+        rodzajKlienta: formEdycji.rodzajKlienta === "firma" ? "firma" : "prywatna",
+        nazwaFirmy: formEdycji.rodzajKlienta === "firma" ? formEdycji.nazwaFirmy?.trim() || "" : "",
+        nip: formEdycji.rodzajKlienta === "firma" ? (formEdycji.nip || "").replace(/\s/g, "") : "",
         imie: imieTrim,
         nazwisko: nazwiskoTrim,
         imieNazwisko: `${imieTrim} ${nazwiskoTrim}`.trim(),
@@ -465,6 +477,8 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
       calosc.includes(q) ||
       (k.telefon || "").toLowerCase().includes(q) ||
       (k.adres || "").toLowerCase().includes(q) ||
+      (k.nazwaFirmy || "").toLowerCase().includes(q) ||
+      (k.nip || "").toLowerCase().includes(q) ||
       numeryKotlowKlienta(k).some((numer) => numer.toLowerCase().includes(q))
     );
   });
@@ -514,6 +528,55 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                 </div>
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
+                  <div className="sm:col-span-2">
+                    <span className="text-xs font-semibold uppercase text-gray-500">Rodzaj klienta</span>
+                    <div className="mt-1 flex flex-wrap gap-3">
+                      <label className="flex min-h-11 items-center gap-2 text-sm text-gray-900">
+                        <input
+                          type="radio"
+                          name="rodzajEdycji"
+                          checked={formEdycji.rodzajKlienta !== "firma"}
+                          onChange={() =>
+                            setFormEdycji({ ...formEdycji, rodzajKlienta: "prywatna", nazwaFirmy: "", nip: "" })
+                          }
+                        />
+                        Osoba prywatna
+                      </label>
+                      <label className="flex min-h-11 items-center gap-2 text-sm text-gray-900">
+                        <input
+                          type="radio"
+                          name="rodzajEdycji"
+                          checked={formEdycji.rodzajKlienta === "firma"}
+                          onChange={() => setFormEdycji({ ...formEdycji, rodzajKlienta: "firma" })}
+                        />
+                        Firma
+                      </label>
+                    </div>
+                  </div>
+                  {formEdycji.rodzajKlienta === "firma" ? (
+                    <>
+                      <div>
+                        <label className="text-xs font-semibold uppercase text-gray-500">Nazwa firmy</label>
+                        <input
+                          type="text"
+                          value={formEdycji.nazwaFirmy || ""}
+                          onChange={(e) => setFormEdycji({ ...formEdycji, nazwaFirmy: e.target.value })}
+                          className="mt-1 w-full rounded-lg border border-gray-200 bg-white p-2 text-sm text-gray-900 outline-none focus:border-gray-400"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold uppercase text-gray-500">NIP</label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={formEdycji.nip || ""}
+                          onChange={(e) => setFormEdycji({ ...formEdycji, nip: e.target.value })}
+                          placeholder="10 cyfr"
+                          className="mt-1 w-full rounded-lg border border-gray-200 bg-white p-2 text-sm text-gray-900 outline-none focus:border-gray-400"
+                        />
+                      </div>
+                    </>
+                  ) : null}
                   <div>
                     <label className="text-xs font-semibold uppercase text-gray-500">
                       Imię
@@ -717,6 +780,8 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                 <KomorkaDanych etykieta="Telefon" wartosc={klient.telefon} ikona={<Phone className="h-4 w-4" aria-hidden />} />
                 <KomorkaDanych etykieta="E-mail" wartosc={klient.email} ikona={<Mail className="h-4 w-4" aria-hidden />} />
                 <KomorkaDanych etykieta="Adres" wartosc={klient.adres} ikona={<MapPin className="h-4 w-4" aria-hidden />} />
+                <KomorkaDanych etykieta="Nazwa firmy" wartosc={klient.nazwaFirmy} />
+                <KomorkaDanych etykieta="NIP" wartosc={klient.nip} />
                 {numeryKotlowKlienta(klient).map((numer, indeks) =>
                   numer ? (
                     <KomorkaDanych
