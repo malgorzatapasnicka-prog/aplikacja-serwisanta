@@ -303,7 +303,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
     }
   };
 
-  const handleWyslijEmail = async (klient: KlientDokument, protokolId: string, nazwaRaportu: string) => {
+  const handleWyslijEmail = async (klient: KlientDokument, protokolId: string) => {
     const db = getDb();
     if (!db) {
       return;
@@ -332,25 +332,6 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
     try {
       setWysylamEmailId(protokolId);
 
-      const res = await fetch("/api/protokol/pdf", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ klientId: klient.id, protokolId }),
-      });
-
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.blad || `Błąd pobierania (${res.status})`);
-      }
-
-      const bajty = new Uint8Array(await res.arrayBuffer());
-      let binarny = "";
-      for (let i = 0; i < bajty.length; i += 0x8000) {
-        binarny += String.fromCharCode(...bajty.subarray(i, i + 0x8000));
-      }
-
       const wysylka = await fetch("/api/send-report", {
         method: "POST",
         headers: {
@@ -358,8 +339,8 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
         },
         body: JSON.stringify({
           email: adres,
-          pdfBase64: btoa(binarny),
-          nazwaRaportu,
+          klientId: klient.id,
+          protokolId,
         }),
       });
 
@@ -802,7 +783,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                         alert("Najpierw zapisz raport z wizyty. Potem można wysłać go na e-mail.");
                         return;
                       }
-                      handleWyslijEmail(klient, ostatni.id, ostatni.nazwaRaportu);
+                      handleWyslijEmail(klient, ostatni.id);
                     }}
                     className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
                   >
@@ -895,7 +876,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                             type="button"
                             disabled={wysylamEmailId === protokol.id}
                             onClick={() =>
-                              handleWyslijEmail(klient, protokol.id, protokol.nazwaRaportu)
+                              handleWyslijEmail(klient, protokol.id)
                             }
                             className="inline-flex items-center gap-2 text-sm font-medium text-gray-900 hover:text-gray-700 disabled:opacity-50"
                           >
