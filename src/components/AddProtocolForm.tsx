@@ -47,6 +47,12 @@ type FormularzProtokolu = {
   uwagi: string;
 };
 
+const RECZNY_NUMER = "recznie";
+
+function numeryDoWyboru(numery: string[], zapisany: string) {
+  return [...new Set([...numery, zapisany].map((numer) => numer.trim()).filter(Boolean))];
+}
+
 const klasaPola =
   "mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-normal text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200";
 
@@ -239,6 +245,10 @@ export function AddProtocolForm({
   numeryProtokolow = [],
   onClose,
 }: AddProtocolFormProps) {
+  const kotlyKlienta = numeryDoWyboru(numeryKotlow, numerKotla);
+  const [numerRecznie, setNumerRecznie] = useState(
+    () => Boolean(numerKotla.trim()) && !numeryKotlow.map((numer) => numer.trim()).includes(numerKotla.trim()),
+  );
   const [formularz, setFormularz] = useState<FormularzProtokolu>({
     nazwaRaportu: "",
     dataPrzegladu: dzis(),
@@ -548,20 +558,46 @@ export function AddProtocolForm({
           </Pole>
 
           <Pole etykieta="Numer kotła">
-            <input
-              list="lista-kotlow-podpowiedz"
-              value={formularz.numerKotla}
-              onChange={(event) => zmienPole("numerKotla", event.target.value)}
-              className={klasaPola}
-              placeholder="Wpisz lub wybierz"
-            />
-            {numeryKotlow.length > 0 && (
-              <datalist id="lista-kotlow-podpowiedz">
-                {numeryKotlow.map((nr) => (
-                  <option key={nr} value={nr} />
+            {kotlyKlienta.length > 0 ? (
+              <select
+                value={
+                  numerRecznie || (formularz.numerKotla !== "" && !kotlyKlienta.includes(formularz.numerKotla))
+                    ? RECZNY_NUMER
+                    : formularz.numerKotla
+                }
+                onChange={(event) => {
+                  const wybrany = event.target.value;
+                  if (wybrany === RECZNY_NUMER) {
+                    setNumerRecznie(true);
+                    if (kotlyKlienta.includes(formularz.numerKotla)) {
+                      zmienPole("numerKotla", "");
+                    }
+                    return;
+                  }
+                  setNumerRecznie(false);
+                  zmienPole("numerKotla", wybrany);
+                }}
+                className={klasaPola}
+              >
+                <option value="">Wybierz numer kotła...</option>
+                {kotlyKlienta.map((nr) => (
+                  <option key={nr} value={nr}>
+                    {nr}
+                  </option>
                 ))}
-              </datalist>
-            )}
+                <option value={RECZNY_NUMER}>Inny / wpisz ręcznie</option>
+              </select>
+            ) : null}
+            {kotlyKlienta.length === 0 ||
+            numerRecznie ||
+            (formularz.numerKotla !== "" && !kotlyKlienta.includes(formularz.numerKotla)) ? (
+              <input
+                value={formularz.numerKotla}
+                onChange={(event) => zmienPole("numerKotla", event.target.value)}
+                className={kotlyKlienta.length > 0 ? `${klasaPola} mt-2` : klasaPola}
+                placeholder="Wpisz numer kotła"
+              />
+            ) : null}
           </Pole>
 
           <Pole etykieta="Moc nominalna">

@@ -822,6 +822,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
             protokolKlient
           )}`.trim()}
           numerKotla={protokolKlient.numerKotla}
+          numeryKotlow={numeryKotlowKlienta(protokolKlient)}
           nazwaKotla={protokolKlient.nazwaKotla}
           numeryProtokolow={klienci.flatMap((klient) =>
             (klient.protokoly ?? []).map((protokol) => protokol.numerProtokolu ?? ""),
