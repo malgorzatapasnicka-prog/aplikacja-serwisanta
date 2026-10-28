@@ -59,8 +59,27 @@ type KlientDokument = {
   rodzajKlienta?: "prywatna" | "firma";
   nazwaFirmy?: string;
   nip?: string;
+  utworzono?: unknown;
   protokoly?: Protokol[];
 };
+
+type SortowanieKlientow = "data-desc" | "data-asc" | "nazwisko-asc" | "nazwisko-desc";
+
+function millisUtworzenia(wartosc: unknown): number {
+  if (wartosc == null) return 0;
+  if (typeof wartosc === "number" && Number.isFinite(wartosc)) return wartosc;
+  if (wartosc instanceof Date) return wartosc.getTime();
+  if (typeof wartosc === "string") {
+    const czas = Date.parse(wartosc);
+    return Number.isNaN(czas) ? 0 : czas;
+  }
+  if (typeof wartosc === "object") {
+    const znacznik = wartosc as { toMillis?: () => number; seconds?: number };
+    if (typeof znacznik.toMillis === "function") return znacznik.toMillis();
+    if (typeof znacznik.seconds === "number") return znacznik.seconds * 1000;
+  }
+  return 0;
+}
 
 function KomorkaDanych({
   etykieta,
@@ -106,6 +125,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
   const [klienci, setKlienci] = useState<KlientDokument[]>([]);
   const [laduje, setLaduje] = useState(true);
   const [szukaj, setSzukaj] = useState("");
+  const [sortowanie, setSortowanie] = useState<SortowanieKlientow>("data-desc");
 
   // Stan edycji klienta
   const [edytowanyId, setEdytowanyId] = useState<string | null>(null);
@@ -167,6 +187,29 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
     return "";
   };
 
+  const kluczAlfabetyczny = (k: KlientDokument) =>
+    pobierzNazwisko(k).trim() || (k.nazwaFirmy || "").trim();
+
+  const posortujKlientow = (lista: KlientDokument[]) =>
+    [...lista].sort((a, b) => {
+      if (sortowanie === "nazwisko-asc" || sortowanie === "nazwisko-desc") {
+        const kluczA = kluczAlfabetyczny(a);
+        const kluczB = kluczAlfabetyczny(b);
+        if (kluczA === "" || kluczB === "") {
+          if (kluczA === "" && kluczB === "") return a.id.localeCompare(b.id);
+          return kluczA === "" ? 1 : -1;
+        }
+        const wynik = kluczA.localeCompare(kluczB, "pl", { sensitivity: "base" });
+        if (wynik !== 0) return sortowanie === "nazwisko-desc" ? -wynik : wynik;
+        const imiona = pobierzImie(a).localeCompare(pobierzImie(b), "pl", { sensitivity: "base" });
+        return imiona !== 0 ? imiona : a.id.localeCompare(b.id);
+      }
+
+      const roznica = millisUtworzenia(a.utworzono) - millisUtworzenia(b.utworzono);
+      if (roznica !== 0) return sortowanie === "data-asc" ? roznica : -roznica;
+      return a.id.localeCompare(b.id);
+    });
+
   // Eksport bazy do CSV z UTF-8 BOM
   const handleEksportCSV = () => {
     if (klienci.length === 0) {
@@ -188,7 +231,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
       "Data ostatniego przeglądu",
     ];
 
-    const wiersze = klienci.map((k) => [
+    const wiersze = posortujKlientow(klienci).map((k) => [
       `"${(k.id || "").replace(/"/g, '""')}"`,
       `"${(k.rodzajKlienta === "firma" ? "Firma" : "Osoba prywatna").replace(/"/g, '""')}"`,
       `"${(k.nazwaFirmy || "").replace(/"/g, '""')}"`,
@@ -467,7 +510,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
     );
   }
 
-  const przefiltrowani = klienci.filter((k) => {
+  const przefiltrowani = posortujKlientow(klienci).filter((k) => {
     const q = szukaj.toLowerCase();
     const imie = pobierzImie(k).toLowerCase();
     const nazwisko = pobierzNazwisko(k).toLowerCase();
@@ -494,6 +537,17 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
           placeholder="Szukaj klienta (imię, nazwisko, telefon, adres, numer kotła)..."
           className="flex-1 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm outline-none transition focus:border-gray-400"
         />
+        <select
+          value={sortowanie}
+          onChange={(e) => setSortowanie(e.target.value as SortowanieKlientow)}
+          aria-label="Sortowanie klientów"
+          className="rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-900 shadow-sm outline-none transition focus:border-gray-400"
+        >
+          <option value="data-desc">Data dodania: najnowsi</option>
+          <option value="data-asc">Data dodania: najstarsi</option>
+          <option value="nazwisko-asc">Nazwisko: A–Z</option>
+          <option value="nazwisko-desc">Nazwisko: Z–A</option>
+        </select>
         <button
           type="button"
           onClick={handleEksportCSV}
