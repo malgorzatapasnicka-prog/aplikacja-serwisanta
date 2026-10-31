@@ -1,10 +1,11 @@
 "use client";
 
 import { FirebaseError } from "firebase/app";
-import { arrayUnion, deleteDoc, doc, setDoc, updateDoc } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore";
+import { getDownloadURL, getStorage, ref, uploadString } from "firebase/storage";
 import { ChangeEvent, FormEvent, useEffect, useState, type ReactNode } from "react";
 import { KOLEKCJE } from "@/lib/collections";
-import { getDb } from "@/lib/firebase";
+import { getDb, getFirebaseApp } from "@/lib/firebase";
 import { zapiszKopieProtokoluNaTelefonie } from "@/lib/kopiaProtokolu";
 import { nastepnyNumerProtokolu } from "@/lib/widokProtokolu";
 import { PodpisNaEkranie } from "@/components/PodpisNaEkranie";
@@ -79,6 +80,21 @@ type ZdjecieFormularza = {
 };
 
 const LIMIT_ZDJECIA = 10;
+
+async function zapiszPlikWStorage(klientId: string, protokolId: string, nazwa: string, dataUrl: string) {
+  if (!dataUrl.startsWith("data:")) {
+    return dataUrl;
+  }
+
+  const app = getFirebaseApp();
+  if (!app) {
+    throw new Error("Firebase nie jest skonfigurowany.");
+  }
+
+  const plik = ref(getStorage(app), `klienci/${klientId}/protokoly/${protokolId}/${nazwa}`);
+  await uploadString(plik, dataUrl, "data_url");
+  return getDownloadURL(plik);
+}
 
 function rysujNaPlotnie(zrodlo: CanvasImageSource, szerokoscZrodla: number, wysokoscZrodla: number) {
   const maks = 900;
@@ -429,51 +445,55 @@ export function AddProtocolForm({
     const protokolId = crypto.randomUUID();
 
     try {
-      if (zalacznikPdf) {
-        await setDoc(doc(db, KOLEKCJE.zalacznikiProtokolu, protokolId), {
-          klientId,
-          pdf: zalacznikPdf,
-        });
+      const wybraneZdjecia = zdjecia.slice(0, LIMIT_ZDJECIA);
+      const adresyZdjec: string[] = [];
+      for (let indeks = 0; indeks < wybraneZdjecia.length; indeks += 1) {
+        adresyZdjec.push(
+          await zapiszPlikWStorage(klientId, protokolId, `zdjecie-${indeks + 1}`, wybraneZdjecia[indeks].src),
+        );
       }
-      await updateDoc(doc(db, KOLEKCJE.klienci, klientId), {
-        protokoly: arrayUnion({
-          id: protokolId,
-          nazwaRaportu: formularz.nazwaRaportu.trim(),
-          czynnosci: formularz.czynnosci,
-          status: formularz.status.trim(),
-          typKotla: model,
-          mocNominalna: formularz.mocNominalna.trim(),
-          sterownik: formularz.sterownik.trim(),
-          numerSeryjny: numer,
-          grzanie: temperatura,
-          maksymalnaTemperaturaZasilania: formularz.maksymalnaTemperaturaZasilania.trim(),
-          dataWypelnienia: formularz.dataPrzegladu,
-          numerProtokolu,
-          modelKotla: model,
-          numerKotla: numer,
-          zadanaTemperaturaGrzania: temperatura,
-          szczelnoscGazowa: formularz.wynikSzczelnosci === "pozytywny",
-          wynikSzczelnosci: formularz.wynikSzczelnosci,
-          cisnienieCO: formularz.cisnienieCONieDotyczy ? "" : formularz.cisnienieCO.trim(),
-          cisnienieCONieDotyczy: formularz.cisnienieCONieDotyczy,
-          zaworKociol: formularz.wynikSzczelnosci === "pozytywny",
-          wynikLancucha: formularz.wynikLancucha,
-          cisnienieNaczynia: formularz.cisnienieNaczyniaNieDotyczy ? "" : formularz.cisnienieNaczynia.trim(),
-          cisnienieNaczyniaNieDotyczy: formularz.cisnienieNaczyniaNieDotyczy,
-          czyszczenieWymiennika: zapisCzynnosci(formularz.czyszczenieWymiennika),
-          czyszczeniePalnika: zapisCzynnosci(formularz.czyszczeniePalnika),
-          sprawdzenieSyfonu: zapisCzynnosci(formularz.sprawdzenieSyfonu),
-          inneCzynnosci: formularz.inneNieDotyczy ? "" : formularz.inneCzynnosci.trim(),
-          inneNieDotyczy: formularz.inneNieDotyczy,
-          dataKolejnegoPrzegladu: formularz.kolejnyPrzegladNieDotyczy ? "" : formularz.dataKolejnegoPrzegladu,
-          kolejnyPrzegladNieDotyczy: formularz.kolejnyPrzegladNieDotyczy,
-          uwagi: formularz.uwagi.trim(),
-          zdjecia: zdjecia.slice(0, LIMIT_ZDJECIA).map((zdjecie) => zdjecie.src),
-          podpisyZdjec: zdjecia.slice(0, LIMIT_ZDJECIA).map((zdjecie) => zdjecie.podpis.trim()),
-          ...(podpisKlienta ? { podpisKlienta } : {}),
-          ...(podpisSerwisanta ? { podpisSerwisanta } : {}),
-          maZalacznikPdf: Boolean(zalacznikPdf),
-        }),
+      const adresPdf = zalacznikPdf.startsWith("data:application/pdf")
+        ? await zapiszPlikWStorage(klientId, protokolId, "zalacznik.pdf", zalacznikPdf)
+        : "";
+
+      await setDoc(doc(db, KOLEKCJE.klienci, klientId, "protokoly", protokolId), {
+        id: protokolId,
+        nazwaRaportu: formularz.nazwaRaportu.trim(),
+        czynnosci: formularz.czynnosci,
+        status: formularz.status.trim(),
+        typKotla: model,
+        mocNominalna: formularz.mocNominalna.trim(),
+        sterownik: formularz.sterownik.trim(),
+        numerSeryjny: numer,
+        grzanie: temperatura,
+        maksymalnaTemperaturaZasilania: formularz.maksymalnaTemperaturaZasilania.trim(),
+        dataWypelnienia: formularz.dataPrzegladu,
+        numerProtokolu,
+        modelKotla: model,
+        numerKotla: numer,
+        zadanaTemperaturaGrzania: temperatura,
+        szczelnoscGazowa: formularz.wynikSzczelnosci === "pozytywny",
+        wynikSzczelnosci: formularz.wynikSzczelnosci,
+        cisnienieCO: formularz.cisnienieCONieDotyczy ? "" : formularz.cisnienieCO.trim(),
+        cisnienieCONieDotyczy: formularz.cisnienieCONieDotyczy,
+        zaworKociol: formularz.wynikSzczelnosci === "pozytywny",
+        wynikLancucha: formularz.wynikLancucha,
+        cisnienieNaczynia: formularz.cisnienieNaczyniaNieDotyczy ? "" : formularz.cisnienieNaczynia.trim(),
+        cisnienieNaczyniaNieDotyczy: formularz.cisnienieNaczyniaNieDotyczy,
+        czyszczenieWymiennika: zapisCzynnosci(formularz.czyszczenieWymiennika),
+        czyszczeniePalnika: zapisCzynnosci(formularz.czyszczeniePalnika),
+        sprawdzenieSyfonu: zapisCzynnosci(formularz.sprawdzenieSyfonu),
+        inneCzynnosci: formularz.inneNieDotyczy ? "" : formularz.inneCzynnosci.trim(),
+        inneNieDotyczy: formularz.inneNieDotyczy,
+        dataKolejnegoPrzegladu: formularz.kolejnyPrzegladNieDotyczy ? "" : formularz.dataKolejnegoPrzegladu,
+        kolejnyPrzegladNieDotyczy: formularz.kolejnyPrzegladNieDotyczy,
+        uwagi: formularz.uwagi.trim(),
+        zdjecia: adresyZdjec,
+        podpisyZdjec: wybraneZdjecia.map((zdjecie) => zdjecie.podpis.trim()),
+        ...(podpisKlienta ? { podpisKlienta } : {}),
+        ...(podpisSerwisanta ? { podpisSerwisanta } : {}),
+        maZalacznikPdf: Boolean(adresPdf),
+        ...(adresPdf ? { zalacznikPdf: adresPdf } : {}),
       });
       if (navigator.onLine === false) {
         setZapisanoWAplikacji(true);
@@ -481,9 +501,6 @@ export function AddProtocolForm({
       }
       onClose();
     } catch (error) {
-      if (zalacznikPdf) {
-        await deleteDoc(doc(db, KOLEKCJE.zalacznikiProtokolu, protokolId)).catch(() => undefined);
-      }
       setBlad(komunikatBledu(error));
     } finally {
       setZapisuje(false);

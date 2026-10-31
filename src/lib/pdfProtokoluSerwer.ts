@@ -19,6 +19,21 @@ export class BladPdf extends Error {
   }
 }
 
+async function pobierzJakoDataUrl(adres: string) {
+  if (!/^https?:\/\//i.test(adres)) {
+    return adres;
+  }
+
+  const odpowiedz = await fetch(adres);
+  if (!odpowiedz.ok) {
+    return "";
+  }
+
+  const mime = odpowiedz.headers.get("content-type")?.split(";")[0]?.trim() || "application/octet-stream";
+  const bajty = Buffer.from(await odpowiedz.arrayBuffer());
+  return `data:${mime};base64,${bajty.toString("base64")}`;
+}
+
 export async function utworzPdfDlaProtokolu(klientId: string, protokolId: string) {
   if (!ID_DOKUMENTU.test(klientId) || !ID_DOKUMENTU.test(protokolId)) {
     throw new BladPdf("Brak danych protokołu.", 400);
@@ -35,16 +50,44 @@ export async function utworzPdfDlaProtokolu(klientId: string, protokolId: string
       throw new BladPdf("Nie znaleziono klienta.", 404);
     }
 
-    const dane = daneProtokoluZDokumentu(snapshot.data(), protokolId);
+    const klient = snapshot.data();
+    const protokolSnap = await getDoc(doc(db, KOLEKCJE.klienci, klientId, "protokoly", protokolId));
+    const tablica = Array.isArray(klient.protokoly) ? klient.protokoly : [];
+    const zPodkolekcji = protokolSnap.exists() ? [{ id: protokolSnap.id, ...protokolSnap.data() }] : [];
+    const dane = daneProtokoluZDokumentu(
+      {
+        ...klient,
+        protokoly: [
+          ...tablica.filter(
+            (pozycja) => !pozycja || typeof pozycja !== "object" || (pozycja as { id?: unknown }).id !== protokolId,
+          ),
+          ...zPodkolekcji,
+        ],
+      },
+      protokolId,
+    );
     if (!dane) {
       throw new BladPdf("Nie znaleziono protokołu.", 404);
+    }
+
+    if (dane.protokol.zdjecia) {
+      dane.protokol.zdjecia = (
+        await Promise.all(dane.protokol.zdjecia.map((adres) => pobierzJakoDataUrl(adres)))
+      ).filter((adres) => adres.startsWith("data:image/"));
     }
 
     let pdf = (await utworzPdfLatex(dane)) ?? utworzPdfProtokolu(dane);
     if (dane.protokol.maZalacznikPdf) {
       const zalacznik = await getDoc(doc(db, KOLEKCJE.zalacznikiProtokolu, protokolId));
-      const tresc = zalacznik.exists() ? zalacznik.data().pdf : "";
-      if (typeof tresc === "string" && tresc.startsWith("data:application/pdf")) {
+      const zeStaregoMiejsca = zalacznik.exists() ? zalacznik.data().pdf : "";
+      const adresNowy = protokolSnap.exists() ? protokolSnap.data().zalacznikPdf : "";
+      const tresc =
+        typeof zeStaregoMiejsca === "string" && zeStaregoMiejsca.startsWith("data:application/pdf")
+          ? zeStaregoMiejsca
+          : typeof adresNowy === "string"
+            ? await pobierzJakoDataUrl(adresNowy)
+            : "";
+      if (tresc.startsWith("data:application/pdf")) {
         pdf = await dolaczZalacznikPdf(pdf, tresc);
       }
     }

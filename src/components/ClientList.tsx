@@ -19,6 +19,7 @@ import {
   collection,
   deleteDoc,
   doc,
+  getDocs,
   onSnapshot,
   orderBy,
   query,
@@ -26,6 +27,7 @@ import {
 } from "firebase/firestore";
 import { KOLEKCJE } from "@/lib/collections";
 import { getDb } from "@/lib/firebase";
+import { protokolyZDokumentu } from "@/lib/klientDokument";
 import { AddProtocolForm } from "@/components/AddProtocolForm";
 
 type Protokol = {
@@ -135,6 +137,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
 
   // Stan modala protokołu oraz pobierania PDF
   const [protokolKlient, setProtokolKlient] = useState<KlientDokument | null>(null);
+  const [protokolyZPodkolekcji, setProtokolyZPodkolekcji] = useState<Record<string, Protokol[]>>({});
   const [pobieramPdfId, setPobieramPdfId] = useState<string | null>(null);
   const [wysylamEmailId, setWysylamEmailId] = useState<string | null>(null);
 
@@ -168,6 +171,42 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
 
     return () => unsubscribe();
   }, []);
+
+  const idKlientow = klienci.map((klient) => klient.id).sort().join("|");
+
+  useEffect(() => {
+    const db = getDb();
+    const ids = idKlientow ? idKlientow.split("|") : [];
+    if (!db || ids.length === 0) {
+      return;
+    }
+
+    const wypisania = ids.map((klientId) =>
+      onSnapshot(
+        query(collection(db, KOLEKCJE.klienci, klientId, "protokoly"), orderBy("dataWypelnienia")),
+        (snapshot) => {
+          const lista = protokolyZDokumentu(
+            snapshot.docs.map((dokument) => ({ id: dokument.id, ...dokument.data() })),
+          ) as Protokol[];
+          setProtokolyZPodkolekcji((aktualne) => ({ ...aktualne, [klientId]: lista }));
+        },
+        (err) => {
+          console.error("Błąd pobierania protokołów:", err);
+        },
+      ),
+    );
+
+    return () => {
+      wypisania.forEach((wypisz) => wypisz());
+    };
+  }, [idKlientow]);
+
+  function protokolyKlienta(klient: KlientDokument) {
+    const zTablicy = klient.protokoly ?? [];
+    const zPodkolekcji = protokolyZPodkolekcji[klient.id] ?? [];
+    const idZPodkolekcji = new Set(zPodkolekcji.map((protokol) => protokol.id));
+    return [...zTablicy.filter((protokol) => !idZPodkolekcji.has(protokol.id)), ...zPodkolekcji];
+  }
 
   const pobierzImie = (k: KlientDokument) => {
     if (k.imie && k.imie.trim() !== "") return k.imie;
@@ -369,13 +408,16 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
     if (!db) return;
 
     try {
-      await deleteDoc(doc(db, KOLEKCJE.klienci, id));
-      const protokoly = klienci.find((klient) => klient.id === id)?.protokoly ?? [];
-      await Promise.all(
-        protokoly.map((protokol) =>
+      const klient = klienci.find((pozycja) => pozycja.id === id);
+      const protokoly = klient ? protokolyKlienta(klient) : [];
+      const podkolekcja = await getDocs(collection(db, KOLEKCJE.klienci, id, "protokoly"));
+      await Promise.all([
+        ...podkolekcja.docs.map((dokument) => deleteDoc(dokument.ref).catch(() => undefined)),
+        ...protokoly.map((protokol) =>
           deleteDoc(doc(db, KOLEKCJE.zalacznikiProtokolu, protokol.id)).catch(() => undefined),
         ),
-      );
+      ]);
+      await deleteDoc(doc(db, KOLEKCJE.klienci, id));
     } catch (err) {
       console.error("Błąd podczas usuwania klienta:", err);
       alert("Nie udało się usunąć klienta. Sprawdź uprawnienia w Firestore.");
@@ -398,13 +440,12 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
 
     try {
       const klient = klienci.find((k) => k.id === klientId);
-      if (!klient || !klient.protokoly) return;
-
-      const zaktualizowaneProtokoly = klient.protokoly.filter((p) => p.id !== protokolId);
-
-      await updateDoc(doc(db, KOLEKCJE.klienci, klientId), {
-        protokoly: zaktualizowaneProtokoly,
-      });
+      await deleteDoc(doc(db, KOLEKCJE.klienci, klientId, "protokoly", protokolId)).catch(() => undefined);
+      if (klient?.protokoly?.some((protokol) => protokol.id === protokolId)) {
+        await updateDoc(doc(db, KOLEKCJE.klienci, klientId), {
+          protokoly: klient.protokoly.filter((protokol) => protokol.id !== protokolId),
+        });
+      }
       await deleteDoc(doc(db, KOLEKCJE.zalacznikiProtokolu, protokolId)).catch(() => undefined);
     } catch (err) {
       console.error("Błąd usuwania protokołu:", err);
@@ -545,6 +586,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
         {przefiltrowani.map((klient) => {
           const imie = pobierzImie(klient);
           const nazwisko = pobierzNazwisko(klient);
+          const protokoly = protokolyKlienta(klient);
           const pelnaNazwa = `${imie} ${nazwisko}`.trim() || "Klient bez nazwy";
           const czyEdytowany = edytowanyId === klient.id;
 
@@ -776,9 +818,9 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                   </button>
                   <button
                     type="button"
-                    disabled={wysylamEmailId !== null && wysylamEmailId === klient.protokoly?.[klient.protokoly.length - 1]?.id}
+                    disabled={wysylamEmailId !== null && wysylamEmailId === protokoly[protokoly.length - 1]?.id}
                     onClick={() => {
-                      const ostatni = klient.protokoly?.[klient.protokoly.length - 1];
+                      const ostatni = protokoly[protokoly.length - 1];
                       if (!ostatni) {
                         alert("Najpierw zapisz raport z wizyty. Potem można wysłać go na e-mail.");
                         return;
@@ -835,13 +877,13 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
               </div>
 
               {/* Lista wystawionych raportów z wizyty / protokołów */}
-              {klient.protokoly && klient.protokoly.length > 0 && (
+              {protokoly.length > 0 && (
                 <div className="mt-5">
                   <span className="text-xs font-semibold uppercase text-gray-500">
-                    Wystawione protokoły ({klient.protokoly.length}):
+                    Wystawione protokoły ({protokoly.length}):
                   </span>
                   <div className="mt-3 space-y-3">
-                    {klient.protokoly.map((protokol) => (
+                    {protokoly.map((protokol) => (
                       <div
                         key={protokol.id}
                         className="flex flex-wrap items-center justify-between gap-2 text-sm"
@@ -925,7 +967,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
           numeryKotlow={numeryKotlowKlienta(protokolKlient)}
           nazwaKotla={protokolKlient.nazwaKotla}
           numeryProtokolow={klienci.flatMap((klient) =>
-            (klient.protokoly ?? []).map((protokol) => protokol.numerProtokolu ?? ""),
+            protokolyKlienta(klient).map((protokol) => protokol.numerProtokolu ?? ""),
           )}
           onClose={() => setProtokolKlient(null)}
         />

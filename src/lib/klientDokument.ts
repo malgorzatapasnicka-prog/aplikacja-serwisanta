@@ -15,7 +15,10 @@ function zdjeciaZDokumentu(wartosc: unknown) {
     return [];
   }
   return wartosc
-    .filter((pozycja): pozycja is string => typeof pozycja === "string" && pozycja.startsWith("data:image/"))
+    .filter(
+      (pozycja): pozycja is string =>
+        typeof pozycja === "string" && (pozycja.startsWith("data:image/") || /^https?:\/\//i.test(pozycja)),
+    )
     .slice(0, 10);
 }
 
