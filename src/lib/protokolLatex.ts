@@ -153,10 +153,6 @@ export function trescLatex(
   ]
     .filter(Boolean)
     .join("\n\\vspace{0.25cm}\n");
-  const blokPomiarow =
-    widok.pomiary.length > 0
-      ? tabelaPol(widok.pomiary.map(([etykieta, wartosc]) => [etykieta, pole(wartosc)]))
-      : "";
   const blokChecklisty = widok.checklista
     .map(
       (grupa) => `\\textbf{${tex(grupa.tytul)}}
@@ -267,7 +263,6 @@ ${pozycjeListy.join("\n")}
 ${sekcja("1. Identyfikacja i ustawienia urządzenia", tabelaPol(identyfikacja))}
 ${blokUrzadzenia ? sekcja("Urządzenie", blokUrzadzenia) : ""}
 ${sekcja("2. Test bezpieczeństwa i szczelności", tabelaPol(bezpieczenstwo))}
-${blokPomiarow ? sekcja("Pomiary", blokPomiarow) : ""}
 ${sekcja("3. Lista kontrolna wykonanych czynności", listaCzynnosci)}
 ${blokChecklisty ? sekcja("Checklista czynności serwisowych", blokChecklisty) : ""}
 ${sekcja("4. Uwagi serwisanta i zdiagnozowane usterki", uwagi)}

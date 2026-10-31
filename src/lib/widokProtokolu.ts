@@ -198,13 +198,7 @@ export function widokProtokolu(dane: DaneProtokoluPdf): WidokProtokolu {
       ] as Array<[string, string | undefined]>
     ).filter((wiersz): wiersz is [string, string] => Boolean(wiersz[1]?.trim())),
     opisUslugi: (raport.opisUslugi ?? "").trim(),
-    pomiary: (
-      [
-        ["Ciśnienie gazu statycznego / na przyłączu", zJednostka(raport.cisnienieGazuStatyczne, "mbar")],
-        ["Ciśnienie wody w instalacji grzewczej", zJednostka(raport.cisnienieWodyGrzewczej, "bar")],
-        ["Ciśnienie wstępne w naczyniu wzbiorczym", zJednostka(raport.cisnienieWstepneNaczynia, "bar")],
-      ] as Array<[string, string]>
-    ).filter((wiersz) => wiersz[1].trim()),
+    cisnienieGazuStatyczne: zJednostka(raport.cisnienieGazuStatyczne, "mbar"),
     rozliczenie: [
       wierszKwot("Usługa", raport.uslugaNetto, raport.uslugaBrutto),
       wierszKwot("Dojazd", raport.dojazdNetto, raport.dojazdBrutto),

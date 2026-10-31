@@ -932,6 +932,13 @@ export function AddProtocolForm({
               Nie dotyczy
             </span>
           </Pole>
+          <Pole etykieta="Ciśnienie gazu statycznego / na przyłączu (mbar)" wymagane={false}>
+            <input
+              value={formularz.cisnienieGazuStatyczne}
+              onChange={(event) => zmienPole("cisnienieGazuStatyczne", event.target.value)}
+              className={klasaPola}
+            />
+          </Pole>
           {grupyChecklistyWProtokole.map((grupa) => (
             <div key={grupa.tytul} className="grid gap-2 rounded-lg border border-slate-200 p-3">
               <p className="text-sm font-semibold text-slate-800">{grupa.tytul}</p>
@@ -1057,21 +1064,6 @@ export function AddProtocolForm({
                 </Pole>
               </div>
             ))}
-          </div>
-        ) : null}
-
-        {zakladka === "pomiary" ? (
-          <div className="mt-5 grid gap-4 sm:grid-cols-2">
-            <h3 className="sm:col-span-2 text-sm font-semibold tracking-wide text-slate-900 uppercase">Pomiary</h3>
-            <Pole etykieta="Ciśnienie gazu statycznego / na przyłączu (mbar)" wymagane={false}>
-              <input value={formularz.cisnienieGazuStatyczne} onChange={(event) => zmienPole("cisnienieGazuStatyczne", event.target.value)} className={klasaPola} />
-            </Pole>
-            <Pole etykieta="Ciśnienie wody w instalacji grzewczej (bar)" wymagane={false}>
-              <input value={formularz.cisnienieWodyGrzewczej} onChange={(event) => zmienPole("cisnienieWodyGrzewczej", event.target.value)} className={klasaPola} />
-            </Pole>
-            <Pole etykieta="Ciśnienie wstępne w naczyniu wzbiorczym (bar)" wymagane={false}>
-              <input value={formularz.cisnienieWstepneNaczynia} onChange={(event) => zmienPole("cisnienieWstepneNaczynia", event.target.value)} className={klasaPola} />
-            </Pole>
           </div>
         ) : null}
 
