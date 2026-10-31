@@ -76,7 +76,6 @@ type FormularzProtokolu = {
 
 const ZAKLADKI = [
   ["protokol", "Protokół"],
-  ["urzadzenie", "Urządzenie"],
   ["rozliczenie", "Rozliczenie"],
   ["pomiary", "Pomiary"],
   ["checklista", "Checklista"],
@@ -96,10 +95,10 @@ function liczbaPola(wartosc: string) {
 
 function polaRozszerzenia(formularz: FormularzProtokolu) {
   const tekstowe = {
+  const tekstowe = {
     modelUrzadzenia: formularz.modelUrzadzenia.trim(),
     numerFabryczny: formularz.numerFabryczny.trim(),
     rodzajGazu: formularz.rodzajGazu.trim(),
-    opisUslugi: formularz.opisUslugi.trim(),
     cisnienieGazuStatyczne: formularz.cisnienieGazuStatyczne.trim(),
     cisnienieWodyGrzewczej: formularz.cisnienieWodyGrzewczej.trim(),
     cisnienieWstepneNaczynia: formularz.cisnienieWstepneNaczynia.trim(),
@@ -120,10 +119,10 @@ function polaRozszerzenia(formularz: FormularzProtokolu) {
   }
 
   return {
+  return {
     ...(tekstowe.modelUrzadzenia ? { modelUrzadzenia: tekstowe.modelUrzadzenia } : {}),
     ...(tekstowe.numerFabryczny ? { numerFabryczny: tekstowe.numerFabryczny } : {}),
     ...(tekstowe.rodzajGazu ? { rodzajGazu: tekstowe.rodzajGazu } : {}),
-    ...(tekstowe.opisUslugi ? { opisUslugi: tekstowe.opisUslugi } : {}),
     ...(tekstowe.cisnienieGazuStatyczne ? { cisnienieGazuStatyczne: tekstowe.cisnienieGazuStatyczne } : {}),
     ...(tekstowe.cisnienieWodyGrzewczej ? { cisnienieWodyGrzewczej: tekstowe.cisnienieWodyGrzewczej } : {}),
     ...(tekstowe.cisnienieWstepneNaczynia ? { cisnienieWstepneNaczynia: tekstowe.cisnienieWstepneNaczynia } : {}),
@@ -380,10 +379,10 @@ export function AddProtocolForm({
     dataKolejnegoPrzegladu: "",
     kolejnyPrzegladNieDotyczy: false,
     uwagi: "",
+    uwagi: "",
     modelUrzadzenia: "",
     numerFabryczny: "",
     rodzajGazu: "",
-    opisUslugi: "",
     uslugaNetto: "",
     uslugaBrutto: "",
     dojazdNetto: "",
@@ -926,6 +925,7 @@ export function AddProtocolForm({
         </>
         ) : null}
 
+        {zakladka === "rozliczenie" ? (
         {zakladka === "urzadzenie" ? (
           <div className="mt-5 grid gap-4">
             <h3 className="text-sm font-semibold tracking-wide text-slate-900 uppercase">Urządzenie</h3>
@@ -975,7 +975,6 @@ export function AddProtocolForm({
           </div>
         ) : null}
 
-        {zakladka === "rozliczenie" ? (
           <div className="mt-5 grid gap-4">
             <h3 className="text-sm font-semibold tracking-wide text-slate-900 uppercase">Rozliczenie</h3>
             {(
