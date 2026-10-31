@@ -60,6 +60,9 @@ export type WidokProtokolu = {
   podpisSerwisanta: string;
   dodatkoweUrzadzenie: Array<[string, string]>;
   opisUslugi: string;
+  cisnienieGazuStatyczne?: string;
+  cisnienieWodyGrzewczej?: string;
+  cisnienieWstepneNaczynia?: string;
   pomiary: Array<[string, string]>;
   rozliczenie: WierszRozliczenia[];
   checklista: GrupaChecklistyWidok[];
@@ -199,6 +202,15 @@ export function widokProtokolu(dane: DaneProtokoluPdf): WidokProtokolu {
     ).filter((wiersz): wiersz is [string, string] => Boolean(wiersz[1]?.trim())),
     opisUslugi: (raport.opisUslugi ?? "").trim(),
     cisnienieGazuStatyczne: zJednostka(raport.cisnienieGazuStatyczne, "mbar"),
+    cisnienieWodyGrzewczej: zJednostka(raport.cisnienieWodyGrzewczej, "bar"),
+    cisnienieWstepneNaczynia: zJednostka(raport.cisnienieWstepneNaczynia, "bar"),
+    pomiary: (
+      [
+        ["Ciśnienie gazu statycznego / na przyłączu", zJednostka(raport.cisnienieGazuStatyczne, "mbar")],
+        ["Ciśnienie wody w instalacji grzewczej", zJednostka(raport.cisnienieWodyGrzewczej, "bar")],
+        ["Ciśnienie wstępne w naczyniu wzbiorczym", zJednostka(raport.cisnienieWstepneNaczynia, "bar")],
+      ] as Array<[string, string]>
+    ).filter((wiersz) => wiersz[1].trim()),
     rozliczenie: [
       wierszKwot("Usługa", raport.uslugaNetto, raport.uslugaBrutto),
       wierszKwot("Dojazd", raport.dojazdNetto, raport.dojazdBrutto),
