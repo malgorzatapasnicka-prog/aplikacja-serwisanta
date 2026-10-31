@@ -46,16 +46,24 @@ function wartoscLubNieDotyczy(nieDotyczy: boolean, wartosc: string, pusta: strin
   return wartosc.trim() ? tex(wartosc) : pusta;
 }
 
-function tabelaPol(wiersze: Array<[string, string]>) {
+function komorkaWartosci(wartosc: string) {
+  if (wartosc.includes("\\begin{minipage}")) {
+    return wartosc;
+  }
+  return `\\textbf{${wartosc}}`;
+}
+
+function tabelaPol(wiersze: Array<[string, string]>, naglowki: [string, string] = ["Parametr", "Wartość"]) {
   if (wiersze.length === 0) {
     return "";
   }
-  const tresc = wiersze.map(([etykieta, wartosc]) => `${tex(etykieta)} & ${wartosc} \\\\`).join("\n");
-  return `\\rowcolors{2}{RowEven}{white}
-\\noindent
-\\begin{tabularx}{\\textwidth}{X l}
+  const tresc = wiersze
+    .map(([etykieta, wartosc]) => `${tex(etykieta)} & ${komorkaWartosci(wartosc)} \\\\`)
+    .join("\n\\midrule\n");
+  return `\\noindent
+\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}X >{\\raggedright\\arraybackslash}X@{}}
 \\toprule
-\\textbf{Parametr} & \\textbf{Wartość} \\\\
+\\textbf{${naglowki[0]}} & \\textbf{${naglowki[1]}} \\\\
 \\midrule
 ${tresc}
 \\bottomrule
@@ -67,7 +75,7 @@ function sekcja(tytul: string, tresc: string) {
   if (!czysta) {
     return "";
   }
-  return `\\section*{${tytul}}\n${czysta}\n\\vspace{0.5cm}\n`;
+  return `\\par\\vspace{0.95em}\n\\noindent{\\large\\bfseries\\color{HeaderBg}${tytul}}\\par\\vspace{0.4em}\n${czysta}\n`;
 }
 
 function kolumnaZdjecia(plik: string, podpis: string, szerokosc: string, wysokosc: string) {
@@ -155,21 +163,26 @@ export function trescLatex(
     .join("\n\\vspace{0.25cm}\n");
   const blokChecklisty = widok.checklista
     .map(
-      (grupa) => `\\textbf{${tex(grupa.tytul)}}
-\\begin{itemize}[label={}, leftmargin=1.2em, itemsep=0.15em]
-${grupa.pozycje.map((pozycja) => `  \\item ${tex(pozycja.etykieta)}: \\textbf{${tex(pozycja.stan)}}`).join("\n")}
+      (grupa) => `{\\bfseries\\color{HeaderBg}${tex(grupa.tytul)}}
+\\begin{itemize}[leftmargin=1.5em, itemsep=0.28em, topsep=0.35em, parsep=0pt]
+${grupa.pozycje.map((pozycja) => `  \\item ${tex(pozycja.etykieta)}\\dotfill\\ \\textbf{${tex(pozycja.stan)}}`).join("\n")}
 \\end{itemize}`,
     )
-    .join("\n");
+    .join("\n\\vspace{0.15cm}\n");
+  const blokPomiarow =
+    widok.pomiary.length > 0
+      ? tabelaPol(widok.pomiary.map(([etykieta, wartosc]) => [etykieta, pole(wartosc)]))
+      : "";
   const blokRozliczenia =
     widok.rozliczenie.length > 0
-      ? `\\begin{tabularx}{\\textwidth}{@{}X r r@{}}
+      ? `\\noindent
+\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}X >{\\raggedleft\\arraybackslash}X >{\\raggedleft\\arraybackslash}X@{}}
 \\toprule
- & \\textbf{Netto} & \\textbf{Brutto} \\\\
+\\textbf{Pozycja} & \\textbf{Netto} & \\textbf{Brutto} \\\\
 \\midrule
 ${widok.rozliczenie
-  .map((wiersz) => `${tex(wiersz.nazwa)} & ${tex(wiersz.netto || "—")} & ${tex(wiersz.brutto || "—")} \\\\`)
-  .join("\n")}
+  .map((wiersz) => `${tex(wiersz.nazwa)} & \\textbf{${tex(wiersz.netto || "—")}} & \\textbf{${tex(wiersz.brutto || "—")}} \\\\`)
+  .join("\n\\midrule\n")}
 \\bottomrule
 \\end{tabularx}`
       : "";
@@ -183,9 +196,10 @@ ${pozycjeListy.join("\n")}
 \\end{itemize}
 \\vspace{0.2cm}
 \\noindent \\textbf{Data kolejnego przeglądu:} ${kolejny}`;
+  const szerokoscUwagi = "\\dimexpr\\textwidth-2\\fboxsep-2\\fboxrule\\relax";
   const uwagi = widok.uwagi
-    ? `\\noindent\n\\fbox{%\n\\begin{minipage}{0.98\\textwidth}\n\\vspace{0.3cm}\n${tex(widok.uwagi).replaceAll("\n", "\\\\\n")}\n\\vspace{0.4cm}\n\\end{minipage}\n}`
-    : `\\noindent\n\\fbox{%\n\\begin{minipage}{0.98\\textwidth}\n\\vspace{3cm}\n~\n\\end{minipage}\n}`;
+    ? `\\noindent\n\\fbox{%\n\\begin{minipage}{${szerokoscUwagi}}\n\\vspace{0.3cm}\n${tex(widok.uwagi).replaceAll("\n", "\\\\\n")}\n\\vspace{0.4cm}\n\\end{minipage}\n}`
+    : `\\noindent\n\\fbox{%\n\\begin{minipage}{${szerokoscUwagi}}\n\\vspace{3cm}\n~\n\\end{minipage}\n}`;
   const analiza = plikiZdjec.length > 0 ? ukladZdjec(plikiZdjec) : "~";
   const miejscePodpisu = plikPodpisuKlienta
     ? `\\includegraphics[width=5.2cm,height=1.5cm,keepaspectratio]{${plikPodpisuKlienta}}\\\\[-1.5mm]`
@@ -196,7 +210,7 @@ ${pozycjeListy.join("\n")}
 
   return `\\documentclass[10pt, a4paper]{article}
 
-\\usepackage[a4paper, margin=2cm]{geometry}
+\\usepackage[a4paper, left=2cm, right=2cm, top=2cm, bottom=2cm]{geometry}
 \\usepackage{fontspec}
 \\usepackage[polish, bidi=basic, provide=*]{babel}
 \\babelprovide[import, onchar=ids fonts]{polish}
@@ -208,18 +222,20 @@ ${pozycjeListy.join("\n")}
   BoldFeatures={FakeBold=2}
 ]{NotoSans}
 
+\\usepackage{array}
 \\usepackage{tabularx}
 \\usepackage{booktabs}
 \\usepackage[table]{xcolor}
 \\usepackage{enumitem}
 \\usepackage{graphicx}
+\\setlength{\\parindent}{0pt}
+\\setlength{\\tabcolsep}{6pt}
+\\renewcommand{\\arraystretch}{1.35}
 
 \\definecolor{HeaderBg}{HTML}{1E293B}
 \\definecolor{RowEven}{HTML}{F8FAFC}
 \\definecolor{StatusErr}{HTML}{DC2626}
 \\definecolor{BorderGray}{HTML}{CBD5E1}
-
-\\renewcommand{\\arraystretch}{1.25}
 
 \\begin{document}
 
@@ -263,29 +279,30 @@ ${pozycjeListy.join("\n")}
 ${sekcja("1. Identyfikacja i ustawienia urządzenia", tabelaPol(identyfikacja))}
 ${blokUrzadzenia ? sekcja("Urządzenie", blokUrzadzenia) : ""}
 ${sekcja("2. Test bezpieczeństwa i szczelności", tabelaPol(bezpieczenstwo))}
+${blokPomiarow ? sekcja("Pomiary", blokPomiarow) : ""}
 ${sekcja("3. Lista kontrolna wykonanych czynności", listaCzynnosci)}
 ${blokChecklisty ? sekcja("Checklista czynności serwisowych", blokChecklisty) : ""}
 ${sekcja("4. Uwagi serwisanta i zdiagnozowane usterki", uwagi)}
 ${blokRozliczenia ? sekcja("Rozliczenie", blokRozliczenia) : ""}
 ${sekcja("5. Załączniki", analiza)}
 ${blokOswiadczenia ? sekcja("Oświadczenie", blokOswiadczenia) : ""}
+\\vspace{0.8cm}
 \\vfill
-
 \\noindent
-\\begin{minipage}[b]{0.45\\textwidth}
+\\begin{minipage}[b]{0.44\\textwidth}
     \\centering
     ${miejscePodpisu}
-    \\rule{5.5cm}{0.4pt}\\\\
-    \\vspace{0.15cm}
-    \\small Podpis klienta
-\\end{minipage}
+    \\rule{0.9\\linewidth}{0.4pt}\\\\
+    \\vspace{0.2cm}
+    {\\small Podpis klienta}
+\\end{minipage}%
 \\hfill
-\\begin{minipage}[b]{0.45\\textwidth}
+\\begin{minipage}[b]{0.44\\textwidth}
     \\centering
     ${miejscePodpisuSerwisanta}
-    \\rule{5.5cm}{0.4pt}\\\\
-    \\vspace{0.15cm}
-    \\small Podpis i pieczęć serwisanta
+    \\rule{0.9\\linewidth}{0.4pt}\\\\
+    \\vspace{0.2cm}
+    {\\small Podpis i pieczęć serwisanta}
 \\end{minipage}
 
 \\end{document}
