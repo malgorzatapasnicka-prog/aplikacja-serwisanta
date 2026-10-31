@@ -166,4 +166,5 @@ export type Protokol = {
   cisnienieWstepneNaczynia?: string;
   checklista?: ChecklistaProtokolu;
   powierzchniaDo300?: boolean;
+  powierzchniaDo150?: boolean;
 };

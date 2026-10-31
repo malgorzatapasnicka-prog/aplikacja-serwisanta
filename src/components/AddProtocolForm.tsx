@@ -70,7 +70,7 @@ type FormularzProtokolu = {
   cisnienieWodyGrzewczej: string;
   cisnienieWstepneNaczynia: string;
   checklista: Record<KluczChecklisty, StanChecklisty>;
-  powierzchniaDo300: boolean;
+  wyborOswiadczenia: "" | "300" | "150";
 };
 
 const ZAKLADKI = [
@@ -1156,15 +1156,29 @@ export function AddProtocolForm({
         <PodpisNaEkranie onChange={setPodpisKlienta} />
 
         <h3 className="mt-6 text-sm font-semibold tracking-wide text-slate-900 uppercase">Zgody</h3>
-        <label className="mt-3 flex items-start gap-2 text-sm text-slate-800">
-          <input
-            type="checkbox"
-            className="mt-1"
-            checked={formularz.powierzchniaDo300}
-            onChange={(event) => zmienPole("powierzchniaDo300", event.target.checked)}
-          />
-          <span>Oświadczam, że powierzchnia użytkowa budynku mieszkalnego jednorodzinnego nie przekracza 300 mkw.</span>
-        </label>
+        <fieldset className="mt-3 space-y-3">
+          <legend className="sr-only">Oświadczenie o powierzchni</legend>
+          <label className="flex items-start gap-2 text-sm text-slate-800">
+            <input
+              type="radio"
+              name="oswiadczenie-powierzchni"
+              className="mt-1"
+              checked={formularz.wyborOswiadczenia === "300"}
+              onChange={() => zmienPole("wyborOswiadczenia", "300")}
+            />
+            <span>Oświadczam, że powierzchnia użytkowa budynku mieszkalnego jednorodzinnego nie przekracza 300 mkw.</span>
+          </label>
+          <label className="flex items-start gap-2 text-sm text-slate-800">
+            <input
+              type="radio"
+              name="oswiadczenie-powierzchni"
+              className="mt-1"
+              checked={formularz.wyborOswiadczenia === "150"}
+              onChange={() => zmienPole("wyborOswiadczenia", "150")}
+            />
+            <span>Oświadczam, że powierzchnia użytkowa lokalu mieszkalnego nie przekracza 150 mkw.</span>
+          </label>
+        </fieldset>
         </>
         ) : null}
 

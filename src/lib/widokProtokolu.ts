@@ -67,6 +67,7 @@ export type WidokProtokolu = {
   rozliczenie: WierszRozliczenia[];
   checklista: GrupaChecklistyWidok[];
   oswiadczeniePowierzchni: boolean;
+  powierzchniaDo150?: boolean;
   oswiadczenieLokalu?: boolean;
 };
 

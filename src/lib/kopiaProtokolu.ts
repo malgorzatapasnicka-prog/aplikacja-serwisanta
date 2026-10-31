@@ -56,6 +56,7 @@ export type KopiaProtokolu = {
   cisnienieWstepneNaczynia?: string;
   checklista?: ChecklistaProtokolu;
   powierzchniaDo300?: boolean;
+  powierzchniaDo150?: boolean;
 };
 
 function tekst(wartosc: string) {
@@ -165,9 +166,14 @@ function blokRozszerzenia(kopia: KopiaProtokolu) {
             .map(([nazwa, netto, brutto]) => `<tr><td>${tekst(nazwa)}</td><td>${tekst(netto || "—")}</td><td>${tekst(brutto || "—")}</td></tr>`)
             .join("")}</table>`
         : "",
-    oswiadczenie: kopia.powierzchniaDo300
-      ? "<p>Oświadczam, że powierzchnia użytkowa budynku mieszkalnego jednorodzinnego nie przekracza 300 mkw.</p>"
-      : "",
+    oswiadczenie: [
+      kopia.powierzchniaDo300
+        ? "<p>Oświadczam, że powierzchnia użytkowa budynku mieszkalnego jednorodzinnego nie przekracza 300 mkw.</p>"
+        : "",
+      kopia.powierzchniaDo150
+        ? "<p>Oświadczam, że powierzchnia użytkowa lokalu mieszkalnego nie przekracza 150 mkw.</p>"
+        : "",
+    ].join(""),
   };
 }
 

@@ -375,17 +375,28 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
       }
   }
 
-  if (widok.oswiadczeniePowierzchni) {
-    const tresc =
-      "Oświadczam, że powierzchnia użytkowa budynku mieszkalnego jednorodzinnego nie przekracza 300 mkw.";
-    const linie = doc.splitTextToSize(tresc, szerokosc) as string[];
-    zapewnij(linie.length * 5 + 10);
+  const oswiadczenia = [
+    widok.oswiadczeniePowierzchni
+      ? "Oświadczam, że powierzchnia użytkowa budynku mieszkalnego jednorodzinnego nie przekracza 300 mkw."
+      : "",
+    widok.powierzchniaDo150
+      ? "Oświadczam, że powierzchnia użytkowa lokalu mieszkalnego nie przekracza 150 mkw."
+      : "",
+  ].filter(Boolean);
+  if (oswiadczenia.length > 0) {
     doc.setFontSize(12);
+    doc.setTextColor(15, 23, 42);
+    zapewnij(8);
     tekst("Oświadczenie", lewy, y);
     y += 6;
     doc.setFontSize(10);
-    doc.text(linie, lewy, y);
-    y += linie.length * 5 + 4;
+    for (const tresc of oswiadczenia) {
+      const linie = doc.splitTextToSize(tresc, szerokosc) as string[];
+      zapewnij(linie.length * 5 + 4);
+      doc.text(linie, lewy, y);
+      y += linie.length * 5 + 3;
+    }
+    y += 2;
   }
 
   zapewnij(28);

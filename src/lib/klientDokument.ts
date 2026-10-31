@@ -150,6 +150,7 @@ export function protokolyZDokumentu(wartosc: unknown): Protokol[] {
         ...(tekst(raport.cisnienieWstepneNaczynia) ? { cisnienieWstepneNaczynia: tekst(raport.cisnienieWstepneNaczynia) } : {}),
         ...(checklistaZDokumentu(raport.checklista) ? { checklista: checklistaZDokumentu(raport.checklista) } : {}),
         ...(tak(raport.powierzchniaDo300) ? { powierzchniaDo300: true } : {}),
+        ...(tak(raport.powierzchniaDo150) ? { powierzchniaDo150: true } : {}),
       },
     ];
   });

@@ -186,9 +186,17 @@ ${widok.rozliczenie
 \\bottomrule
 \\end{tabularx}`
       : "";
-  const blokOswiadczenia = widok.oswiadczeniePowierzchni
-    ? `\\noindent ${tex("Oświadczam, że powierzchnia użytkowa budynku mieszkalnego jednorodzinnego nie przekracza 300 mkw.")}`
-    : "";
+  const zdaniaOswiadczen = [
+    widok.oswiadczeniePowierzchni
+      ? "Oświadczam, że powierzchnia użytkowa budynku mieszkalnego jednorodzinnego nie przekracza 300 mkw."
+      : "",
+    widok.powierzchniaDo150
+      ? "Oświadczam, że powierzchnia użytkowa lokalu mieszkalnego nie przekracza 150 mkw."
+      : "",
+  ].filter(Boolean);
+  const blokOswiadczenia = zdaniaOswiadczen
+    .map((zdanie) => `\\noindent ${tex(zdanie)}\\par`)
+    .join("\n\\vspace{0.55em}\n");
   const listaCzynnosci = `\\noindent
 \\begin{itemize}[label={}, leftmargin=1.6em]
 ${pozycjeListy.join("\n")}
