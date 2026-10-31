@@ -67,6 +67,7 @@ export type WidokProtokolu = {
   rozliczenie: WierszRozliczenia[];
   checklista: GrupaChecklistyWidok[];
   oswiadczeniePowierzchni: boolean;
+  oswiadczenieLokalu?: boolean;
 };
 
 export function numerProtokoluZDaty(dataIso: string, kolejny: number) {
@@ -227,7 +228,7 @@ export function widokProtokolu(dane: DaneProtokoluPdf): WidokProtokolu {
       }),
     })).filter((grupa) => grupa.pozycje.length > 0),
     oswiadczeniePowierzchni: raport.powierzchniaDo300 === true,
-    oswiadczenieLokalu: raport.powierzchniaDo150 === true,
+    oswiadczenieLokalu: raport.powierzchniaDo300 === true,
   };
 }
 
