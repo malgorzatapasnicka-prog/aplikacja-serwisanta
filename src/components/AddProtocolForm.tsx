@@ -128,8 +128,8 @@ function polaRozszerzenia(formularz: FormularzProtokolu) {
     ...(kwoty.materialyNetto !== undefined ? { materialyNetto: kwoty.materialyNetto } : {}),
     ...(kwoty.materialyBrutto !== undefined ? { materialyBrutto: kwoty.materialyBrutto } : {}),
     ...(Object.keys(checklista).length > 0 ? { checklista } : {}),
-    ...(formularz.powierzchniaDo300 ? { powierzchniaDo300: true } : {}),
-    ...(formularz.powierzchniaDo150 ? { powierzchniaDo150: true } : {}),
+    ...(formularz.wyborOswiadczenia === "300" ? { powierzchniaDo300: true } : {}),
+    ...(formularz.wyborOswiadczenia === "150" ? { powierzchniaDo150: true } : {}),
   };
 }
 
