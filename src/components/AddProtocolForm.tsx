@@ -76,7 +76,6 @@ type FormularzProtokolu = {
 const ZAKLADKI = [
   ["protokol", "Protokół"],
   ["rozliczenie", "Rozliczenie"],
-  ["pomiary", "Pomiary"],
   ["zalaczniki", "Załączniki"],
 ] as const;
 
