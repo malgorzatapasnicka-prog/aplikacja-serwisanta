@@ -192,6 +192,27 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
     ["Status urządzenia", widok.status, "", "", widok.statusAwaria],
   ]);
 
+  if (widok.dodatkoweUrzadzenie.length > 0 || widok.opisUslugi) {
+    zapewnij(10);
+    doc.setFontSize(12);
+    tekst("Urządzenie", lewy, y);
+    y += 6;
+    doc.setFontSize(10);
+    for (const [etykieta, wartosc] of widok.dodatkoweUrzadzenie) {
+      const linie = doc.splitTextToSize(`${etykieta}: ${wartosc}`, szerokosc) as string[];
+      zapewnij(linie.length * 5);
+      doc.text(linie, lewy, y);
+      y += linie.length * 5;
+    }
+    if (widok.opisUslugi) {
+      const linie = doc.splitTextToSize(widok.opisUslugi, szerokosc) as string[];
+      zapewnij(linie.length * 5 + 2);
+      doc.text(linie, lewy, y);
+      y += linie.length * 5 + 2;
+    }
+    y += 4;
+  }
+
   doc.setFontSize(12);
   tekst("2. Test bezpieczeństwa i szczelności", lewy, y);
   y += 4;
@@ -209,6 +230,20 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
       wartoscLubNieDotyczy(widok.cisnienieNaczyniaNieDotyczy, widok.cisnienieNaczynia, "bar"),
     ],
   ]);
+
+  if (widok.pomiary.length > 0) {
+    zapewnij(10);
+    doc.setFontSize(12);
+    tekst("Pomiary", lewy, y);
+    y += 6;
+    doc.setFontSize(10);
+    for (const [etykieta, wartosc] of widok.pomiary) {
+      zapewnij(6);
+      tekst(`${etykieta}: ${wartosc}`, lewy, y);
+      y += 5;
+    }
+    y += 3;
+  }
 
   doc.setFontSize(12);
   tekst("3. Lista kontrolna wykonanych czynności", lewy, y);
@@ -243,6 +278,27 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
   }
   y += 8;
 
+  if (widok.checklista.length > 0) {
+    zapewnij(10);
+    doc.setFontSize(12);
+    tekst("Checklista czynności serwisowych", lewy, y);
+    y += 6;
+    for (const grupa of widok.checklista) {
+      zapewnij(8);
+      doc.setFontSize(11);
+      tekst(grupa.tytul, lewy, y);
+      y += 5;
+      doc.setFontSize(10);
+      for (const pozycja of grupa.pozycje) {
+        const linie = doc.splitTextToSize(`${pozycja.etykieta}: ${pozycja.stan}`, szerokosc - 4) as string[];
+        zapewnij(linie.length * 5);
+        doc.text(linie, lewy + 2, y);
+        y += linie.length * 5;
+      }
+    }
+    y += 3;
+  }
+
   zapewnij(70);
   doc.setFontSize(12);
   tekst("4. Uwagi serwisanta i zdiagnozowane usterki", lewy, y);
@@ -258,6 +314,25 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
     doc.text(linieUwag, lewy + 3, y + 6);
   }
   y += wysokoscUwag + 8;
+
+  if (widok.rozliczenie.length > 0) {
+    zapewnij(12 + widok.rozliczenie.length * 6);
+    doc.setFontSize(12);
+    tekst("Rozliczenie", lewy, y);
+    y += 6;
+    doc.setFontSize(10);
+    tekst("Netto", lewy + 110, y);
+    tekst("Brutto", lewy + 145, y);
+    y += 5;
+    for (const wiersz of widok.rozliczenie) {
+      zapewnij(6);
+      tekst(wiersz.nazwa, lewy, y);
+      tekst(wiersz.netto || "—", lewy + 110, y);
+      tekst(wiersz.brutto || "—", lewy + 145, y);
+      y += 5;
+    }
+    y += 4;
+  }
 
   zapewnij(50);
   doc.setFontSize(12);
@@ -298,6 +373,19 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
         }
         y = yPodpisu + dodatkowyOpis + 4;
       }
+  }
+
+  if (widok.oswiadczeniePowierzchni) {
+    const tresc =
+      "Oświadczam, że powierzchnia użytkowa budynku mieszkalnego jednorodzinnego nie przekracza 300 mkw.";
+    const linie = doc.splitTextToSize(tresc, szerokosc) as string[];
+    zapewnij(linie.length * 5 + 10);
+    doc.setFontSize(12);
+    tekst("Oświadczenie", lewy, y);
+    y += 6;
+    doc.setFontSize(10);
+    doc.text(linie, lewy, y);
+    y += linie.length * 5 + 4;
   }
 
   zapewnij(28);

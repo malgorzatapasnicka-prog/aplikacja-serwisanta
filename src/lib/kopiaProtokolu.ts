@@ -1,6 +1,14 @@
 import { FIRMA } from "@/lib/firma";
 import { formatujDateIso } from "@/lib/daneProtokolu";
-import { ETYKIETY_CZYNNOSCI, type CzynnoscProtokolu, type StanCzynnosci, type WynikKontroli } from "@/types/protokol";
+import {
+  ETYKIETY_CHECKLISTY,
+  ETYKIETY_CZYNNOSCI,
+  GRUPY_CHECKLISTY,
+  type ChecklistaProtokolu,
+  type CzynnoscProtokolu,
+  type StanCzynnosci,
+  type WynikKontroli,
+} from "@/types/protokol";
 
 export type KopiaProtokolu = {
   imieNazwisko: string;
@@ -33,6 +41,21 @@ export type KopiaProtokolu = {
   podpisKlienta: string;
   podpisSerwisanta: string;
   nazwaZalacznika: string;
+  modelUrzadzenia?: string;
+  numerFabryczny?: string;
+  rodzajGazu?: string;
+  opisUslugi?: string;
+  uslugaNetto?: number;
+  uslugaBrutto?: number;
+  dojazdNetto?: number;
+  dojazdBrutto?: number;
+  materialyNetto?: number;
+  materialyBrutto?: number;
+  cisnienieGazuStatyczne?: string;
+  cisnienieWodyGrzewczej?: string;
+  cisnienieWstepneNaczynia?: string;
+  checklista?: ChecklistaProtokolu;
+  powierzchniaDo300?: boolean;
 };
 
 function tekst(wartosc: string) {
@@ -93,6 +116,61 @@ function nazwaPliku(kopia: KopiaProtokolu) {
   return `protokol-${czysta || "serwisowy"}.html`;
 }
 
+function kwota(wartosc: number | undefined) {
+  if (typeof wartosc !== "number" || !Number.isFinite(wartosc)) {
+    return "";
+  }
+  return `${wartosc.toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} zł`;
+}
+
+function blokRozszerzenia(kopia: KopiaProtokolu) {
+  const urzadzenie = (
+    [
+      ["Model urządzenia", kopia.modelUrzadzenia ?? ""],
+      ["Numer fabryczny", kopia.numerFabryczny ?? ""],
+      ["Rodzaj gazu", kopia.rodzajGazu ?? ""],
+    ] as Array<[string, string]>
+  ).filter((wiersz) => wiersz[1].trim());
+  const opis = (kopia.opisUslugi ?? "").trim();
+  const pomiary = (
+    [
+      ["Ciśnienie gazu statycznego / na przyłączu", kopia.cisnienieGazuStatyczne ?? ""],
+      ["Ciśnienie wody w instalacji grzewczej", kopia.cisnienieWodyGrzewczej ?? ""],
+      ["Ciśnienie wstępne w naczyniu wzbiorczym", kopia.cisnienieWstepneNaczynia ?? ""],
+    ] as Array<[string, string]>
+  ).filter((wiersz) => wiersz[1].trim());
+  const koszty = [
+    ["Usługa", kwota(kopia.uslugaNetto), kwota(kopia.uslugaBrutto)],
+    ["Dojazd", kwota(kopia.dojazdNetto), kwota(kopia.dojazdBrutto)],
+    ["Części/Materiały", kwota(kopia.materialyNetto), kwota(kopia.materialyBrutto)],
+  ].filter((wiersz) => wiersz[1] || wiersz[2]);
+  const checklista = GRUPY_CHECKLISTY.map((grupa) => {
+    const pozycje = grupa.pola.flatMap(([klucz, etykieta]) => {
+      const stan = kopia.checklista?.[klucz];
+      return stan ? [`<li>${tekst(etykieta)}: <strong>${tekst(ETYKIETY_CHECKLISTY[stan])}</strong></li>`] : [];
+    });
+    return pozycje.length > 0 ? `<p><strong>${tekst(grupa.tytul)}</strong></p><ul>${pozycje.join("")}</ul>` : "";
+  }).join("");
+
+  return {
+    urzadzenie:
+      urzadzenie.length > 0 || opis
+        ? `${urzadzenie.length > 0 ? tabelaPelna(urzadzenie) : ""}${opis ? `<p>${tekst(opis).replaceAll("\n", "<br>")}</p>` : ""}`
+        : "",
+    pomiary: pomiary.length > 0 ? tabelaPelna(pomiary) : "",
+    checklista,
+    koszty:
+      koszty.length > 0
+        ? `<table><tr><th></th><th>Netto</th><th>Brutto</th></tr>${koszty
+            .map(([nazwa, netto, brutto]) => `<tr><td>${tekst(nazwa)}</td><td>${tekst(netto || "—")}</td><td>${tekst(brutto || "—")}</td></tr>`)
+            .join("")}</table>`
+        : "",
+    oswiadczenie: kopia.powierzchniaDo300
+      ? "<p>Oświadczam, że powierzchnia użytkowa budynku mieszkalnego jednorodzinnego nie przekracza 300 mkw.</p>"
+      : "",
+  };
+}
+
 function tabelaPelna(wiersze: Array<[string, string]>) {
   return `<table>${wiersze.map(([etykieta, wartosc]) => wiersz(etykieta, tekst(wartosc.trim() || "—"))).join("")}</table>`;
 }
@@ -120,6 +198,7 @@ export function dokumentKopiiProtokolu(kopia: KopiaProtokolu) {
     .join("");
   const podpisKlienta = obraz(kopia.podpisKlienta);
   const podpisSerwisanta = obraz(kopia.podpisSerwisanta);
+  const rozszerzenie = blokRozszerzenia(kopia);
   const podpisy = [
     podpisKlienta ? `<div><p>Podpis klienta</p><img src="${podpisKlienta}" alt="Podpis klienta"></div>` : "",
     podpisSerwisanta ? `<div><p>Podpis serwisanta</p><img src="${podpisSerwisanta}" alt="Podpis serwisanta"></div>` : "",
@@ -174,6 +253,7 @@ export function dokumentKopiiProtokolu(kopia: KopiaProtokolu) {
       ["Status urządzenia", kopia.status],
     ]),
   )}
+  ${sekcja("Urządzenie", rozszerzenie.urzadzenie)}
   ${sekcja(
     "2. Test bezpieczeństwa i szczelności",
     tabelaPelna([
@@ -183,6 +263,7 @@ export function dokumentKopiiProtokolu(kopia: KopiaProtokolu) {
       ["Ciśnienie wstępne w naczyniu wzbiorczym", poleAlboNieDotyczy(kopia.cisnienieNaczynia, kopia.cisnienieNaczyniaNieDotyczy)],
     ]),
   )}
+  ${sekcja("Pomiary", rozszerzenie.pomiary)}
   ${sekcja(
     "3. Lista kontrolna wykonanych czynności",
     tabelaPelna([
@@ -200,11 +281,14 @@ export function dokumentKopiiProtokolu(kopia: KopiaProtokolu) {
       ],
     ]),
   )}
+  ${sekcja("Checklista czynności serwisowych", rozszerzenie.checklista)}
   ${sekcja("4. Uwagi serwisanta i zdiagnozowane usterki", `<p>${kopia.uwagi.trim() ? tekst(kopia.uwagi).replaceAll("\n", "<br>") : "—"}</p>`)}
+  ${sekcja("Rozliczenie", rozszerzenie.koszty)}
   ${sekcja(
     "5. Załączniki",
     `${zdjecia || "<p>—</p>"}${kopia.nazwaZalacznika.trim() ? `<p>Załącznik PDF: ${tekst(kopia.nazwaZalacznika.trim())}</p>` : ""}`,
   )}
+  ${sekcja("Oświadczenie", rozszerzenie.oswiadczenie)}
   ${sekcja("Podpisy", podpisy ? `<div class="podpisy">${podpisy}</div>` : "<p>—</p>")}
 </body>
 </html>`;

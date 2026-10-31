@@ -9,7 +9,18 @@ import { getDb, getFirebaseApp } from "@/lib/firebase";
 import { zapiszKopieProtokoluNaTelefonie } from "@/lib/kopiaProtokolu";
 import { nastepnyNumerProtokolu } from "@/lib/widokProtokolu";
 import { PodpisNaEkranie } from "@/components/PodpisNaEkranie";
-import { ETYKIETY_CZYNNOSCI, type CzynnoscProtokolu, type StanCzynnosci, type WynikKontroli } from "@/types/protokol";
+import {
+  ETYKIETY_CZYNNOSCI,
+  GRUPY_CHECKLISTY,
+  RODZAJE_GAZU,
+  pustaChecklista,
+  type ChecklistaProtokolu,
+  type CzynnoscProtokolu,
+  type KluczChecklisty,
+  type StanChecklisty,
+  type StanCzynnosci,
+  type WynikKontroli,
+} from "@/types/protokol";
 
 type AddProtocolFormProps = {
   klientId: string;
@@ -46,7 +57,86 @@ type FormularzProtokolu = {
   dataKolejnegoPrzegladu: string;
   kolejnyPrzegladNieDotyczy: boolean;
   uwagi: string;
+  modelUrzadzenia: string;
+  numerFabryczny: string;
+  rodzajGazu: string;
+  opisUslugi: string;
+  uslugaNetto: string;
+  uslugaBrutto: string;
+  dojazdNetto: string;
+  dojazdBrutto: string;
+  materialyNetto: string;
+  materialyBrutto: string;
+  cisnienieGazuStatyczne: string;
+  cisnienieWodyGrzewczej: string;
+  cisnienieWstepneNaczynia: string;
+  checklista: Record<KluczChecklisty, StanChecklisty>;
+  powierzchniaDo300: boolean;
 };
+
+const ZAKLADKI = [
+  ["protokol", "Protokół"],
+  ["urzadzenie", "Urządzenie"],
+  ["rozliczenie", "Rozliczenie"],
+  ["pomiary", "Pomiary"],
+  ["checklista", "Checklista"],
+  ["zalaczniki", "Załączniki"],
+] as const;
+
+type Zakladka = (typeof ZAKLADKI)[number][0];
+
+function liczbaPola(wartosc: string) {
+  const czysta = wartosc.trim().replace(",", ".");
+  if (!czysta) {
+    return undefined;
+  }
+  const liczba = Number(czysta);
+  return Number.isFinite(liczba) ? liczba : undefined;
+}
+
+function polaRozszerzenia(formularz: FormularzProtokolu) {
+  const tekstowe = {
+    modelUrzadzenia: formularz.modelUrzadzenia.trim(),
+    numerFabryczny: formularz.numerFabryczny.trim(),
+    rodzajGazu: formularz.rodzajGazu.trim(),
+    opisUslugi: formularz.opisUslugi.trim(),
+    cisnienieGazuStatyczne: formularz.cisnienieGazuStatyczne.trim(),
+    cisnienieWodyGrzewczej: formularz.cisnienieWodyGrzewczej.trim(),
+    cisnienieWstepneNaczynia: formularz.cisnienieWstepneNaczynia.trim(),
+  };
+  const kwoty = {
+    uslugaNetto: liczbaPola(formularz.uslugaNetto),
+    uslugaBrutto: liczbaPola(formularz.uslugaBrutto),
+    dojazdNetto: liczbaPola(formularz.dojazdNetto),
+    dojazdBrutto: liczbaPola(formularz.dojazdBrutto),
+    materialyNetto: liczbaPola(formularz.materialyNetto),
+    materialyBrutto: liczbaPola(formularz.materialyBrutto),
+  };
+  const checklista: ChecklistaProtokolu = {};
+  for (const [klucz, stan] of Object.entries(formularz.checklista) as Array<[KluczChecklisty, StanChecklisty]>) {
+    if (stan) {
+      checklista[klucz] = stan;
+    }
+  }
+
+  return {
+    ...(tekstowe.modelUrzadzenia ? { modelUrzadzenia: tekstowe.modelUrzadzenia } : {}),
+    ...(tekstowe.numerFabryczny ? { numerFabryczny: tekstowe.numerFabryczny } : {}),
+    ...(tekstowe.rodzajGazu ? { rodzajGazu: tekstowe.rodzajGazu } : {}),
+    ...(tekstowe.opisUslugi ? { opisUslugi: tekstowe.opisUslugi } : {}),
+    ...(tekstowe.cisnienieGazuStatyczne ? { cisnienieGazuStatyczne: tekstowe.cisnienieGazuStatyczne } : {}),
+    ...(tekstowe.cisnienieWodyGrzewczej ? { cisnienieWodyGrzewczej: tekstowe.cisnienieWodyGrzewczej } : {}),
+    ...(tekstowe.cisnienieWstepneNaczynia ? { cisnienieWstepneNaczynia: tekstowe.cisnienieWstepneNaczynia } : {}),
+    ...(kwoty.uslugaNetto !== undefined ? { uslugaNetto: kwoty.uslugaNetto } : {}),
+    ...(kwoty.uslugaBrutto !== undefined ? { uslugaBrutto: kwoty.uslugaBrutto } : {}),
+    ...(kwoty.dojazdNetto !== undefined ? { dojazdNetto: kwoty.dojazdNetto } : {}),
+    ...(kwoty.dojazdBrutto !== undefined ? { dojazdBrutto: kwoty.dojazdBrutto } : {}),
+    ...(kwoty.materialyNetto !== undefined ? { materialyNetto: kwoty.materialyNetto } : {}),
+    ...(kwoty.materialyBrutto !== undefined ? { materialyBrutto: kwoty.materialyBrutto } : {}),
+    ...(Object.keys(checklista).length > 0 ? { checklista } : {}),
+    ...(formularz.powierzchniaDo300 ? { powierzchniaDo300: true } : {}),
+  };
+}
 
 const RECZNY_NUMER = "recznie";
 
@@ -290,7 +380,24 @@ export function AddProtocolForm({
     dataKolejnegoPrzegladu: "",
     kolejnyPrzegladNieDotyczy: false,
     uwagi: "",
+    modelUrzadzenia: "",
+    numerFabryczny: "",
+    rodzajGazu: "",
+    opisUslugi: "",
+    uslugaNetto: "",
+    uslugaBrutto: "",
+    dojazdNetto: "",
+    dojazdBrutto: "",
+    materialyNetto: "",
+    materialyBrutto: "",
+    cisnienieGazuStatyczne: "",
+    cisnienieWodyGrzewczej: "",
+    cisnienieWstepneNaczynia: "",
+    checklista: pustaChecklista(),
+    powierzchniaDo300: false,
   });
+  const [zakladka, setZakladka] = useState<Zakladka>("protokol");
+  const [wlasnyGaz, setWlasnyGaz] = useState(false);
 
   const [zdjecia, setZdjecia] = useState<ZdjecieFormularza[]>([]);
   const [zalacznikPdf, setZalacznikPdf] = useState("");
@@ -354,6 +461,7 @@ export function AddProtocolForm({
         podpisKlienta,
         podpisSerwisanta,
         nazwaZalacznika,
+        ...polaRozszerzenia(formularz),
       });
       setKopiaZapisana(true);
     } catch (error) {
@@ -494,6 +602,7 @@ export function AddProtocolForm({
         ...(podpisSerwisanta ? { podpisSerwisanta } : {}),
         maZalacznikPdf: Boolean(adresPdf),
         ...(adresPdf ? { zalacznikPdf: adresPdf } : {}),
+        ...polaRozszerzenia(formularz),
       });
       if (navigator.onLine === false) {
         setZapisanoWAplikacji(true);
@@ -511,7 +620,7 @@ export function AddProtocolForm({
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 p-4">
       <form
         onSubmit={zapiszProtokol}
-        className="mx-auto my-4 w-full max-w-lg rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+        className="mx-auto my-4 w-full max-w-2xl rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
       >
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -566,6 +675,23 @@ export function AddProtocolForm({
           </div>
         </fieldset>
 
+        <div className="mt-5 flex gap-1 overflow-x-auto border-b border-slate-200 pb-px">
+          {ZAKLADKI.map(([wartosc, etykieta]) => (
+            <button
+              key={wartosc}
+              type="button"
+              onClick={() => setZakladka(wartosc)}
+              className={`shrink-0 rounded-t-lg px-3 py-2 text-sm font-medium ${
+                zakladka === wartosc ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
+              }`}
+            >
+              {etykieta}
+            </button>
+          ))}
+        </div>
+
+        {zakladka === "protokol" ? (
+        <>
         <h3 className="mt-6 text-sm font-semibold tracking-wide text-slate-900 uppercase">
           1. Identyfikacja i ustawienia urządzenia
         </h3>
@@ -797,7 +923,132 @@ export function AddProtocolForm({
           4. Uwagi serwisanta i zdiagnozowane usterki
         </h3>
         <textarea value={formularz.uwagi} onChange={(event) => zmienPole("uwagi", event.target.value)} rows={5} className={`${klasaPola} mt-3`} />
+        </>
+        ) : null}
 
+        {zakladka === "urzadzenie" ? (
+          <div className="mt-5 grid gap-4">
+            <h3 className="text-sm font-semibold tracking-wide text-slate-900 uppercase">Urządzenie</h3>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Pole etykieta="Model urządzenia" wymagane={false}>
+                <input value={formularz.modelUrzadzenia} onChange={(event) => zmienPole("modelUrzadzenia", event.target.value)} className={klasaPola} />
+              </Pole>
+              <Pole etykieta="Numer fabryczny" wymagane={false}>
+                <input value={formularz.numerFabryczny} onChange={(event) => zmienPole("numerFabryczny", event.target.value)} className={klasaPola} />
+              </Pole>
+              <Pole etykieta="Rodzaj gazu" wymagane={false}>
+                <select
+                  value={wlasnyGaz ? "inny" : formularz.rodzajGazu}
+                  onChange={(event) => {
+                    const wybrany = event.target.value;
+                    if (wybrany === "inny") {
+                      setWlasnyGaz(true);
+                      if ((RODZAJE_GAZU as readonly string[]).includes(formularz.rodzajGazu)) {
+                        zmienPole("rodzajGazu", "");
+                      }
+                      return;
+                    }
+                    setWlasnyGaz(false);
+                    zmienPole("rodzajGazu", wybrany);
+                  }}
+                  className={klasaPola}
+                >
+                  <option value="">Wybierz...</option>
+                  {RODZAJE_GAZU.map((gaz) => (
+                    <option key={gaz} value={gaz}>{gaz}</option>
+                  ))}
+                  <option value="inny">Inny</option>
+                </select>
+                {wlasnyGaz ? (
+                  <input
+                    value={formularz.rodzajGazu}
+                    onChange={(event) => zmienPole("rodzajGazu", event.target.value)}
+                    className={`${klasaPola} mt-2`}
+                    placeholder="Wpisz rodzaj gazu, np. GZ50"
+                  />
+                ) : null}
+              </Pole>
+            </div>
+            <Pole etykieta="Opis usługi / podjęte działania" wymagane={false}>
+              <textarea value={formularz.opisUslugi} onChange={(event) => zmienPole("opisUslugi", event.target.value)} rows={5} className={klasaPola} />
+            </Pole>
+          </div>
+        ) : null}
+
+        {zakladka === "rozliczenie" ? (
+          <div className="mt-5 grid gap-4">
+            <h3 className="text-sm font-semibold tracking-wide text-slate-900 uppercase">Rozliczenie</h3>
+            {(
+              [
+                ["Usługa", "uslugaNetto", "uslugaBrutto"],
+                ["Dojazd", "dojazdNetto", "dojazdBrutto"],
+                ["Części/Materiały", "materialyNetto", "materialyBrutto"],
+              ] as const
+            ).map(([etykieta, netto, brutto]) => (
+              <div key={etykieta} className="grid gap-3 rounded-lg border border-slate-200 p-3 sm:grid-cols-2">
+                <p className="sm:col-span-2 text-sm font-medium text-slate-800">{etykieta}</p>
+                <Pole etykieta="Kwota netto" wymagane={false}>
+                  <input inputMode="decimal" value={formularz[netto]} onChange={(event) => zmienPole(netto, event.target.value)} className={klasaPola} placeholder="0,00" />
+                </Pole>
+                <Pole etykieta="Kwota brutto" wymagane={false}>
+                  <input inputMode="decimal" value={formularz[brutto]} onChange={(event) => zmienPole(brutto, event.target.value)} className={klasaPola} placeholder="0,00" />
+                </Pole>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        {zakladka === "pomiary" ? (
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <h3 className="sm:col-span-2 text-sm font-semibold tracking-wide text-slate-900 uppercase">Pomiary</h3>
+            <Pole etykieta="Ciśnienie gazu statycznego / na przyłączu (mbar)" wymagane={false}>
+              <input value={formularz.cisnienieGazuStatyczne} onChange={(event) => zmienPole("cisnienieGazuStatyczne", event.target.value)} className={klasaPola} />
+            </Pole>
+            <Pole etykieta="Ciśnienie wody w instalacji grzewczej (bar)" wymagane={false}>
+              <input value={formularz.cisnienieWodyGrzewczej} onChange={(event) => zmienPole("cisnienieWodyGrzewczej", event.target.value)} className={klasaPola} />
+            </Pole>
+            <Pole etykieta="Ciśnienie wstępne w naczyniu wzbiorczym (bar)" wymagane={false}>
+              <input value={formularz.cisnienieWstepneNaczynia} onChange={(event) => zmienPole("cisnienieWstepneNaczynia", event.target.value)} className={klasaPola} />
+            </Pole>
+          </div>
+        ) : null}
+
+        {zakladka === "checklista" ? (
+          <div className="mt-5 grid gap-3">
+            <h3 className="text-sm font-semibold tracking-wide text-slate-900 uppercase">Checklista czynności serwisowych</h3>
+            {GRUPY_CHECKLISTY.map((grupa) => (
+              <details key={grupa.tytul} open className="rounded-lg border border-slate-200">
+                <summary className="cursor-pointer px-3 py-2 text-sm font-semibold text-slate-800">{grupa.tytul}</summary>
+                <div className="grid gap-2 px-3 pb-3">
+                  {grupa.pola.map(([klucz, etykieta]) => (
+                    <label key={klucz} className="grid gap-1 text-sm text-slate-700 sm:grid-cols-[1fr_12rem] sm:items-center">
+                      <span>{etykieta}</span>
+                      <select
+                        value={formularz.checklista[klucz]}
+                        onChange={(event) =>
+                          setFormularz((aktualny) => ({
+                            ...aktualny,
+                            checklista: { ...aktualny.checklista, [klucz]: event.target.value as StanChecklisty },
+                          }))
+                        }
+                        className={klasaPola}
+                      >
+                        <option value="">—</option>
+                        <option value="wykonano">Wykonano</option>
+                        <option value="brak">Brak</option>
+                        <option value="wymieniono">Wymieniono</option>
+                        <option value="nie_dotyczy">Nie dotyczy</option>
+                      </select>
+                    </label>
+                  ))}
+                </div>
+              </details>
+            ))}
+          </div>
+        ) : null}
+
+        {zakladka === "zalaczniki" ? (
+        <>
         <h3 className="mt-6 text-sm font-semibold tracking-wide text-slate-900 uppercase">5. Załączniki</h3>
         <p className="mt-1 text-xs text-slate-500">
           Do 10 zdjęć z analizatora albo aparatu. W galerii można zaznaczyć kilka naraz. Pliki HEIC z iPhone’a są zapisywane jako JPEG.
@@ -883,6 +1134,19 @@ export function AddProtocolForm({
           onChange={setPodpisSerwisanta}
         />
         <PodpisNaEkranie onChange={setPodpisKlienta} />
+
+        <h3 className="mt-6 text-sm font-semibold tracking-wide text-slate-900 uppercase">Zgody</h3>
+        <label className="mt-3 flex items-start gap-2 text-sm text-slate-800">
+          <input
+            type="checkbox"
+            className="mt-1"
+            checked={formularz.powierzchniaDo300}
+            onChange={(event) => zmienPole("powierzchniaDo300", event.target.checked)}
+          />
+          <span>Oświadczam, że powierzchnia użytkowa budynku mieszkalnego jednorodzinnego nie przekracza 300 mkw.</span>
+        </label>
+        </>
+        ) : null}
 
         {brakSieci || zapisanoWAplikacji ? (
           <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">

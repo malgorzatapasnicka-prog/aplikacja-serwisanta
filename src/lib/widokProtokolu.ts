@@ -1,10 +1,28 @@
 import { formatujDateIso, type DaneProtokoluPdf } from "@/lib/daneProtokolu";
 import { FIRMA } from "@/lib/firma";
-import { stanCzynnosci, wynikKontroli, type StanCzynnosci, type WynikKontroli } from "@/types/protokol";
+import {
+  ETYKIETY_CHECKLISTY,
+  GRUPY_CHECKLISTY,
+  stanCzynnosci,
+  wynikKontroli,
+  type StanCzynnosci,
+  type WynikKontroli,
+} from "@/types/protokol";
 
 export type PozycjaListy = {
   etykieta: string;
   stan: StanCzynnosci;
+};
+
+export type WierszRozliczenia = {
+  nazwa: string;
+  netto: string;
+  brutto: string;
+};
+
+export type GrupaChecklistyWidok = {
+  tytul: string;
+  pozycje: { etykieta: string; stan: string }[];
 };
 
 export type WidokProtokolu = {
@@ -40,6 +58,12 @@ export type WidokProtokolu = {
   podpisyZdjec: string[];
   podpisKlienta: string;
   podpisSerwisanta: string;
+  dodatkoweUrzadzenie: Array<[string, string]>;
+  opisUslugi: string;
+  pomiary: Array<[string, string]>;
+  rozliczenie: WierszRozliczenia[];
+  checklista: GrupaChecklistyWidok[];
+  oswiadczeniePowierzchni: boolean;
 };
 
 export function numerProtokoluZDaty(dataIso: string, kolejny: number) {
@@ -85,6 +109,30 @@ function cisnienie(wartosc: string) {
     return czysta;
   }
   return `${czysta} bar`;
+}
+
+function zJednostka(wartosc: string | undefined, jednostka: string) {
+  const czysta = (wartosc ?? "").trim();
+  if (!czysta || new RegExp(jednostka, "i").test(czysta)) {
+    return czysta;
+  }
+  return `${czysta} ${jednostka}`;
+}
+
+function kwota(wartosc: number | undefined) {
+  if (typeof wartosc !== "number" || !Number.isFinite(wartosc)) {
+    return "";
+  }
+  return `${wartosc.toLocaleString("pl-PL", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} zł`;
+}
+
+function wierszKwot(nazwa: string, netto: number | undefined, brutto: number | undefined): WierszRozliczenia | null {
+  const nettoTekst = kwota(netto);
+  const bruttoTekst = kwota(brutto);
+  if (!nettoTekst && !bruttoTekst) {
+    return null;
+  }
+  return { nazwa, netto: nettoTekst, brutto: bruttoTekst };
 }
 
 function zapisanePole(zapisane: string | undefined, zapas = "") {
@@ -142,6 +190,37 @@ export function widokProtokolu(dane: DaneProtokoluPdf): WidokProtokolu {
     ...zdjeciaZPodpisami(raport.zdjecia, raport.podpisyZdjec),
     podpisKlienta: (raport.podpisKlienta ?? "").startsWith("data:image/png") ? raport.podpisKlienta ?? "" : "",
     podpisSerwisanta: (raport.podpisSerwisanta ?? "").startsWith("data:image/png") ? raport.podpisSerwisanta ?? "" : "",
+    dodatkoweUrzadzenie: (
+      [
+        ["Model urządzenia", raport.modelUrzadzenia],
+        ["Numer fabryczny", raport.numerFabryczny],
+        ["Rodzaj gazu", raport.rodzajGazu],
+      ] as Array<[string, string | undefined]>
+    ).filter((wiersz): wiersz is [string, string] => Boolean(wiersz[1]?.trim())),
+    opisUslugi: (raport.opisUslugi ?? "").trim(),
+    pomiary: (
+      [
+        ["Ciśnienie gazu statycznego / na przyłączu", zJednostka(raport.cisnienieGazuStatyczne, "mbar")],
+        ["Ciśnienie wody w instalacji grzewczej", zJednostka(raport.cisnienieWodyGrzewczej, "bar")],
+        ["Ciśnienie wstępne w naczyniu wzbiorczym", zJednostka(raport.cisnienieWstepneNaczynia, "bar")],
+      ] as Array<[string, string]>
+    ).filter((wiersz) => wiersz[1].trim()),
+    rozliczenie: [
+      wierszKwot("Usługa", raport.uslugaNetto, raport.uslugaBrutto),
+      wierszKwot("Dojazd", raport.dojazdNetto, raport.dojazdBrutto),
+      wierszKwot("Części/Materiały", raport.materialyNetto, raport.materialyBrutto),
+    ].filter((wiersz): wiersz is WierszRozliczenia => wiersz !== null),
+    checklista: GRUPY_CHECKLISTY.map((grupa) => ({
+      tytul: grupa.tytul,
+      pozycje: grupa.pola.flatMap(([klucz, etykieta]) => {
+        const stan = raport.checklista?.[klucz];
+        if (!stan) {
+          return [];
+        }
+        return [{ etykieta, stan: ETYKIETY_CHECKLISTY[stan] }];
+      }),
+    })).filter((grupa) => grupa.pozycje.length > 0),
+    oswiadczeniePowierzchni: raport.powierzchniaDo300 === true,
   };
 }
 

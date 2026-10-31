@@ -145,6 +145,41 @@ export function trescLatex(
     : widok.dataKolejnegoPrzegladu
       ? tex(widok.dataKolejnegoPrzegladu)
       : "\\dotfill";
+  const blokUrzadzenia = [
+    widok.dodatkoweUrzadzenie.length > 0
+      ? tabelaPol(widok.dodatkoweUrzadzenie.map(([etykieta, wartosc]) => [etykieta, pole(wartosc)]))
+      : "",
+    widok.opisUslugi ? `\\noindent ${tex(widok.opisUslugi).replaceAll("\n", "\\\\\n")}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n\\vspace{0.25cm}\n");
+  const blokPomiarow =
+    widok.pomiary.length > 0
+      ? tabelaPol(widok.pomiary.map(([etykieta, wartosc]) => [etykieta, pole(wartosc)]))
+      : "";
+  const blokChecklisty = widok.checklista
+    .map(
+      (grupa) => `\\textbf{${tex(grupa.tytul)}}
+\\begin{itemize}[label={}, leftmargin=1.2em, itemsep=0.15em]
+${grupa.pozycje.map((pozycja) => `  \\item ${tex(pozycja.etykieta)}: \\textbf{${tex(pozycja.stan)}}`).join("\n")}
+\\end{itemize}`,
+    )
+    .join("\n");
+  const blokRozliczenia =
+    widok.rozliczenie.length > 0
+      ? `\\begin{tabularx}{\\textwidth}{@{}X r r@{}}
+\\toprule
+ & \\textbf{Netto} & \\textbf{Brutto} \\\\
+\\midrule
+${widok.rozliczenie
+  .map((wiersz) => `${tex(wiersz.nazwa)} & ${tex(wiersz.netto || "—")} & ${tex(wiersz.brutto || "—")} \\\\`)
+  .join("\n")}
+\\bottomrule
+\\end{tabularx}`
+      : "";
+  const blokOswiadczenia = widok.oswiadczeniePowierzchni
+    ? `\\noindent ${tex("Oświadczam, że powierzchnia użytkowa budynku mieszkalnego jednorodzinnego nie przekracza 300 mkw.")}`
+    : "";
   const listaCzynnosci = `\\noindent
 \\begin{itemize}[label={}, leftmargin=1.6em]
 ${pozycjeListy.join("\n")}
@@ -230,10 +265,15 @@ ${pozycjeListy.join("\n")}
 \\vspace{0.6cm}
 
 ${sekcja("1. Identyfikacja i ustawienia urządzenia", tabelaPol(identyfikacja))}
+${blokUrzadzenia ? sekcja("Urządzenie", blokUrzadzenia) : ""}
 ${sekcja("2. Test bezpieczeństwa i szczelności", tabelaPol(bezpieczenstwo))}
+${blokPomiarow ? sekcja("Pomiary", blokPomiarow) : ""}
 ${sekcja("3. Lista kontrolna wykonanych czynności", listaCzynnosci)}
+${blokChecklisty ? sekcja("Checklista czynności serwisowych", blokChecklisty) : ""}
 ${sekcja("4. Uwagi serwisanta i zdiagnozowane usterki", uwagi)}
+${blokRozliczenia ? sekcja("Rozliczenie", blokRozliczenia) : ""}
 ${sekcja("5. Załączniki", analiza)}
+${blokOswiadczenia ? sekcja("Oświadczenie", blokOswiadczenia) : ""}
 \\vfill
 
 \\noindent
