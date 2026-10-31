@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { addDoc, collection, onSnapshot, orderBy, query, serverTimestamp } from "firebase/firestore";
 import { KOLEKCJE } from "@/lib/collections";
-import { getDb } from "@/lib/firebase";
+import { getDb, gdySesjaAktywna } from "@/lib/firebase";
 
 type KlientOpcja = {
   id: string;
@@ -43,9 +43,7 @@ export function AddOrderForm() {
   const [blad, setBlad] = useState("");
 
   useEffect(() => {
-    const db = getDb();
-    if (!db) return;
-
+    return gdySesjaAktywna((db) => {
     const q = query(collection(db, KOLEKCJE.klienci), orderBy("utworzono", "desc"));
     const unsub = onSnapshot(q, (snap) => {
       const lista = snap.docs.map((d) => {
@@ -71,6 +69,7 @@ export function AddOrderForm() {
     });
 
     return () => unsub();
+    });
   }, [wybranyKlientId]);
 
   const handleSubmit = async (e: React.FormEvent) => {

@@ -13,6 +13,7 @@
 import nodemailer from "nodemailer";
 import { nazwaPlikuPdf } from "@/lib/daneProtokolu";
 import { FIRMA } from "@/lib/firma";
+import { tokenZNaglowka } from "@/lib/firebaseServer";
 import { BladPdf, utworzPdfDlaProtokolu } from "@/lib/pdfProtokoluSerwer";
 
 export const maxDuration = 60;
@@ -58,7 +59,7 @@ export async function POST(request: Request) {
   });
 
   try {
-    const { pdf, nazwaRaportu } = await utworzPdfDlaProtokolu(klientId, protokolId);
+    const { pdf, nazwaRaportu } = await utworzPdfDlaProtokolu(klientId, protokolId, tokenZNaglowka(request));
     await transporter.sendMail({
       from: uzytkownik,
       to: email,

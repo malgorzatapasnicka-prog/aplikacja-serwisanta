@@ -2,7 +2,7 @@ import { FirebaseError } from "firebase/app";
 import { doc, getDoc } from "firebase/firestore";
 import { KOLEKCJE } from "@/lib/collections";
 import { dolaczZalacznikPdf } from "@/lib/dolaczZalacznikPdf";
-import { getServerDb } from "@/lib/firebaseServer";
+import { otworzBazeSerwera } from "@/lib/firebaseServer";
 import { daneProtokoluZDokumentu } from "@/lib/klientDokument";
 import { utworzPdfLatex } from "@/lib/protokolLatex";
 import { utworzPdfProtokolu } from "@/lib/protokolPdf";
@@ -34,15 +34,21 @@ async function pobierzJakoDataUrl(adres: string) {
   return `data:${mime};base64,${bajty.toString("base64")}`;
 }
 
-export async function utworzPdfDlaProtokolu(klientId: string, protokolId: string) {
+export async function utworzPdfDlaProtokolu(klientId: string, protokolId: string, idToken: string) {
   if (!ID_DOKUMENTU.test(klientId) || !ID_DOKUMENTU.test(protokolId)) {
     throw new BladPdf("Brak danych protokołu.", 400);
   }
 
-  const db = getServerDb();
-  if (!db) {
-    throw new BladPdf("Firebase nie jest skonfigurowany.", 503);
+  if (!idToken) {
+    throw new BladPdf("Brak sesji serwisanta. Zaloguj się ponownie.", 401);
   }
+
+  const sesja = await otworzBazeSerwera(idToken);
+  if (!sesja) {
+    throw new BladPdf("Sesja serwisanta wygasła. Zaloguj się ponownie.", 401);
+  }
+
+  const db = sesja.db;
 
   try {
     const snapshot = await getDoc(doc(db, KOLEKCJE.klienci, klientId));
@@ -116,5 +122,7 @@ export async function utworzPdfDlaProtokolu(klientId: string, protokolId: string
     }
     const komunikat = error instanceof Error ? error.message : "Nie udało się utworzyć PDF.";
     throw new BladPdf(komunikat, 500);
+  } finally {
+    await sesja.zamknij();
   }
 }

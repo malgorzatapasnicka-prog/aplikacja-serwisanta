@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getAuth, onAuthStateChanged, User, signInWithEmailAndPassword } from "firebase/auth";
-import { getFirebaseApp } from "@/lib/firebase";
+import { onAuthStateChanged, signInWithEmailAndPassword, User } from "firebase/auth";
+import { authAplikacji, wyczyscWylogowanieReczne, zalogujSerwisantaZEnv } from "@/lib/firebase";
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -13,22 +13,46 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    try {
-      const app = getFirebaseApp();
-      if (!app) {
+    const auth = authAplikacji();
+    if (!auth) {
+      setLoading(false);
+      return;
+    }
+
+    let anulowane = false;
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      if (anulowane) {
+        return;
+      }
+
+      if (currentUser) {
+        setUser(currentUser);
         setLoading(false);
         return;
       }
-      const auth = getAuth(app);
-      const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-        setUser(currentUser);
+
+      const logowanie = zalogujSerwisantaZEnv();
+      if (!logowanie) {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
+      logowanie.catch((err: unknown) => {
+        if (anulowane) {
+          return;
+        }
+        const message = err instanceof Error ? err.message : "Błąd logowania";
+        setError(message);
+        setUser(null);
         setLoading(false);
       });
+    });
 
-      return () => unsubscribe();
-    } catch {
-      setLoading(false);
-    }
+    return () => {
+      anulowane = true;
+      unsubscribe();
+    };
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -36,9 +60,9 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     setError(null);
     setSubmitting(true);
     try {
-      const app = getFirebaseApp();
-      if (!app) throw new Error("Firebase nie jest zainicjalizowany.");
-      const auth = getAuth(app);
+      const auth = authAplikacji();
+      if (!auth) throw new Error("Firebase nie jest zainicjalizowany.");
+      wyczyscWylogowanieReczne();
       await signInWithEmailAndPassword(auth, email, password);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Błąd logowania";
@@ -52,9 +76,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     return (
       <>
         <div className="flex min-h-screen items-center justify-center bg-slate-50">
-          <div className="text-sm font-medium text-slate-500">
-            Ładowanie aplikacji...
-          </div>
+          <div className="text-sm font-medium text-slate-500">Ładowanie aplikacji...</div>
         </div>
         <div hidden>{children}</div>
       </>

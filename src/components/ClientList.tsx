@@ -26,7 +26,7 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { KOLEKCJE } from "@/lib/collections";
-import { getDb } from "@/lib/firebase";
+import { getDb, getFirebaseApp, gdySesjaAktywna, tokenSesji } from "@/lib/firebase";
 import { protokolyZDokumentu, scalProtokoly } from "@/lib/klientDokument";
 import { AddProtocolForm } from "@/components/AddProtocolForm";
 
@@ -142,34 +142,33 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
   const [wysylamEmailId, setWysylamEmailId] = useState<string | null>(null);
 
   useEffect(() => {
-    const db = getDb();
-    if (!db) {
+    if (!getFirebaseApp()) {
       setLaduje(false);
       return;
     }
 
-    const q = query(
-      collection(db, KOLEKCJE.klienci),
-      orderBy("utworzono", "desc")
-    );
+    return gdySesjaAktywna((db) => {
+      const q = query(
+        collection(db, KOLEKCJE.klienci),
+        orderBy("utworzono", "desc")
+      );
 
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const lista: KlientDokument[] = snapshot.docs.map((d) => ({
-          id: d.id,
-          ...d.data(),
-        }));
-        setKlienci(lista);
-        setLaduje(false);
-      },
-      (err) => {
-        console.error("Błąd pobierania klientów:", err);
-        setLaduje(false);
-      }
-    );
-
-    return () => unsubscribe();
+      return onSnapshot(
+        q,
+        (snapshot) => {
+          const lista: KlientDokument[] = snapshot.docs.map((d) => ({
+            id: d.id,
+            ...d.data(),
+          }));
+          setKlienci(lista);
+          setLaduje(false);
+        },
+        (err) => {
+          console.error("Błąd pobierania klientów:", err);
+          setLaduje(false);
+        }
+      );
+    });
   }, []);
 
   const idsKlientow = [
@@ -182,12 +181,12 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
   const kluczKlientow = idsKlientow.join("\n");
 
   useEffect(() => {
-    const db = getDb();
     const ids = kluczKlientow.split("\n").filter((id) => id.length > 0);
-    if (!db || ids.length === 0) {
+    if (ids.length === 0) {
       return;
     }
 
+    return gdySesjaAktywna((db) => {
     const wypisania = ids.map((klientId) =>
       onSnapshot(
         collection(db, KOLEKCJE.klienci, klientId, "protokoly"),
@@ -206,6 +205,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
     return () => {
       wypisania.forEach((wypisz) => wypisz());
     };
+    });
   }, [kluczKlientow]);
 
   function protokolyKlienta(klient: KlientDokument) {
@@ -316,10 +316,12 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
     try {
       setPobieramPdfId(protokolId);
 
+      const token = await tokenSesji();
       const res = await fetch("/api/protokol/pdf", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ klientId, protokolId }),
       });
@@ -375,10 +377,12 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
     try {
       setWysylamEmailId(protokolId);
 
+      const token = await tokenSesji();
       const wysylka = await fetch("/api/send-report", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           email: adres,

@@ -1,4 +1,5 @@
 import { nazwaPlikuPdf } from "@/lib/daneProtokolu";
+import { tokenZNaglowka } from "@/lib/firebaseServer";
 import { BladPdf, utworzPdfDlaProtokolu } from "@/lib/pdfProtokoluSerwer";
 
 function blad(tekst: string, status: number) {
@@ -21,7 +22,7 @@ export async function POST(request: Request) {
   const protokolId = body && typeof body === "object" && "protokolId" in body ? tekst(body.protokolId) : "";
 
   try {
-    const { pdf, nazwaRaportu } = await utworzPdfDlaProtokolu(klientId, protokolId);
+    const { pdf, nazwaRaportu } = await utworzPdfDlaProtokolu(klientId, protokolId, tokenZNaglowka(request));
     const nazwa = nazwaPlikuPdf(nazwaRaportu);
 
     return new Response(new Uint8Array(pdf), {

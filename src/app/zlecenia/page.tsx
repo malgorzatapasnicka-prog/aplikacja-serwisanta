@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { collection, onSnapshot, orderBy, query, updateDoc, doc, deleteDoc } from "firebase/firestore";
 import { KOLEKCJE } from "@/lib/collections";
-import { getDb } from "@/lib/firebase";
+import { getDb, getFirebaseApp, gdySesjaAktywna } from "@/lib/firebase";
 import { PageHeader } from "@/components/PageHeader";
 import { AddOrderForm } from "@/components/AddOrderForm";
 
@@ -25,23 +25,22 @@ export default function ZleceniaPage() {
   const [laduje, setLaduje] = useState(true);
 
   useEffect(() => {
-    const db = getDb();
-    if (!db) {
+    if (!getFirebaseApp()) {
       setLaduje(false);
       return;
     }
 
-    const q = query(collection(db, KOLEKCJE.zlecenia), orderBy("utworzono", "desc"));
-    const unsub = onSnapshot(q, (snap) => {
-      const lista = snap.docs.map((d) => ({
-        id: d.id,
-        ...d.data(),
-      }));
-      setZlecenia(lista);
-      setLaduje(false);
+    return gdySesjaAktywna((db) => {
+      const q = query(collection(db, KOLEKCJE.zlecenia), orderBy("utworzono", "desc"));
+      return onSnapshot(q, (snap) => {
+        const lista = snap.docs.map((d) => ({
+          id: d.id,
+          ...d.data(),
+        }));
+        setZlecenia(lista);
+        setLaduje(false);
+      });
     });
-
-    return () => unsub();
   }, []);
 
   const zmienStatus = async (id: string, nowyStatus: string) => {

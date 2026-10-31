@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogOut } from "lucide-react";
-import { getAuth, signOut } from "firebase/auth";
-import { getFirebaseApp } from "@/lib/firebase";
+import { signOut } from "firebase/auth";
+import { authAplikacji, oznaczWylogowanieReczne } from "@/lib/firebase";
 
 const LINKI = [
   { href: "/", label: "Pulpit" },
@@ -17,9 +17,9 @@ export function AppNav() {
 
   const handleLogout = async () => {
     try {
-      const app = getFirebaseApp();
-      if (app) {
-        const auth = getAuth(app);
+      const auth = authAplikacji();
+      if (auth) {
+        oznaczWylogowanieReczne();
         await signOut(auth);
       }
     } catch (error) {
