@@ -227,6 +227,7 @@ export function widokProtokolu(dane: DaneProtokoluPdf): WidokProtokolu {
       }),
     })).filter((grupa) => grupa.pozycje.length > 0),
     oswiadczeniePowierzchni: raport.powierzchniaDo300 === true,
+    oswiadczenieLokalu: raport.powierzchniaDo150 === true,
   };
 }
 
