@@ -445,7 +445,7 @@ export function AddProtocolForm({
     cisnienieWodyGrzewczej: "",
     cisnienieWstepneNaczynia: "",
     checklista: pustaChecklista(),
-    powierzchniaDo300: false,
+    wyborOswiadczenia: "",
   });
   const [zakladka, setZakladka] = useState<Zakladka>("protokol");
   const [wlasnyGaz, setWlasnyGaz] = useState(false);
