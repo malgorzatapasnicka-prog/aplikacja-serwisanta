@@ -78,7 +78,6 @@ const ZAKLADKI = [
   ["protokol", "Protokół"],
   ["rozliczenie", "Rozliczenie"],
   ["pomiary", "Pomiary"],
-  ["checklista", "Checklista"],
   ["zalaczniki", "Załączniki"],
 ] as const;
 
@@ -878,6 +877,32 @@ export function AddProtocolForm({
               Nie dotyczy
             </span>
           </Pole>
+          {grupyChecklistyWProtokole().map((grupa) => (
+            <div key={grupa.tytul} className="grid gap-2 rounded-lg border border-slate-200 p-3">
+              <p className="text-sm font-semibold text-slate-800">{grupa.tytul}</p>
+              {grupa.pola.map(([klucz, etykieta]) => (
+                <label key={klucz} className="grid gap-1 text-sm text-slate-700 sm:grid-cols-[1fr_12rem] sm:items-center">
+                  <span>{etykieta}</span>
+                  <select
+                    value={formularz.checklista[klucz]}
+                    onChange={(event) =>
+                      setFormularz((aktualny) => ({
+                        ...aktualny,
+                        checklista: { ...aktualny.checklista, [klucz]: event.target.value as StanChecklisty },
+                      }))
+                    }
+                    className={klasaPola}
+                  >
+                    <option value="">—</option>
+                    <option value="wykonano">Wykonano</option>
+                    <option value="brak">Brak</option>
+                    <option value="wymieniono">Wymieniono</option>
+                    <option value="nie_dotyczy">Nie dotyczy</option>
+                  </select>
+                </label>
+              ))}
+            </div>
+          ))}
         </div>
 
         <h3 className="mt-6 text-sm font-semibold tracking-wide text-slate-900 uppercase">
@@ -992,40 +1017,6 @@ export function AddProtocolForm({
             <Pole etykieta="Ciśnienie wstępne w naczyniu wzbiorczym (bar)" wymagane={false}>
               <input value={formularz.cisnienieWstepneNaczynia} onChange={(event) => zmienPole("cisnienieWstepneNaczynia", event.target.value)} className={klasaPola} />
             </Pole>
-          </div>
-        ) : null}
-
-        {zakladka === "checklista" ? (
-          <div className="mt-5 grid gap-3">
-            <h3 className="text-sm font-semibold tracking-wide text-slate-900 uppercase">Checklista czynności serwisowych</h3>
-            {GRUPY_CHECKLISTY.map((grupa) => (
-              <details key={grupa.tytul} open className="rounded-lg border border-slate-200">
-                <summary className="cursor-pointer px-3 py-2 text-sm font-semibold text-slate-800">{grupa.tytul}</summary>
-                <div className="grid gap-2 px-3 pb-3">
-                  {grupa.pola.map(([klucz, etykieta]) => (
-                    <label key={klucz} className="grid gap-1 text-sm text-slate-700 sm:grid-cols-[1fr_12rem] sm:items-center">
-                      <span>{etykieta}</span>
-                      <select
-                        value={formularz.checklista[klucz]}
-                        onChange={(event) =>
-                          setFormularz((aktualny) => ({
-                            ...aktualny,
-                            checklista: { ...aktualny.checklista, [klucz]: event.target.value as StanChecklisty },
-                          }))
-                        }
-                        className={klasaPola}
-                      >
-                        <option value="">—</option>
-                        <option value="wykonano">Wykonano</option>
-                        <option value="brak">Brak</option>
-                        <option value="wymieniono">Wymieniono</option>
-                        <option value="nie_dotyczy">Nie dotyczy</option>
-                      </select>
-                    </label>
-                  ))}
-                </div>
-              </details>
-            ))}
           </div>
         ) : null}
 
