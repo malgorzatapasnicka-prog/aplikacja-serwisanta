@@ -15,10 +15,13 @@ import {
   User,
   X,
 } from "lucide-react";
+import { FirebaseError } from "firebase/app";
 import {
+  arrayRemove,
   collection,
   deleteDoc,
   doc,
+  getDoc,
   getDocs,
   onSnapshot,
   orderBy,
@@ -192,7 +195,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
         collection(db, KOLEKCJE.klienci, klientId, "protokoly"),
         (snapshot) => {
           const lista = protokolyZDokumentu(
-            snapshot.docs.map((dokument) => ({ id: dokument.id, ...dokument.data() })),
+            snapshot.docs.map((dokument) => ({ ...dokument.data(), id: dokument.id })),
           ) as Protokol[];
           setProtokolyZPodkolekcji((aktualne) => ({ ...aktualne, [klientId]: lista }));
         },
@@ -444,20 +447,65 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
     if (!potwierdzenie) return;
 
     const db = getDb();
-    if (!db) return;
+    if (!db) {
+      alert("Brak sesji serwisanta. Zaloguj się ponownie.");
+      return;
+    }
 
     try {
-      const klient = klienci.find((k) => k.id === klientId);
-      await deleteDoc(doc(db, KOLEKCJE.klienci, klientId, "protokoly", protokolId)).catch(() => undefined);
-      if (klient?.protokoly?.some((protokol) => protokol.id === protokolId)) {
-        await updateDoc(doc(db, KOLEKCJE.klienci, klientId), {
-          protokoly: klient.protokoly.filter((protokol) => protokol.id !== protokolId),
-        });
+      const refPodkolekcji = doc(db, KOLEKCJE.klienci, klientId, "protokoly", protokolId);
+      let usunietoZPodkolekcji = false;
+      let bylWPodkolekcji = false;
+      let bladPodkolekcji: unknown = null;
+      try {
+        const odczytPodkolekcji = await getDoc(refPodkolekcji);
+        if (odczytPodkolekcji.exists()) {
+          bylWPodkolekcji = true;
+          await deleteDoc(refPodkolekcji);
+          usunietoZPodkolekcji = true;
+        }
+      } catch (error) {
+        bladPodkolekcji = error;
       }
+
+      const refKlienta = doc(db, KOLEKCJE.klienci, klientId);
+      const odczytKlienta = await getDoc(refKlienta);
+      const tablica = odczytKlienta.data()?.protokoly;
+      const znaleziony = Array.isArray(tablica)
+        ? tablica.find(
+            (pozycja) =>
+              !!pozycja && typeof pozycja === "object" && (pozycja as { id?: unknown }).id === protokolId,
+          )
+        : undefined;
+      if (znaleziony) {
+        await updateDoc(refKlienta, { protokoly: arrayRemove(znaleziony) });
+      }
+
+      if (bladPodkolekcji && (bylWPodkolekcji || !znaleziony)) {
+        throw bladPodkolekcji;
+      }
+
+      if (!usunietoZPodkolekcji && !znaleziony && !bladPodkolekcji) {
+        alert("Nie znaleziono tego raportu w bazie.");
+        return;
+      }
+
+      setProtokolyZPodkolekcji((aktualne) => ({
+        ...aktualne,
+        [klientId]: (aktualne[klientId] ?? []).filter((protokol) => protokol.id !== protokolId),
+      }));
       await deleteDoc(doc(db, KOLEKCJE.zalacznikiProtokolu, protokolId)).catch(() => undefined);
     } catch (err) {
       console.error("Błąd usuwania protokołu:", err);
-      alert("Nie udało się usunąć protokołu.");
+      const kod = err instanceof FirebaseError ? err.code : "";
+      if (kod === "permission-denied") {
+        alert(
+          "Firestore odrzuciło usunięcie raportu. Reguła musi pozwalać na delete zalogowanemu serwisantowi, także w podkolekcji protokoły.",
+        );
+        return;
+      }
+      const msg = err instanceof Error ? err.message : "";
+      alert(msg ? `Nie udało się usunąć protokołu. ${msg}` : "Nie udało się usunąć protokołu.");
     }
   };
 
