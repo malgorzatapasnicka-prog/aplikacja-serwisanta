@@ -51,21 +51,30 @@ export async function utworzPdfDlaProtokolu(klientId: string, protokolId: string
     }
 
     const klient = snapshot.data();
-    const protokolSnap = await getDoc(doc(db, KOLEKCJE.klienci, klientId, "protokoly", protokolId));
+    let rekordPodkolekcji: Record<string, unknown> | null = null;
+    let idPodkolekcji = "";
+    try {
+      const odczytPodkolekcji = await getDoc(doc(db, KOLEKCJE.klienci, klientId, "protokoly", protokolId));
+      if (odczytPodkolekcji.exists()) {
+        const surowy = odczytPodkolekcji.data();
+        rekordPodkolekcji = surowy && typeof surowy === "object" ? (surowy as Record<string, unknown>) : null;
+        idPodkolekcji = odczytPodkolekcji.id;
+      }
+    } catch (error) {
+      if (!(error instanceof FirebaseError) || (error.code !== "permission-denied" && error.code !== "unauthenticated")) {
+        throw error;
+      }
+    }
     const tablica = Array.isArray(klient.protokoly) ? klient.protokoly : [];
-    const zPodkolekcji = protokolSnap.exists() ? [{ id: protokolSnap.id, ...protokolSnap.data() }] : [];
-    const dane = daneProtokoluZDokumentu(
-      {
-        ...klient,
-        protokoly: [
+    const protokoly = rekordPodkolekcji
+      ? [
           ...tablica.filter(
             (pozycja) => !pozycja || typeof pozycja !== "object" || (pozycja as { id?: unknown }).id !== protokolId,
           ),
-          ...zPodkolekcji,
-        ],
-      },
-      protokolId,
-    );
+          { id: idPodkolekcji, ...rekordPodkolekcji },
+        ]
+      : tablica;
+    const dane = daneProtokoluZDokumentu({ ...klient, protokoly }, protokolId);
     if (!dane) {
       throw new BladPdf("Nie znaleziono protokołu.", 404);
     }
@@ -78,13 +87,21 @@ export async function utworzPdfDlaProtokolu(klientId: string, protokolId: string
 
     let pdf = (await utworzPdfLatex(dane)) ?? utworzPdfProtokolu(dane);
     if (dane.protokol.maZalacznikPdf) {
-      const zalacznik = await getDoc(doc(db, KOLEKCJE.zalacznikiProtokolu, protokolId));
-      const zeStaregoMiejsca = zalacznik.exists() ? zalacznik.data().pdf : "";
-      const adresNowy = protokolSnap.exists() ? protokolSnap.data().zalacznikPdf : "";
+      let zeStaregoMiejsca = "";
+      try {
+        const zalacznik = await getDoc(doc(db, KOLEKCJE.zalacznikiProtokolu, protokolId));
+        const pdfZalacznika = zalacznik.exists() ? zalacznik.data()?.pdf : "";
+        zeStaregoMiejsca = typeof pdfZalacznika === "string" ? pdfZalacznika : "";
+      } catch (error) {
+        if (!(error instanceof FirebaseError) || (error.code !== "permission-denied" && error.code !== "unauthenticated")) {
+          throw error;
+        }
+      }
+      const adresNowy = typeof rekordPodkolekcji?.zalacznikPdf === "string" ? rekordPodkolekcji.zalacznikPdf : "";
       const tresc =
-        typeof zeStaregoMiejsca === "string" && zeStaregoMiejsca.startsWith("data:application/pdf")
+        zeStaregoMiejsca.startsWith("data:application/pdf")
           ? zeStaregoMiejsca
-          : typeof adresNowy === "string"
+          : adresNowy
             ? await pobierzJakoDataUrl(adresNowy)
             : "";
       if (tresc.startsWith("data:application/pdf")) {
@@ -96,9 +113,6 @@ export async function utworzPdfDlaProtokolu(klientId: string, protokolId: string
   } catch (error) {
     if (error instanceof BladPdf) {
       throw error;
-    }
-    if (error instanceof FirebaseError && error.code === "permission-denied") {
-      throw new BladPdf("Firestore odrzuciło odczyt klienta.", 403);
     }
     const komunikat = error instanceof Error ? error.message : "Nie udało się utworzyć PDF.";
     throw new BladPdf(komunikat, 500);

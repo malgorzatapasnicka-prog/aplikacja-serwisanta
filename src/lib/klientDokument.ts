@@ -120,3 +120,24 @@ export function daneProtokoluZDokumentu(
     protokol,
   };
 }
+
+export function scalProtokoly<T extends { id: string; dataWypelnienia?: string }>(
+  zTablicy: readonly T[],
+  zPodkolekcji: readonly T[],
+): T[] {
+  const mapa = new Map<string, T>();
+  for (const protokol of zTablicy) {
+    if (protokol?.id) {
+      mapa.set(protokol.id, protokol);
+    }
+  }
+  for (const protokol of zPodkolekcji) {
+    if (protokol?.id) {
+      mapa.set(protokol.id, protokol);
+    }
+  }
+
+  return [...mapa.values()].sort(
+    (a, b) => (a.dataWypelnienia || "").localeCompare(b.dataWypelnienia || "") || a.id.localeCompare(b.id),
+  );
+}

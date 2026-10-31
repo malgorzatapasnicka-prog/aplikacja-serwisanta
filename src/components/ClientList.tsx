@@ -27,7 +27,7 @@ import {
 } from "firebase/firestore";
 import { KOLEKCJE } from "@/lib/collections";
 import { getDb } from "@/lib/firebase";
-import { protokolyZDokumentu } from "@/lib/klientDokument";
+import { protokolyZDokumentu, scalProtokoly } from "@/lib/klientDokument";
 import { AddProtocolForm } from "@/components/AddProtocolForm";
 
 type Protokol = {
@@ -172,18 +172,25 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
     return () => unsubscribe();
   }, []);
 
-  const idKlientow = klienci.map((klient) => klient.id).sort().join("|");
+  const idsKlientow = [
+    ...new Set(
+      klienci
+        .map((klient) => (typeof klient.id === "string" ? klient.id.trim() : ""))
+        .filter((id) => id.length > 0),
+    ),
+  ].sort();
+  const kluczKlientow = idsKlientow.join("\n");
 
   useEffect(() => {
     const db = getDb();
-    const ids = idKlientow ? idKlientow.split("|") : [];
+    const ids = kluczKlientow.split("\n").filter((id) => id.length > 0);
     if (!db || ids.length === 0) {
       return;
     }
 
     const wypisania = ids.map((klientId) =>
       onSnapshot(
-        query(collection(db, KOLEKCJE.klienci, klientId, "protokoly"), orderBy("dataWypelnienia")),
+        collection(db, KOLEKCJE.klienci, klientId, "protokoly"),
         (snapshot) => {
           const lista = protokolyZDokumentu(
             snapshot.docs.map((dokument) => ({ id: dokument.id, ...dokument.data() })),
@@ -199,13 +206,10 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
     return () => {
       wypisania.forEach((wypisz) => wypisz());
     };
-  }, [idKlientow]);
+  }, [kluczKlientow]);
 
   function protokolyKlienta(klient: KlientDokument) {
-    const zTablicy = klient.protokoly ?? [];
-    const zPodkolekcji = protokolyZPodkolekcji[klient.id] ?? [];
-    const idZPodkolekcji = new Set(zPodkolekcji.map((protokol) => protokol.id));
-    return [...zTablicy.filter((protokol) => !idZPodkolekcji.has(protokol.id)), ...zPodkolekcji];
+    return scalProtokoly(klient.protokoly ?? [], protokolyZPodkolekcji[klient.id] ?? []);
   }
 
   const pobierzImie = (k: KlientDokument) => {
