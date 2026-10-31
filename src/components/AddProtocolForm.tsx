@@ -95,7 +95,6 @@ function liczbaPola(wartosc: string) {
 
 function polaRozszerzenia(formularz: FormularzProtokolu) {
   const tekstowe = {
-  const tekstowe = {
     modelUrzadzenia: formularz.modelUrzadzenia.trim(),
     numerFabryczny: formularz.numerFabryczny.trim(),
     rodzajGazu: formularz.rodzajGazu.trim(),
@@ -118,7 +117,6 @@ function polaRozszerzenia(formularz: FormularzProtokolu) {
     }
   }
 
-  return {
   return {
     ...(tekstowe.modelUrzadzenia ? { modelUrzadzenia: tekstowe.modelUrzadzenia } : {}),
     ...(tekstowe.numerFabryczny ? { numerFabryczny: tekstowe.numerFabryczny } : {}),
@@ -379,10 +377,10 @@ export function AddProtocolForm({
     dataKolejnegoPrzegladu: "",
     kolejnyPrzegladNieDotyczy: false,
     uwagi: "",
-    uwagi: "",
     modelUrzadzenia: "",
     numerFabryczny: "",
     rodzajGazu: "",
+    opisUslugi: "",
     uslugaNetto: "",
     uslugaBrutto: "",
     dojazdNetto: "",
@@ -782,6 +780,40 @@ export function AddProtocolForm({
               placeholder="ERROR / Usterka"
             />
           </Pole>
+          <Pole etykieta="Rodzaj gazu" wymagane={false}>
+            <select
+              value={wlasnyGaz ? "inny" : formularz.rodzajGazu}
+              onChange={(event) => {
+                const wybrany = event.target.value;
+                if (wybrany === "inny") {
+                  setWlasnyGaz(true);
+                  if ((RODZAJE_GAZU as readonly string[]).includes(formularz.rodzajGazu)) {
+                    zmienPole("rodzajGazu", "");
+                  }
+                  return;
+                }
+                setWlasnyGaz(false);
+                zmienPole("rodzajGazu", wybrany);
+              }}
+              className={klasaPola}
+            >
+              <option value="">Wybierz...</option>
+              {RODZAJE_GAZU.map((gaz) => (
+                <option key={gaz} value={gaz}>
+                  {gaz}
+                </option>
+              ))}
+              <option value="inny">Inny</option>
+            </select>
+            {wlasnyGaz ? (
+              <input
+                value={formularz.rodzajGazu}
+                onChange={(event) => zmienPole("rodzajGazu", event.target.value)}
+                className={`${klasaPola} mt-2`}
+                placeholder="Wpisz rodzaj gazu, np. GZ50"
+              />
+            ) : null}
+          </Pole>
         </div>
 
         <h3 className="mt-6 text-sm font-semibold tracking-wide text-slate-900 uppercase">
@@ -926,55 +958,6 @@ export function AddProtocolForm({
         ) : null}
 
         {zakladka === "rozliczenie" ? (
-        {zakladka === "urzadzenie" ? (
-          <div className="mt-5 grid gap-4">
-            <h3 className="text-sm font-semibold tracking-wide text-slate-900 uppercase">Urządzenie</h3>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Pole etykieta="Model urządzenia" wymagane={false}>
-                <input value={formularz.modelUrzadzenia} onChange={(event) => zmienPole("modelUrzadzenia", event.target.value)} className={klasaPola} />
-              </Pole>
-              <Pole etykieta="Numer fabryczny" wymagane={false}>
-                <input value={formularz.numerFabryczny} onChange={(event) => zmienPole("numerFabryczny", event.target.value)} className={klasaPola} />
-              </Pole>
-              <Pole etykieta="Rodzaj gazu" wymagane={false}>
-                <select
-                  value={wlasnyGaz ? "inny" : formularz.rodzajGazu}
-                  onChange={(event) => {
-                    const wybrany = event.target.value;
-                    if (wybrany === "inny") {
-                      setWlasnyGaz(true);
-                      if ((RODZAJE_GAZU as readonly string[]).includes(formularz.rodzajGazu)) {
-                        zmienPole("rodzajGazu", "");
-                      }
-                      return;
-                    }
-                    setWlasnyGaz(false);
-                    zmienPole("rodzajGazu", wybrany);
-                  }}
-                  className={klasaPola}
-                >
-                  <option value="">Wybierz...</option>
-                  {RODZAJE_GAZU.map((gaz) => (
-                    <option key={gaz} value={gaz}>{gaz}</option>
-                  ))}
-                  <option value="inny">Inny</option>
-                </select>
-                {wlasnyGaz ? (
-                  <input
-                    value={formularz.rodzajGazu}
-                    onChange={(event) => zmienPole("rodzajGazu", event.target.value)}
-                    className={`${klasaPola} mt-2`}
-                    placeholder="Wpisz rodzaj gazu, np. GZ50"
-                  />
-                ) : null}
-              </Pole>
-            </div>
-            <Pole etykieta="Opis usługi / podjęte działania" wymagane={false}>
-              <textarea value={formularz.opisUslugi} onChange={(event) => zmienPole("opisUslugi", event.target.value)} rows={5} className={klasaPola} />
-            </Pole>
-          </div>
-        ) : null}
-
           <div className="mt-5 grid gap-4">
             <h3 className="text-sm font-semibold tracking-wide text-slate-900 uppercase">Rozliczenie</h3>
             {(
