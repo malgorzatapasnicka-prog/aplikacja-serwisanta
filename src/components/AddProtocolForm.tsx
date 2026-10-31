@@ -11,7 +11,6 @@ import { nastepnyNumerProtokolu } from "@/lib/widokProtokolu";
 import { PodpisNaEkranie } from "@/components/PodpisNaEkranie";
 import {
   ETYKIETY_CZYNNOSCI,
-  GRUPY_CHECKLISTY,
   RODZAJE_GAZU,
   pustaChecklista,
   type ChecklistaProtokolu,
@@ -337,6 +336,62 @@ function WynikKontroliPole({
     </fieldset>
   );
 }
+
+const grupyChecklistyWProtokole = [
+  {
+    tytul: "Pomieszczenie",
+    pola: [
+      ["kontrolaWentylacji", "Kontrola wentylacji"],
+      ["stanZapylenia", "Stan zapylenia"],
+    ],
+  },
+  {
+    tytul: "Instalacje",
+    pola: [
+      ["filtrGazu", "Filtr gazu"],
+      ["filtrZimnejWody", "Filtr zimnej wody"],
+      ["filtrNaPowrocie", "Filtr na powrocie"],
+      ["odplywKondensatu", "Odpływ kondensatu"],
+    ],
+  },
+  {
+    tytul: "Strona wodna",
+    pola: [
+      ["inspekcjaNieszczelnosci", "Inspekcja nieszczelności"],
+      ["plukanieWymiennikaSpaliny", "Płukanie wymiennika spaliny-woda"],
+      ["plukanieWymiennikaCwu", "Płukanie wymiennika CWU"],
+      ["zaworPrzelaczny", "Zawór przełączny CO-CWU"],
+      ["czujnikTempKotla", "Czujnik temp. kotła"],
+      ["czujnikTempCwu", "Czujnik temp. CWU"],
+      ["zaworBezpieczenstwa", "Zawór bezpieczeństwa"],
+    ],
+  },
+  {
+    tytul: "Strona spalinowa",
+    pola: [
+      ["elektroda", "Elektroda zapłonowa/jonizacyjna"],
+      ["izolacjeTermiczne", "Izolacje termiczne"],
+      ["zabezpieczeniePrzeplywu", "Zabezpieczenia przed przepływem zwrotnym"],
+      ["czyszczenieWentylatora", "Czyszczenie wentylatora"],
+      ["analizaSpalin", "Analiza spalin"],
+      ["szczelnoscKomina", "Badanie szczelności komina"],
+      ["czujnikTempSpalin", "Czujnik temp. spalin"],
+    ],
+  },
+  {
+    tytul: "Regulator",
+    pola: [
+      ["historiaUsterek", "Historia usterek"],
+      ["testPrzekaznikow", "Test przekaźników"],
+      ["testRealizacjiTemp", "Test realizacji temp. CO i CWU"],
+      ["testZabezpieczenTermicznych", "Test zabezpieczeń termicznych"],
+      ["przylaczaElektryczne", "Przyłącza elektryczne"],
+    ],
+  },
+] as const satisfies readonly {
+  readonly tytul: string;
+  readonly pola: readonly (readonly [KluczChecklisty, string])[];
+}[];
 
 export function AddProtocolForm({
   klientId,
@@ -877,7 +932,7 @@ export function AddProtocolForm({
               Nie dotyczy
             </span>
           </Pole>
-          {grupyChecklistyWProtokole().map((grupa) => (
+          {grupyChecklistyWProtokole.map((grupa) => (
             <div key={grupa.tytul} className="grid gap-2 rounded-lg border border-slate-200 p-3">
               <p className="text-sm font-semibold text-slate-800">{grupa.tytul}</p>
               {grupa.pola.map(([klucz, etykieta]) => (
