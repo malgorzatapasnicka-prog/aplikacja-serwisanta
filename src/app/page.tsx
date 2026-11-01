@@ -14,6 +14,11 @@ const KARTY = [
     opis: `Wizyty i naprawy w kolekcji ${KOLEKCJE.zlecenia}`,
     href: "/zlecenia",
   },
+  {
+    label: "Rozliczenia",
+    opis: "Kwoty z protokołów i sumy za wybrany okres (tylko dla serwisanta)",
+    href: "/rozliczenia",
+  },
 ];
 
 export default function Home() {

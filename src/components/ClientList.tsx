@@ -32,8 +32,10 @@ import { KOLEKCJE } from "@/lib/collections";
 import { getDb, getFirebaseApp, gdySesjaAktywna, tokenSesji } from "@/lib/firebase";
 import { protokolyZDokumentu, scalProtokoly } from "@/lib/klientDokument";
 import { AddProtocolForm } from "@/components/AddProtocolForm";
+import { RozliczenieProtokolu } from "@/components/RozliczenieProtokolu";
+import type { KwotyProtokolu } from "@/lib/rozliczenie";
 
-type Protokol = {
+type Protokol = KwotyProtokolu & {
   id: string;
   nazwaRaportu: string;
   czynnosci: string;
@@ -940,10 +942,8 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                   </span>
                   <div className="mt-3 space-y-3">
                     {protokoly.map((protokol) => (
-                      <div
-                        key={protokol.id}
-                        className="flex flex-wrap items-center justify-between gap-2 text-sm"
-                      >
+                      <div key={protokol.id}>
+                      <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
                         <div>
                           <strong className="font-medium text-gray-900">{protokol.nazwaRaportu}</strong>
                           <span className="ml-2 text-gray-500">({protokol.dataWypelnienia})</span>
@@ -996,6 +996,8 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                             <X className="h-4 w-4" aria-hidden />
                           </button>
                         </div>
+                      </div>
+                      <RozliczenieProtokolu protokol={protokol} />
                       </div>
                     ))}
                   </div>

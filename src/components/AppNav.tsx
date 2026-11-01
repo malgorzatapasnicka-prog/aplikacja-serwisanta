@@ -10,6 +10,7 @@ const LINKI = [
   { href: "/", label: "Pulpit" },
   { href: "/klienci", label: "Klienci" },
   { href: "/zlecenia", label: "Zlecenia" },
+  { href: "/rozliczenia", label: "Rozliczenia" },
 ];
 
 export function AppNav() {
