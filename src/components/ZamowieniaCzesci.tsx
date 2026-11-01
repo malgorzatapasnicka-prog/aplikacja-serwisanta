@@ -15,17 +15,11 @@ import {
 import { FormEvent, useEffect, useState } from "react";
 import { KOLEKCJE } from "@/lib/collections";
 import { getDb, gdySesjaAktywna } from "@/lib/firebase";
+import { WyborKlienta, type KlientOpcja } from "@/components/WyborKlienta";
 import { KOMUNIKAT_ZAPISANO_OFFLINE, zapiszBezCzekania } from "@/lib/zapisOffline";
 
 const STATUSY = ["Do zamówienia", "Zamówione", "Zrealizowane"] as const;
 type StatusZamowienia = (typeof STATUSY)[number];
-
-type KlientOpcja = {
-  id: string;
-  nazwa: string;
-  adres: string;
-  telefon: string;
-};
 
 type KlientDane = {
   imieNazwisko: string;
@@ -50,10 +44,6 @@ const KLASY_STATUSU: Record<StatusZamowienia, string> = {
 
 function tekst(wartosc: unknown) {
   return typeof wartosc === "string" ? wartosc.trim() : "";
-}
-
-function opisKlienta(klient: KlientOpcja) {
-  return klient.adres ? `${klient.nazwa} (${klient.adres})` : klient.nazwa;
 }
 
 function formatujDate(data: Timestamp | null) {
@@ -158,7 +148,7 @@ export function ZamowieniaCzesci() {
       return;
     }
     if (!klient) {
-      setBlad("Wybierz klienta, dla którego jest ta część.");
+      setBlad("Wybierz klienta z listy podpowiedzi.");
       return;
     }
 
@@ -221,28 +211,7 @@ export function ZamowieniaCzesci() {
             />
           </label>
 
-          <label className="block text-xs font-semibold uppercase text-slate-600">
-            Klient
-            <select
-              value={klientId}
-              onChange={(e) => setKlientId(e.target.value)}
-              disabled={ladujeKlientow}
-              className="field mt-1.5 font-normal normal-case text-slate-900"
-            >
-              <option value="">
-                {ladujeKlientow
-                  ? "Ładowanie klientów..."
-                  : klienci.length === 0
-                    ? "Brak klientów w bazie"
-                    : "Wybierz klienta..."}
-              </option>
-              {klienci.map((klient) => (
-                <option key={klient.id} value={klient.id}>
-                  {opisKlienta(klient)}
-                </option>
-              ))}
-            </select>
-          </label>
+          <WyborKlienta klienci={klienci} wartosc={klientId} onZmiana={setKlientId} laduje={ladujeKlientow} />
         </div>
 
         {blad ? (
