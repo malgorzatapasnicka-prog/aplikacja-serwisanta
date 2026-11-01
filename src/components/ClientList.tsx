@@ -21,8 +21,6 @@ import {
   collection,
   deleteDoc,
   doc,
-  getDoc,
-  getDocs,
   onSnapshot,
   orderBy,
   query,
@@ -31,6 +29,7 @@ import {
 import { KOLEKCJE } from "@/lib/collections";
 import { getDb, getFirebaseApp, gdySesjaAktywna, tokenSesji } from "@/lib/firebase";
 import { protokolyZDokumentu, scalProtokoly } from "@/lib/klientDokument";
+import { brakSieci, odczytDokumentu, odczytZapytania, zapiszBezCzekania } from "@/lib/zapisOffline";
 import { AddProtocolForm } from "@/components/AddProtocolForm";
 import { RozliczenieProtokolu } from "@/components/RozliczenieProtokolu";
 import type { KwotyProtokolu } from "@/lib/rozliczenie";
@@ -318,6 +317,10 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
     protokolId: string,
     nazwaRaportu: string
   ) => {
+    if (brakSieci()) {
+      alert("Brak internetu. PDF z serwera pobierzesz po odzyskaniu sieci. Do tego czasu protokół jest bezpieczny w telefonie.");
+      return;
+    }
     try {
       setPobieramPdfId(protokolId);
 
@@ -354,6 +357,10 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
   };
 
   const handleWyslijEmail = async (klient: KlientDokument, protokolId: string) => {
+    if (brakSieci()) {
+      alert("Brak internetu. Raport wyślesz e-mailem po odzyskaniu sieci. Do tego czasu protokół jest bezpieczny w telefonie.");
+      return;
+    }
     const db = getDb();
     if (!db) {
       return;
@@ -371,7 +378,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
         return;
       }
       try {
-        await updateDoc(doc(db, KOLEKCJE.klienci, klient.id), { email: adres });
+        await zapiszBezCzekania(updateDoc(doc(db, KOLEKCJE.klienci, klient.id), { email: adres }));
       } catch (err) {
         console.error("Błąd zapisu adresu e-mail:", err);
         alert("Nie udało się zapisać adresu e-mail klienta.");
@@ -423,14 +430,14 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
     try {
       const klient = klienci.find((pozycja) => pozycja.id === id);
       const protokoly = klient ? protokolyKlienta(klient) : [];
-      const podkolekcja = await getDocs(collection(db, KOLEKCJE.klienci, id, "protokoly"));
-      await Promise.all([
+      const podkolekcja = await odczytZapytania(collection(db, KOLEKCJE.klienci, id, "protokoly"));
+      await zapiszBezCzekania(Promise.all([
         ...podkolekcja.docs.map((dokument) => deleteDoc(dokument.ref).catch(() => undefined)),
         ...protokoly.map((protokol) =>
           deleteDoc(doc(db, KOLEKCJE.zalacznikiProtokolu, protokol.id)).catch(() => undefined),
         ),
-      ]);
-      await deleteDoc(doc(db, KOLEKCJE.klienci, id));
+      ]));
+      await zapiszBezCzekania(deleteDoc(doc(db, KOLEKCJE.klienci, id)));
     } catch (err) {
       console.error("Błąd podczas usuwania klienta:", err);
       alert("Nie udało się usunąć klienta. Sprawdź uprawnienia w Firestore.");
@@ -460,10 +467,10 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
       let bylWPodkolekcji = false;
       let bladPodkolekcji: unknown = null;
       try {
-        const odczytPodkolekcji = await getDoc(refPodkolekcji);
+        const odczytPodkolekcji = await odczytDokumentu(refPodkolekcji);
         if (odczytPodkolekcji.exists()) {
           bylWPodkolekcji = true;
-          await deleteDoc(refPodkolekcji);
+          await zapiszBezCzekania(deleteDoc(refPodkolekcji));
           usunietoZPodkolekcji = true;
         }
       } catch (error) {
@@ -471,7 +478,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
       }
 
       const refKlienta = doc(db, KOLEKCJE.klienci, klientId);
-      const odczytKlienta = await getDoc(refKlienta);
+      const odczytKlienta = await odczytDokumentu(refKlienta);
       const tablica = odczytKlienta.data()?.protokoly;
       const znaleziony = Array.isArray(tablica)
         ? tablica.find(
@@ -480,7 +487,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
           )
         : undefined;
       if (znaleziony) {
-        await updateDoc(refKlienta, { protokoly: arrayRemove(znaleziony) });
+        await zapiszBezCzekania(updateDoc(refKlienta, { protokoly: arrayRemove(znaleziony) }));
       }
 
       if (bladPodkolekcji && (bylWPodkolekcji || !znaleziony)) {
@@ -496,7 +503,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
         ...aktualne,
         [klientId]: (aktualne[klientId] ?? []).filter((protokol) => protokol.id !== protokolId),
       }));
-      await deleteDoc(doc(db, KOLEKCJE.zalacznikiProtokolu, protokolId)).catch(() => undefined);
+      await zapiszBezCzekania(deleteDoc(doc(db, KOLEKCJE.zalacznikiProtokolu, protokolId))).catch(() => undefined);
     } catch (err) {
       console.error("Błąd usuwania protokołu:", err);
       const kod = err instanceof FirebaseError ? err.code : "";
@@ -550,7 +557,8 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
         numeryKotlow.pop();
       }
 
-      await updateDoc(docRef, {
+      await zapiszBezCzekania(
+        updateDoc(docRef, {
         rodzajKlienta: formEdycji.rodzajKlienta === "firma" ? "firma" : "prywatna",
         nazwaFirmy: formEdycji.rodzajKlienta === "firma" ? formEdycji.nazwaFirmy?.trim() || "" : "",
         nip: formEdycji.rodzajKlienta === "firma" ? (formEdycji.nip || "").replace(/\s/g, "") : "",
@@ -563,7 +571,8 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
         dataOstatniegoPrzegladu: formEdycji.dataOstatniegoPrzegladu || "",
         numeryKotlow,
         numerKotla: numeryKotlow.find((numer) => numer !== "") || "",
-      });
+        }),
+      );
       setEdytowanyId(null);
       setFormEdycji(null);
     } catch (err: unknown) {

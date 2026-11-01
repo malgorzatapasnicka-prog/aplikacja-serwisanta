@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { collection, onSnapshot, orderBy, query, updateDoc, doc, deleteDoc } from "firebase/firestore";
 import { KOLEKCJE } from "@/lib/collections";
 import { getDb, getFirebaseApp, gdySesjaAktywna } from "@/lib/firebase";
+import { zapiszBezCzekania } from "@/lib/zapisOffline";
 import { PageHeader } from "@/components/PageHeader";
 import { AddOrderForm } from "@/components/AddOrderForm";
 
@@ -46,14 +47,14 @@ export default function ZleceniaPage() {
   const zmienStatus = async (id: string, nowyStatus: string) => {
     const db = getDb();
     if (!db) return;
-    await updateDoc(doc(db, KOLEKCJE.zlecenia, id), { status: nowyStatus });
+    await zapiszBezCzekania(updateDoc(doc(db, KOLEKCJE.zlecenia, id), { status: nowyStatus }));
   };
 
   const usunZlecenie = async (id: string) => {
     if (!window.confirm("Czy na pewno usunąć to zlecenie?")) return;
     const db = getDb();
     if (!db) return;
-    await deleteDoc(doc(db, KOLEKCJE.zlecenia, id));
+    await zapiszBezCzekania(deleteDoc(doc(db, KOLEKCJE.zlecenia, id)));
   };
 
   return (

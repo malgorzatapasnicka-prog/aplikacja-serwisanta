@@ -2,10 +2,11 @@
 
 import { FirebaseError } from "firebase/app";
 import { doc, setDoc } from "firebase/firestore";
-import { getDownloadURL, getStorage, ref, uploadString } from "firebase/storage";
 import { ChangeEvent, FormEvent, useEffect, useState, type ReactNode } from "react";
 import { KOLEKCJE } from "@/lib/collections";
-import { getDb, getFirebaseApp } from "@/lib/firebase";
+import { getDb } from "@/lib/firebase";
+import { czyBladTrwaly, dodajDoKolejki, przetworzKolejkePlikow, zapiszPlikWStorage } from "@/lib/kolejkaPlikow";
+import { brakSieci as telefonBezSieci, zapiszBezCzekania } from "@/lib/zapisOffline";
 import { zapiszKopieProtokoluNaTelefonie } from "@/lib/kopiaProtokolu";
 import { nastepnyNumerProtokolu } from "@/lib/widokProtokolu";
 import { PodpisNaEkranie } from "@/components/PodpisNaEkranie";
@@ -165,21 +166,6 @@ type ZdjecieFormularza = {
 };
 
 const LIMIT_ZDJECIA = 10;
-
-async function zapiszPlikWStorage(klientId: string, protokolId: string, nazwa: string, dataUrl: string) {
-  if (!dataUrl.startsWith("data:")) {
-    return dataUrl;
-  }
-
-  const app = getFirebaseApp();
-  if (!app) {
-    throw new Error("Firebase nie jest skonfigurowany.");
-  }
-
-  const plik = ref(getStorage(app), `klienci/${klientId}/protokoly/${protokolId}/${nazwa}`);
-  await uploadString(plik, dataUrl, "data_url");
-  return getDownloadURL(plik);
-}
 
 function rysujNaPlotnie(zrodlo: CanvasImageSource, szerokoscZrodla: number, wysokoscZrodla: number) {
   const maks = 900;
@@ -605,17 +591,47 @@ export function AddProtocolForm({
 
     try {
       const wybraneZdjecia = zdjecia.slice(0, LIMIT_ZDJECIA);
-      const adresyZdjec: string[] = [];
-      for (let indeks = 0; indeks < wybraneZdjecia.length; indeks += 1) {
-        adresyZdjec.push(
-          await zapiszPlikWStorage(klientId, protokolId, `zdjecie-${indeks + 1}`, wybraneZdjecia[indeks].src),
-        );
-      }
-      const adresPdf = zalacznikPdf.startsWith("data:application/pdf")
-        ? await zapiszPlikWStorage(klientId, protokolId, "zalacznik.pdf", zalacznikPdf)
-        : "";
+      const maZalacznikDoWyslania = zalacznikPdf.startsWith("data:application/pdf");
+      let adresyZdjec: string[] = [];
+      let adresPdf = "";
+      // Bez internetu (albo przy zerwanym połączeniu) zdjęcia czekają w telefonie, a protokół zapisuje się od razu.
+      let plikiOczekuja = false;
 
-      await setDoc(doc(db, KOLEKCJE.klienci, klientId, "protokoly", protokolId), {
+      if (wybraneZdjecia.length > 0 || maZalacznikDoWyslania) {
+        if (telefonBezSieci()) {
+          plikiOczekuja = true;
+        } else {
+          try {
+            for (let indeks = 0; indeks < wybraneZdjecia.length; indeks += 1) {
+              adresyZdjec.push(
+                await zapiszPlikWStorage(klientId, protokolId, `zdjecie-${indeks + 1}`, wybraneZdjecia[indeks].src),
+              );
+            }
+            adresPdf = maZalacznikDoWyslania
+              ? await zapiszPlikWStorage(klientId, protokolId, "zalacznik.pdf", zalacznikPdf)
+              : "";
+          } catch (error) {
+            if (czyBladTrwaly(error)) {
+              throw error;
+            }
+            adresyZdjec = [];
+            adresPdf = "";
+            plikiOczekuja = true;
+          }
+        }
+
+        if (plikiOczekuja) {
+          await dodajDoKolejki({
+            id: protokolId,
+            klientId,
+            zdjecia: wybraneZdjecia.map((zdjecie) => ({ src: zdjecie.src, podpis: zdjecie.podpis })),
+            zalacznikPdf: maZalacznikDoWyslania ? zalacznikPdf : "",
+          });
+        }
+      }
+
+      const zapisanoNaSerwerze = await zapiszBezCzekania(
+        setDoc(doc(db, KOLEKCJE.klienci, klientId, "protokoly", protokolId), {
         id: protokolId,
         nazwaRaportu: formularz.nazwaRaportu.trim(),
         czynnosci: formularz.czynnosci,
@@ -648,14 +664,19 @@ export function AddProtocolForm({
         kolejnyPrzegladNieDotyczy: formularz.kolejnyPrzegladNieDotyczy,
         uwagi: formularz.uwagi.trim(),
         zdjecia: adresyZdjec,
-        podpisyZdjec: wybraneZdjecia.map((zdjecie) => zdjecie.podpis.trim()),
+        podpisyZdjec: plikiOczekuja ? [] : wybraneZdjecia.map((zdjecie) => zdjecie.podpis.trim()),
+        ...(plikiOczekuja ? { oczekujacePliki: true } : {}),
         ...(podpisKlienta ? { podpisKlienta } : {}),
         ...(podpisSerwisanta ? { podpisSerwisanta } : {}),
         maZalacznikPdf: Boolean(adresPdf),
         ...(adresPdf ? { zalacznikPdf: adresPdf } : {}),
         ...polaRozszerzenia(formularz),
-      });
-      if (navigator.onLine === false) {
+        }),
+      );
+      if (plikiOczekuja) {
+        void przetworzKolejkePlikow();
+      }
+      if (!zapisanoNaSerwerze || plikiOczekuja || telefonBezSieci()) {
         setZapisanoWAplikacji(true);
         return;
       }
@@ -1184,10 +1205,17 @@ export function AddProtocolForm({
 
         {brakSieci || zapisanoWAplikacji ? (
           <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
-            <p>Brak internetu. Zapisz kopię protokołu na telefonie. Plik powstanie z danych wpisanych w formularzu.</p>
             {zapisanoWAplikacji ? (
-              <p className="mt-1">Protokół czeka w aplikacji i wyśle się po odzyskaniu sieci.</p>
-            ) : null}
+              <p className="font-semibold">
+                Protokół jest zapisany w telefonie. Wyśle się automatycznie po odzyskaniu sieci razem ze zdjęciami.
+                Możesz zamknąć to okno.
+              </p>
+            ) : (
+              <p>
+                Brak internetu. Protokół zapisze się w telefonie i wyśle sam po odzyskaniu sieci. Możesz też zapisać
+                kopię pliku na telefonie.
+              </p>
+            )}
             {kopiaZapisana ? <p className="mt-1">Kopia została przekazana do zapisania w telefonie.</p> : null}
             <button
               type="button"

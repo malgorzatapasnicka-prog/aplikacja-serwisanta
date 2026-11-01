@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { addDoc, collection, onSnapshot, orderBy, query, serverTimestamp } from "firebase/firestore";
+import { collection, doc, onSnapshot, orderBy, query, serverTimestamp, setDoc } from "firebase/firestore";
 import { KOLEKCJE } from "@/lib/collections";
 import { getDb, gdySesjaAktywna } from "@/lib/firebase";
+import { KOMUNIKAT_ZAPISANO_OFFLINE, zapiszBezCzekania } from "@/lib/zapisOffline";
 
 type KlientOpcja = {
   id: string;
@@ -87,6 +88,7 @@ export function AddOrderForm() {
 
     try {
       let klientId = wybranyKlientId;
+      const zapisy: Promise<unknown>[] = [];
       let klientNazwa = "";
       let klientTelefon = "";
       let klientAdres = "";
@@ -100,7 +102,9 @@ export function AddOrderForm() {
           throw new Error("Wpisz imię i nazwisko nowego klienta.");
         }
 
-        const klientRef = await addDoc(collection(db, KOLEKCJE.klienci), {
+        const klientRef = doc(collection(db, KOLEKCJE.klienci));
+        zapisy.push(
+          setDoc(klientRef, {
           rodzajKlienta: nowyKlient.rodzaj,
           nazwaFirmy: nowyKlient.rodzaj === "firma" ? nowyKlient.nazwaFirmy.trim() : "",
           nip: nowyKlient.rodzaj === "firma" ? nowyKlient.nip.replace(/\s/g, "") : "",
@@ -112,7 +116,8 @@ export function AddOrderForm() {
           email: nowyKlient.email.trim(),
           numerKotla: nowyKlient.numerKotla.trim(),
           utworzono: serverTimestamp(),
-        });
+          }),
+        );
 
         klientId = klientRef.id;
         klientNazwa = `${imieTrim} ${nazwiskoTrim}`.trim();
@@ -130,7 +135,8 @@ export function AddOrderForm() {
         klientKociol = znaleziony.numerKotla || "";
       }
 
-      await addDoc(collection(db, KOLEKCJE.zlecenia), {
+      zapisy.push(
+        setDoc(doc(collection(db, KOLEKCJE.zlecenia)), {
         klientId,
         klientNazwa,
         klientTelefon,
@@ -142,12 +148,14 @@ export function AddOrderForm() {
         priorytet,
         status: "Nowe",
         utworzono: serverTimestamp(),
-      });
+        }),
+      );
+      const zapisano = await zapiszBezCzekania(Promise.all(zapisy));
 
       setOpisZlecenia("");
       setTerminRealizacji("");
       setNowyKlient({ rodzaj: "prywatna", nazwaFirmy: "", nip: "", imie: "", nazwisko: "", telefon: "", adres: "", email: "", numerKotla: "" });
-      setSukces("Zlecenie zostało pomyślnie dodane!");
+      setSukces(zapisano ? "Zlecenie zostało pomyślnie dodane!" : `Zlecenie dodane. ${KOMUNIKAT_ZAPISANO_OFFLINE}`);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Wystąpił błąd zapisu.";
       setBlad(msg);

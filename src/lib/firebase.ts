@@ -2,7 +2,12 @@
 
 import { getApp, getApps, initializeApp, type FirebaseApp } from "firebase/app";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from "firebase/auth";
-import { initializeFirestore, persistentLocalCache, type Firestore } from "firebase/firestore";
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  type Firestore,
+} from "firebase/firestore";
 import { firebaseConfig, isFirebaseConfigured } from "@/lib/firebaseConfig";
 
 let firestore: Firestore | null = null;
@@ -85,7 +90,7 @@ export function getDb(): Firestore | null {
 
   if (!firestore) {
     firestore = initializeFirestore(app, {
-      localCache: persistentLocalCache(),
+      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
     });
   }
 

@@ -1,10 +1,11 @@
 "use client";
 
 import { FirebaseError } from "firebase/app";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { collection, doc, serverTimestamp, setDoc } from "firebase/firestore";
 import { FormEvent, useState } from "react";
 import { KOLEKCJE } from "@/lib/collections";
 import { getDb } from "@/lib/firebase";
+import { KOMUNIKAT_ZAPISANO_OFFLINE, zapiszBezCzekania } from "@/lib/zapisOffline";
 
 const MAKS_KOTLOW = 5;
 
@@ -137,7 +138,8 @@ export function AddClientForm() {
         numeryKotlow.pop();
       }
 
-      await addDoc(collection(db, KOLEKCJE.klienci), {
+      const zapisano = await zapiszBezCzekania(
+        setDoc(doc(collection(db, KOLEKCJE.klienci)), {
         rodzajKlienta: formularz.rodzaj,
         nazwaFirmy: firma ? formularz.nazwaFirmy.trim() : "",
         nip: firma ? formularz.nip.replace(/\s/g, "") : "",
@@ -151,9 +153,10 @@ export function AddClientForm() {
         numeryKotlow,
         numerKotla: numeryKotlow.find((numer) => numer !== "") || "",
         utworzono: serverTimestamp(),
-      });
+        }),
+      );
       setFormularz(PUSTY_FORMULARZ);
-      setSukces("Klient został dodany.");
+      setSukces(zapisano ? "Klient został dodany." : `Klient dodany. ${KOMUNIKAT_ZAPISANO_OFFLINE}`);
     } catch (error) {
       setBlad(komunikatBledu(error));
     } finally {
