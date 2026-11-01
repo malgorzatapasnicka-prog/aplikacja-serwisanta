@@ -29,12 +29,12 @@ export default function Home() {
         description="Po uruchomieniu aplikacji zapisani klienci są od razu na tej stronie."
       />
       <ClientList opisPustej="Brak zapisanych klientów. Dodasz ich w zakładce Baza klientów." />
-      <section className="mt-8 grid gap-4 sm:grid-cols-2">
+      <section className="mt-6 grid gap-6 sm:grid-cols-2">
         {KARTY.map((karta) => (
           <Link
             key={karta.label}
             href={karta.href}
-            className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-colors hover:border-slate-300"
+            className="card transition-colors hover:border-slate-300"
           >
             <p className="text-sm font-medium text-slate-900">{karta.label}</p>
             <p className="mt-2 text-sm leading-6 text-slate-600">{karta.opis}</p>

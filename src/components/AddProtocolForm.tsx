@@ -140,7 +140,7 @@ function numeryDoWyboru(numery: string[], zapisany: string) {
 }
 
 const klasaPola =
-  "mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-normal text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200";
+  "field mt-1.5";
 
 function dzis() {
   const teraz = new Date();
@@ -671,7 +671,7 @@ export function AddProtocolForm({
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/50 p-4">
       <form
         onSubmit={zapiszProtokol}
-        className="mx-auto my-4 w-full max-w-2xl rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+        className="card mx-auto my-4 w-full max-w-2xl"
       >
         <div className="flex items-start justify-between gap-3">
           <div>
@@ -681,12 +681,12 @@ export function AddProtocolForm({
               Nr protokołu: {numerProtokolu}
             </p>
           </div>
-          <button type="button" onClick={onClose} className="rounded-lg px-2 py-1 text-sm text-slate-500 hover:bg-slate-100">
+          <button type="button" onClick={onClose} className="btn btn-outline">
             Zamknij
           </button>
         </div>
 
-        <div className="mt-5 grid gap-4">
+        <div className="mt-6 grid gap-4">
           <Pole etykieta="Nazwa raportu">
             <input
               value={formularz.nazwaRaportu}
@@ -726,14 +726,14 @@ export function AddProtocolForm({
           </div>
         </fieldset>
 
-        <div className="mt-5 flex gap-1 overflow-x-auto border-b border-slate-200 pb-px">
+        <div className="mt-6 flex gap-1 overflow-x-auto border-b border-slate-200 pb-px">
           {ZAKLADKI.map(([wartosc, etykieta]) => (
             <button
               key={wartosc}
               type="button"
               onClick={() => setZakladka(wartosc)}
               className={`shrink-0 rounded-t-lg px-3 py-2 text-sm font-medium ${
-                zakladka === wartosc ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
+                zakladka === wartosc ? "bg-navy text-white" : "text-slate-600 hover:bg-slate-100"
               }`}
             >
               {etykieta}
@@ -1045,7 +1045,7 @@ export function AddProtocolForm({
         ) : null}
 
         {zakladka === "rozliczenie" ? (
-          <div className="mt-5 grid gap-4">
+          <div className="mt-6 grid gap-4">
             <h3 className="text-sm font-semibold tracking-wide text-slate-900 uppercase">Rozliczenie</h3>
             {(
               [
@@ -1077,11 +1077,11 @@ export function AddProtocolForm({
           {zdjecia.length} / {LIMIT_ZDJECIA}
         </p>
         <div className="mt-3 flex flex-wrap gap-2">
-          <label className="inline-flex cursor-pointer items-center rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white">
+          <label className="btn btn-primary cursor-pointer">
             Zrób zdjęcie
             <input type="file" accept="image/*,.heic,.heif" capture="environment" className="hidden" onChange={handleZdjecia} />
           </label>
-          <label className="inline-flex cursor-pointer items-center rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700">
+          <label className="btn btn-outline cursor-pointer">
             Wybierz z galerii
             <input type="file" accept="image/*,.heic,.heif" multiple className="hidden" onChange={handleZdjecia} />
           </label>
@@ -1128,7 +1128,7 @@ export function AddProtocolForm({
         <p className="mt-1 text-xs text-slate-500">
           Opcjonalnie. Strony tego pliku zostaną dodane na końcu gotowego protokołu.
         </p>
-        <label className="mt-3 inline-flex cursor-pointer items-center rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700">
+        <label className="btn btn-outline mt-3 cursor-pointer">
           Wybierz PDF
           <input type="file" accept="application/pdf,.pdf" className="hidden" onChange={handleZalacznik} />
         </label>
@@ -1192,7 +1192,7 @@ export function AddProtocolForm({
             <button
               type="button"
               onClick={zapiszKopieNaTelefonie}
-              className="mt-3 rounded-lg bg-amber-800 px-3 py-2 text-sm font-medium text-white"
+              className="btn btn-primary mt-3"
             >
               Zapisz kopię na telefonie
             </button>
@@ -1205,18 +1205,18 @@ export function AddProtocolForm({
           </p>
         ) : null}
 
-        <div className="mt-5 flex gap-3">
+        <div className="mt-6 flex gap-3">
           <button
             type="submit"
             disabled={zapisuje || przetwarzamZdjecie || zapisanoWAplikacji}
-            className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-800 disabled:bg-slate-400"
+            className="btn btn-primary"
           >
             {zapisuje ? "Zapisywanie…" : "Zapisz protokół"}
           </button>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            className="btn btn-outline"
           >
             Anuluj
           </button>

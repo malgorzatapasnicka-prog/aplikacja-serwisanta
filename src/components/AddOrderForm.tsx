@@ -157,10 +157,10 @@ export function AddOrderForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm space-y-5">
-      <div className="border-b border-stone-100 pb-3">
-        <h2 className="text-base font-semibold text-stone-900">Nowe zlecenie serwisowe</h2>
-        <p className="text-xs text-stone-500">Wybierz klienta z bazy lub dodaj nowego klienta w locie.</p>
+    <form onSubmit={handleSubmit} className="card space-y-6">
+      <div className="border-b border-slate-100 pb-3">
+        <h2 className="text-base font-semibold text-slate-900">Nowe zlecenie serwisowe</h2>
+        <p className="text-xs text-slate-500">Wybierz klienta z bazy lub dodaj nowego klienta w locie.</p>
       </div>
 
       <div className="flex gap-2">
@@ -169,8 +169,8 @@ export function AddOrderForm() {
           onClick={() => setTrybKlienta("istniejacy")}
           className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition ${
             trybKlienta === "istniejacy"
-              ? "bg-amber-500 text-stone-950"
-              : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+              ? "bg-navy text-white"
+              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
           }`}
         >
           Wybierz z bazy klientów
@@ -180,8 +180,8 @@ export function AddOrderForm() {
           onClick={() => setTrybKlienta("nowy")}
           className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition ${
             trybKlienta === "nowy"
-              ? "bg-amber-500 text-stone-950"
-              : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+              ? "bg-navy text-white"
+              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
           }`}
         >
           + Dodaj nowego klienta
@@ -190,16 +190,16 @@ export function AddOrderForm() {
 
       {trybKlienta === "istniejacy" ? (
         <div>
-          <label className="block text-xs font-semibold uppercase text-stone-600 mb-1">
+          <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">
             Wybierz klienta
           </label>
           {klienci.length === 0 ? (
-            <p className="text-xs text-stone-500">Brak klientów w bazie. Przełącz na &quot;Dodaj nowego klienta&quot;.</p>
+            <p className="text-xs text-slate-500">Brak klientów w bazie. Przełącz na &quot;Dodaj nowego klienta&quot;.</p>
           ) : (
             <select
               value={wybranyKlientId}
               onChange={(e) => setWybranyKlientId(e.target.value)}
-              className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm text-stone-900 outline-none focus:border-amber-400"
+              className="field"
             >
               {klienci.map((k) => (
                 <option key={k.id} value={k.id}>
@@ -210,14 +210,14 @@ export function AddOrderForm() {
           )}
         </div>
       ) : (
-        <div className="rounded-lg border border-stone-200 bg-stone-50/50 p-4 space-y-3">
-          <span className="text-xs font-bold uppercase tracking-wider text-amber-700">Dane nowego klienta</span>
+        <div className="space-y-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-600">Dane nowego klienta</span>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => setNowyKlient({ ...nowyKlient, rodzaj: "prywatna", nazwaFirmy: "", nip: "" })}
               className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition ${
-                nowyKlient.rodzaj !== "firma" ? "bg-amber-500 text-stone-950" : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                nowyKlient.rodzaj !== "firma" ? "bg-navy text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
               Osoba prywatna
@@ -226,7 +226,7 @@ export function AddOrderForm() {
               type="button"
               onClick={() => setNowyKlient({ ...nowyKlient, rodzaj: "firma" })}
               className={`rounded-lg px-3.5 py-1.5 text-xs font-semibold transition ${
-                nowyKlient.rodzaj === "firma" ? "bg-amber-500 text-stone-950" : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                nowyKlient.rodzaj === "firma" ? "bg-navy text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
               }`}
             >
               Firma
@@ -236,76 +236,76 @@ export function AddOrderForm() {
             {nowyKlient.rodzaj === "firma" ? (
               <>
                 <div>
-                  <label className="block text-xs font-medium text-stone-700">Nazwa firmy</label>
+                  <label className="block text-xs font-medium text-slate-700">Nazwa firmy</label>
                   <input
                     type="text"
                     value={nowyKlient.nazwaFirmy}
                     onChange={(e) => setNowyKlient({ ...nowyKlient, nazwaFirmy: e.target.value })}
-                    className="mt-1 w-full rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm outline-none focus:border-amber-400"
+                    className="field mt-1"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-stone-700">NIP</label>
+                  <label className="block text-xs font-medium text-slate-700">NIP</label>
                   <input
                     type="text"
                     inputMode="numeric"
                     value={nowyKlient.nip}
                     onChange={(e) => setNowyKlient({ ...nowyKlient, nip: e.target.value })}
                     placeholder="10 cyfr"
-                    className="mt-1 w-full rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm outline-none focus:border-amber-400"
+                    className="field mt-1"
                   />
                 </div>
               </>
             ) : null}
             <div>
-              <label className="block text-xs font-medium text-stone-700">Imię *</label>
+              <label className="block text-xs font-medium text-slate-700">Imię *</label>
               <input
                 type="text"
                 required
                 value={nowyKlient.imie}
                 onChange={(e) => setNowyKlient({ ...nowyKlient, imie: e.target.value })}
-                className="mt-1 w-full rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm outline-none focus:border-amber-400"
+                className="field mt-1"
                 placeholder="Jan"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-stone-700">Nazwisko *</label>
+              <label className="block text-xs font-medium text-slate-700">Nazwisko *</label>
               <input
                 type="text"
                 required
                 value={nowyKlient.nazwisko}
                 onChange={(e) => setNowyKlient({ ...nowyKlient, nazwisko: e.target.value })}
-                className="mt-1 w-full rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm outline-none focus:border-amber-400"
+                className="field mt-1"
                 placeholder="Kowalski"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-stone-700">Telefon</label>
+              <label className="block text-xs font-medium text-slate-700">Telefon</label>
               <input
                 type="tel"
                 value={nowyKlient.telefon}
                 onChange={(e) => setNowyKlient({ ...nowyKlient, telefon: e.target.value })}
-                className="mt-1 w-full rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm outline-none focus:border-amber-400"
+                className="field mt-1"
                 placeholder="np. 500 600 700"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-stone-700">Adres instalacji</label>
+              <label className="block text-xs font-medium text-slate-700">Adres instalacji</label>
               <input
                 type="text"
                 value={nowyKlient.adres}
                 onChange={(e) => setNowyKlient({ ...nowyKlient, adres: e.target.value })}
-                className="mt-1 w-full rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm outline-none focus:border-amber-400"
+                className="field mt-1"
                 placeholder="ul. Polna 5, Warszawa"
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-stone-700">Model / Numer kotła</label>
+              <label className="block text-xs font-medium text-slate-700">Model / Numer kotła</label>
               <input
                 type="text"
                 value={nowyKlient.numerKotla}
                 onChange={(e) => setNowyKlient({ ...nowyKlient, numerKotla: e.target.value })}
-                className="mt-1 w-full rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm outline-none focus:border-amber-400"
+                className="field mt-1"
                 placeholder="np. Viessmann Vitodens 100"
               />
             </div>
@@ -315,11 +315,11 @@ export function AddOrderForm() {
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div>
-          <label className="block text-xs font-semibold uppercase text-stone-600 mb-1">Typ zlecenia</label>
+          <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Typ zlecenia</label>
           <select
             value={typZlecenia}
             onChange={(e) => setTypZlecenia(e.target.value)}
-            className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm outline-none focus:border-amber-400"
+            className="field"
           >
             <option value="Przegląd okresowy">Przegląd okresowy</option>
             <option value="Awaria / Naprawa">Awaria / Naprawa</option>
@@ -330,21 +330,21 @@ export function AddOrderForm() {
         </div>
 
         <div>
-          <label className="block text-xs font-semibold uppercase text-stone-600 mb-1">Planowany termin</label>
+          <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Planowany termin</label>
           <input
             type="date"
             value={terminRealizacji}
             onChange={(e) => setTerminRealizacji(e.target.value)}
-            className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm outline-none focus:border-amber-400"
+            className="field"
           />
         </div>
 
         <div>
-          <label className="block text-xs font-semibold uppercase text-stone-600 mb-1">Priorytet</label>
+          <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Priorytet</label>
           <select
             value={priorytet}
             onChange={(e) => setPriorytet(e.target.value)}
-            className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm outline-none focus:border-amber-400"
+            className="field"
           >
             <option value="Normalny">Normalny</option>
             <option value="Pilny">Pilny</option>
@@ -354,13 +354,13 @@ export function AddOrderForm() {
       </div>
 
       <div>
-        <label className="block text-xs font-semibold uppercase text-stone-600 mb-1">Opis prac / Objawy awarii</label>
+        <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Opis prac / Objawy awarii</label>
         <textarea
           rows={3}
           value={opisZlecenia}
           onChange={(e) => setOpisZlecenia(e.target.value)}
           placeholder="np. Kocioł wyłącza się z błędem F.28, brak ciepłej wody użytkowej..."
-          className="w-full rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm outline-none focus:border-amber-400"
+          className="field"
         />
       </div>
 
@@ -368,7 +368,7 @@ export function AddOrderForm() {
         <button
           type="submit"
           disabled={zapisuje}
-          className="rounded-lg bg-stone-950 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-stone-800 disabled:opacity-50"
+          className="btn btn-primary"
         >
           {zapisuje ? "Zapisywanie zlecenia..." : "Dodaj zlecenie"}
         </button>

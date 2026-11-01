@@ -29,7 +29,7 @@ export function AppNav() {
   };
 
   return (
-    <aside className="border-b border-slate-800 bg-slate-900 text-slate-100 md:sticky md:top-0 md:flex md:h-screen md:w-64 md:shrink-0 md:flex-col md:border-b-0 md:border-r">
+    <aside className="border-b border-white/10 bg-navy text-slate-100 md:sticky md:top-0 md:flex md:h-screen md:w-64 md:shrink-0 md:flex-col md:border-b-0 md:border-r md:border-white/10">
       {/* Nagłówek menu */}
       <div className="px-5 py-5">
         <Link
@@ -40,7 +40,7 @@ export function AppNav() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-radwin.svg" alt="Radwin Technika Grzewcza" width={162} height={40} className="h-10 w-auto" />
         </Link>
-        <p className="text-xs font-medium uppercase tracking-[0.18em] text-amber-400">
+        <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-400">
           Serwis
         </p>
         <p className="mt-1 text-lg font-semibold tracking-tight">CRM serwisanta</p>
@@ -58,7 +58,7 @@ export function AppNav() {
               className={`rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors ${
                 aktywny
                   ? "bg-white/10 text-white"
-                  : "text-stone-300 hover:bg-white/5 hover:text-white"
+                  : "text-slate-300 hover:bg-white/5 hover:text-white"
               }`}
             >
               {link.label}
@@ -74,7 +74,7 @@ export function AppNav() {
           onClick={handleLogout}
           className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-red-400 transition-colors hover:bg-red-500/10 hover:text-red-300"
         >
-          <LogOut className="h-4 w-4 text-gray-400" aria-hidden />
+          <LogOut className="h-4 w-4 text-slate-400" aria-hidden />
           <span>Wyloguj się</span>
         </button>
       </div>

@@ -185,7 +185,7 @@ export function PodpisNaEkranie({
         <button
           type="button"
           onClick={otworz}
-          className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700"
+          className="btn btn-outline"
         >
           {podpis ? "Zmień podpis" : "Złóż podpis"}
         </button>
@@ -196,7 +196,7 @@ export function PodpisNaEkranie({
               setPodpis("");
               onChange("");
             }}
-            className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700"
+            className="btn btn-outline"
           >
             Wyczyść podpis
           </button>
@@ -222,13 +222,13 @@ export function PodpisNaEkranie({
                 />
               </div>
               <div className="flex gap-2 border-t border-slate-200 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pl-[max(0.75rem,env(safe-area-inset-left))] pr-[max(0.75rem,env(safe-area-inset-right))]">
-                <button type="button" onClick={wyczysc} className="min-h-11 flex-1 rounded-lg border border-slate-200 px-3 text-sm font-medium text-slate-700">
+                <button type="button" onClick={wyczysc} className="btn btn-outline min-h-11 flex-1">
                   Wyczyść
                 </button>
-                <button type="button" onClick={zamknij} className="min-h-11 flex-1 rounded-lg border border-slate-200 px-3 text-sm font-medium text-slate-700">
+                <button type="button" onClick={zamknij} className="btn btn-outline min-h-11 flex-1">
                   Zamknij
                 </button>
-                <button type="button" onClick={zapisz} className="min-h-11 flex-1 rounded-lg bg-slate-900 px-3 text-sm font-medium text-white">
+                <button type="button" onClick={zapisz} className="btn btn-primary min-h-11 flex-1">
                   Zapisz
                 </button>
               </div>
@@ -239,7 +239,7 @@ export function PodpisNaEkranie({
               <button
                 type="button"
                 onClick={zamknij}
-                className="min-h-11 rounded-lg border border-slate-200 px-5 text-sm font-medium text-slate-700"
+                className="btn btn-outline min-h-11"
               >
                 Anuluj
               </button>

@@ -75,7 +75,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
   if (loading) {
     return (
       <>
-        <div className="flex min-h-screen items-center justify-center bg-slate-50">
+        <div className="flex min-h-screen items-center justify-center bg-background">
           <div className="text-sm font-medium text-slate-500">Ładowanie aplikacji...</div>
         </div>
         <div hidden>{children}</div>
@@ -85,8 +85,8 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (!user) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-100 p-4">
-        <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-md">
+      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+        <div className="card w-full max-w-md">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-radwin.svg" alt="Radwin Technika Grzewcza" width={162} height={40} className="mb-6 h-14 w-auto" />
           <h1 className="mb-2 text-2xl font-bold text-slate-900">CRM Serwisanta</h1>
@@ -108,7 +108,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+                className="field mt-1"
                 placeholder="twoj@email.pl"
               />
             </div>
@@ -122,7 +122,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500"
+                className="field mt-1"
                 placeholder="••••••••"
               />
             </div>
@@ -130,7 +130,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full rounded-lg bg-blue-600 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
+              className="btn btn-primary w-full"
             >
               {submitting ? "Logowanie..." : "Zaloguj się"}
             </button>

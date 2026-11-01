@@ -65,30 +65,30 @@ export default function ZleceniaPage() {
 
       <AddOrderForm />
 
-      <div className="space-y-4">
-        <h3 className="text-base font-semibold text-stone-900">Aktualne zlecenia ({zlecenia.length})</h3>
+      <div className="space-y-6">
+        <h3 className="text-base font-semibold text-slate-900">Aktualne zlecenia ({zlecenia.length})</h3>
 
         {laduje ? (
-          <div className="p-8 text-center text-sm text-stone-500 bg-white rounded-xl border border-stone-200">
+          <div className="card text-center text-sm text-slate-500">
             Ładowanie zleceń...
           </div>
         ) : zlecenia.length === 0 ? (
-          <div className="p-8 text-center text-sm text-stone-500 bg-white rounded-xl border border-dashed border-stone-300">
+          <div className="card border-dashed text-center text-sm text-slate-500 shadow-none">
             Brak zarejestrowanych zleceń. Dodaj pierwsze powyżej.
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 gap-6">
             {zlecenia.map((zl) => (
               <div
                 key={zl.id}
-                className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm space-y-3"
+                className="card space-y-4"
               >
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-stone-100 pb-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
                   <div>
-                    <span className="text-xs font-bold uppercase tracking-wider text-amber-600">
+                    <span className="text-xs font-bold uppercase tracking-wider text-navy">
                       {zl.typZlecenia || "Serwis"}
                     </span>
-                    <h4 className="text-lg font-bold text-stone-900">{zl.klientNazwa}</h4>
+                    <h4 className="text-lg font-bold text-slate-900">{zl.klientNazwa}</h4>
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -110,7 +110,7 @@ export default function ZleceniaPage() {
                     </select>
                     <button
                       onClick={() => usunZlecenie(zl.id)}
-                      className="rounded-lg p-1.5 text-stone-400 hover:bg-red-50 hover:text-red-600 transition"
+                      className="rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600 transition"
                       title="Usuń zlecenie"
                     >
                       ✕
@@ -120,24 +120,24 @@ export default function ZleceniaPage() {
 
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 text-sm">
                   <div>
-                    <span className="text-[11px] font-semibold uppercase text-stone-500 block">Telefon</span>
-                    <span className="text-stone-900 font-medium">{zl.klientTelefon || "—"}</span>
+                    <span className="text-[11px] font-semibold uppercase text-slate-500 block">Telefon</span>
+                    <span className="text-slate-900 font-medium">{zl.klientTelefon || "—"}</span>
                   </div>
                   <div>
-                    <span className="text-[11px] font-semibold uppercase text-stone-500 block">Adres</span>
-                    <span className="text-stone-900 font-medium">{zl.klientAdres || "—"}</span>
+                    <span className="text-[11px] font-semibold uppercase text-slate-500 block">Adres</span>
+                    <span className="text-slate-900 font-medium">{zl.klientAdres || "—"}</span>
                   </div>
                   <div>
-                    <span className="text-[11px] font-semibold uppercase text-stone-500 block">Termin / Priorytet</span>
-                    <span className="text-stone-900 font-medium">
+                    <span className="text-[11px] font-semibold uppercase text-slate-500 block">Termin / Priorytet</span>
+                    <span className="text-slate-900 font-medium">
                       {zl.terminRealizacji || "Brak terminu"} ({zl.priorytet || "Normalny"})
                     </span>
                   </div>
                 </div>
 
                 {zl.opisZlecenia && (
-                  <div className="rounded-lg bg-stone-50 p-3 text-xs text-stone-700 border border-stone-100">
-                    <strong className="block text-stone-900 mb-0.5">Opis usterki / zakres prac:</strong>
+                  <div className="rounded-lg bg-slate-50 p-3 text-xs text-slate-700 border border-slate-100">
+                    <strong className="block text-slate-900 mb-0.5">Opis usterki / zakres prac:</strong>
                     {zl.opisZlecenia}
                   </div>
                 )}

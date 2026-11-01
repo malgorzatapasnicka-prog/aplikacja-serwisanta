@@ -53,7 +53,7 @@ const POLA: {
 ];
 
 const klasaPola =
-  "mt-1.5 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-900 outline-none focus:border-gray-400";
+  "field mt-1.5";
 
 function komunikatBledu(error: unknown): string {
   if (error instanceof FirebaseError && error.code === "permission-denied") {
@@ -162,12 +162,12 @@ export function AddClientForm() {
   }
 
   return (
-    <form onSubmit={zapiszKlienta} className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
-      <h2 className="text-base font-semibold text-gray-900">Nowy klient</h2>
-      <fieldset className="mt-4">
-        <legend className="text-xs font-semibold uppercase text-gray-500">Rodzaj klienta</legend>
+    <form onSubmit={zapiszKlienta} className="card">
+      <h2 className="text-base font-semibold text-slate-900">Nowy klient</h2>
+      <fieldset className="mt-6">
+        <legend className="text-xs font-semibold uppercase text-slate-500">Rodzaj klienta</legend>
         <div className="mt-2 grid gap-3 sm:grid-cols-2">
-          <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-900">
+          <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-900">
             <input
               type="radio"
               name="rodzajKlienta"
@@ -176,7 +176,7 @@ export function AddClientForm() {
             />
             Osoba prywatna
           </label>
-          <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-900">
+          <label className="flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-900">
             <input
               type="radio"
               name="rodzajKlienta"
@@ -187,10 +187,10 @@ export function AddClientForm() {
           </label>
         </div>
       </fieldset>
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2">
         {formularz.rodzaj === "firma" ? (
           <>
-            <label className="block text-xs font-semibold uppercase text-gray-500">
+            <label className="block text-xs font-semibold uppercase text-slate-500">
               Nazwa firmy
               <input
                 name="nazwaFirmy"
@@ -201,7 +201,7 @@ export function AddClientForm() {
                 className={klasaPola}
               />
             </label>
-            <label className="block text-xs font-semibold uppercase text-gray-500">
+            <label className="block text-xs font-semibold uppercase text-slate-500">
               NIP
               <input
                 name="nip"
@@ -217,7 +217,7 @@ export function AddClientForm() {
           </>
         ) : null}
         {POLA.map((pole) => (
-          <label key={pole.name} className="block text-xs font-semibold uppercase text-gray-500">
+          <label key={pole.name} className="block text-xs font-semibold uppercase text-slate-500">
             {pole.label}
             <input
               name={pole.name}
@@ -230,14 +230,14 @@ export function AddClientForm() {
           </label>
         ))}
         {formularz.numeryKotlow.map((numer, indeks) => (
-          <label key={`kociol-${indeks}`} className="block text-xs font-semibold uppercase text-gray-500">
+          <label key={`kociol-${indeks}`} className="block text-xs font-semibold uppercase text-slate-500">
             <span className="flex items-center justify-between gap-2">
               Numer kotła {indeks + 1}
               {indeks > 0 ? (
                 <button
                   type="button"
                   onClick={() => usunKociol(indeks)}
-                  className="text-[11px] font-medium normal-case text-gray-500 hover:text-gray-800"
+                  className="text-[11px] font-medium normal-case text-slate-500 hover:text-slate-800"
                 >
                   Usuń
                 </button>
@@ -257,16 +257,16 @@ export function AddClientForm() {
         <button
           type="button"
           onClick={dodajKociol}
-          className="mt-4 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          className="btn btn-outline mt-6"
         >
           Dodaj kolejny kocioł
         </button>
       ) : null}
-      <div className="mt-5 flex flex-wrap items-center gap-3">
+      <div className="mt-6 flex flex-wrap items-center gap-4">
         <button
           type="submit"
           disabled={zapisuje}
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-blue-300"
+          className="btn btn-primary"
         >
           {zapisuje ? "Zapisywanie…" : "Dodaj"}
         </button>

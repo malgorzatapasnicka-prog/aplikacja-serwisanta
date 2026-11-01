@@ -12,7 +12,7 @@ export default function RozliczeniaPage() {
       {/* Suspense: komponent używa bieżącej daty (domyślny okres = ten miesiąc), więc nie jest prerenderowany. */}
       <Suspense
         fallback={
-          <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
+          <div className="card text-center text-sm text-slate-500">
             Ładowanie rozliczeń...
           </div>
         }

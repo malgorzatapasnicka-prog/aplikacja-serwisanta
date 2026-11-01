@@ -11,7 +11,7 @@ export default function KlienciPage() {
         description="Tutaj widać zapisanych klientów. Formularz dodawania jest nad listą."
       />
       <AddClientForm />
-      <div className="mt-8">
+      <div className="mt-6">
         <Suspense fallback={<div>Ładowanie danych...</div>}>
           <ClientList opisPustej="Dodaj pierwszego klienta formularzem powyżej." />
         </Suspense>

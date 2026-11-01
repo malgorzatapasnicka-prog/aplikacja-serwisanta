@@ -163,14 +163,14 @@ export function RozliczeniaPrzeglad() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="card">
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
           <label className="block text-xs font-semibold uppercase text-slate-600">
             Okres
             <select
               value={okres}
               onChange={(e) => setOkres(e.target.value as Okres)}
-              className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-normal normal-case text-slate-900 outline-none focus:border-blue-500 sm:w-56"
+              className="field mt-1 block font-normal normal-case sm:w-56"
             >
               {OPCJE_OKRESU.map((opcja) => (
                 <option key={opcja.wartosc} value={opcja.wartosc}>
@@ -189,7 +189,7 @@ export function RozliczeniaPrzeglad() {
                   value={wlasnyOd}
                   max={wlasnyDo || undefined}
                   onChange={(e) => setWlasnyOd(e.target.value)}
-                  className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal text-slate-900 outline-none focus:border-blue-500"
+                  className="field mt-1 block font-normal"
                 />
               </label>
               <label className="block text-xs font-semibold uppercase text-slate-600">
@@ -199,7 +199,7 @@ export function RozliczeniaPrzeglad() {
                   value={wlasnyDo}
                   min={wlasnyOd || undefined}
                   onChange={(e) => setWlasnyDo(e.target.value)}
-                  className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm font-normal text-slate-900 outline-none focus:border-blue-500"
+                  className="field mt-1 block font-normal"
                 />
               </label>
             </>
@@ -209,7 +209,7 @@ export function RozliczeniaPrzeglad() {
             type="button"
             onClick={pobierzCsv}
             disabled={zRozliczeniem.length === 0}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 sm:ml-auto"
+            className="btn btn-outline sm:ml-auto"
             title="Pobierz zestawienie do arkusza kalkulacyjnego"
           >
             <Download className="h-4 w-4 text-slate-400" aria-hidden />
@@ -224,21 +224,21 @@ export function RozliczeniaPrzeglad() {
       {blad && <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{blad}</div>}
 
       {laduje ? (
-        <div className="rounded-xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
+        <div className="card text-center text-sm text-slate-500">
           Ładowanie rozliczeń...
         </div>
       ) : (
         <>
-          <section className="grid gap-4 sm:grid-cols-3">
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <section className="grid gap-6 sm:grid-cols-3">
+            <div className="card">
               <p className="text-xs font-semibold uppercase text-slate-500">Suma netto</p>
               <p className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">{formatujKwote(sumaNetto)}</p>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="card">
               <p className="text-xs font-semibold uppercase text-slate-500">Suma brutto</p>
               <p className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">{formatujKwote(sumaBrutto)}</p>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="card">
               <p className="text-xs font-semibold uppercase text-slate-500">Protokoły z rozliczeniem</p>
               <p className="mt-2 text-2xl font-semibold tracking-tight text-slate-900">
                 {zRozliczeniem.length}
@@ -252,41 +252,41 @@ export function RozliczeniaPrzeglad() {
             </div>
           </section>
 
-          <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-            <h2 className="border-b border-slate-100 px-5 py-3 text-sm font-semibold text-slate-900">
+          <section className="card overflow-hidden p-0">
+            <h2 className="border-b border-slate-100 px-6 py-4 text-sm font-semibold text-slate-900">
               Sumy według rodzaju
             </h2>
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-left text-xs uppercase text-slate-500">
                 <tr>
-                  <th className="px-5 py-2 font-semibold">Pozycja</th>
-                  <th className="px-5 py-2 text-right font-semibold">Netto</th>
-                  <th className="px-5 py-2 text-right font-semibold">Brutto</th>
+                  <th className="px-6 py-2 font-semibold">Pozycja</th>
+                  <th className="px-6 py-2 text-right font-semibold">Netto</th>
+                  <th className="px-6 py-2 text-right font-semibold">Brutto</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {sumyKategorii.map((kategoria) => (
                   <tr key={kategoria.nazwa}>
-                    <td className="px-5 py-2.5 text-slate-700">{kategoria.nazwa}</td>
-                    <td className="px-5 py-2.5 text-right tabular-nums text-slate-900">
+                    <td className="px-6 py-2.5 text-slate-700">{kategoria.nazwa}</td>
+                    <td className="px-6 py-2.5 text-right tabular-nums text-slate-900">
                       {formatujKwote(kategoria.netto)}
                     </td>
-                    <td className="px-5 py-2.5 text-right tabular-nums text-slate-900">
+                    <td className="px-6 py-2.5 text-right tabular-nums text-slate-900">
                       {formatujKwote(kategoria.brutto)}
                     </td>
                   </tr>
                 ))}
                 <tr className="bg-slate-50 font-semibold">
-                  <td className="px-5 py-2.5 text-slate-900">Razem</td>
-                  <td className="px-5 py-2.5 text-right tabular-nums text-slate-900">{formatujKwote(sumaNetto)}</td>
-                  <td className="px-5 py-2.5 text-right tabular-nums text-slate-900">{formatujKwote(sumaBrutto)}</td>
+                  <td className="px-6 py-2.5 text-slate-900">Razem</td>
+                  <td className="px-6 py-2.5 text-right tabular-nums text-slate-900">{formatujKwote(sumaNetto)}</td>
+                  <td className="px-6 py-2.5 text-right tabular-nums text-slate-900">{formatujKwote(sumaBrutto)}</td>
                 </tr>
               </tbody>
             </table>
           </section>
 
-          <section className="rounded-xl border border-slate-200 bg-white shadow-sm">
-            <h2 className="border-b border-slate-100 px-5 py-3 text-sm font-semibold text-slate-900">
+          <section className="card p-0">
+            <h2 className="border-b border-slate-100 px-6 py-4 text-sm font-semibold text-slate-900">
               Protokoły w okresie ({zRozliczeniem.length})
             </h2>
             {zRozliczeniem.length === 0 ? (

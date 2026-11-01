@@ -101,10 +101,10 @@ function KomorkaDanych({
 
   return (
     <div className="flex gap-3">
-      {ikona ? <span className="mt-0.5 text-gray-400">{ikona}</span> : null}
+      {ikona ? <span className="mt-0.5 text-slate-400">{ikona}</span> : null}
       <div className="min-w-0">
-        <span className="text-xs font-semibold uppercase text-gray-500">{etykieta}</span>
-        <span className="mt-1 block break-words text-sm font-medium text-gray-900">{wartosc}</span>
+        <span className="text-xs font-semibold uppercase text-slate-500">{etykieta}</span>
+        <span className="mt-1 block break-words text-sm font-medium text-slate-900">{wartosc}</span>
       </div>
     </div>
   );
@@ -576,7 +576,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
 
   if (laduje) {
     return (
-      <div className="rounded-xl border border-gray-100 bg-white p-8 text-center text-sm text-gray-500 shadow-sm">
+      <div className="card text-center text-sm text-slate-500">
         Ładowanie listy klientów...
       </div>
     );
@@ -584,7 +584,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
 
   if (klienci.length === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-gray-200 bg-white p-8 text-center text-sm text-gray-500">
+      <div className="card border-dashed text-center text-sm text-slate-500 shadow-none">
         {opisPustej || "Brak zapisanych klientów w bazie."}
       </div>
     );
@@ -607,7 +607,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
   });
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Pasek narzędzi: Wyszukiwarka + CSV */}
       <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
         <input
@@ -615,13 +615,13 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
           value={szukaj}
           onChange={(e) => setSzukaj(e.target.value)}
           placeholder="Szukaj klienta (imię, nazwisko, telefon, adres, numer kotła)..."
-          className="flex-1 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 shadow-sm outline-none transition focus:border-gray-400"
+          className="field flex-1"
         />
         <select
           value={sortowanie}
           onChange={(e) => setSortowanie(e.target.value as SortowanieKlientow)}
           aria-label="Sortowanie klientów"
-          className="rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-900 shadow-sm outline-none transition focus:border-gray-400"
+          className="field w-auto font-medium"
         >
           <option value="data-desc">Data dodania: najnowsi</option>
           <option value="data-asc">Data dodania: najstarsi</option>
@@ -631,16 +631,16 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
         <button
           type="button"
           onClick={handleEksportCSV}
-          className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition hover:bg-gray-50"
+          className="btn btn-outline"
           title="Pobierz bazę do arkusza kalkulacyjnego"
         >
-          <Download className="h-4 w-4 text-gray-400" aria-hidden />
+          <Download className="h-4 w-4 text-slate-400" aria-hidden />
           Pobierz CSV
         </button>
       </div>
 
       {/* Lista kafelków */}
-      <div className="space-y-4">
+      <div className="space-y-6">
         {przefiltrowani.map((klient) => {
           const imie = pobierzImie(klient);
           const nazwisko = pobierzNazwisko(klient);
@@ -653,10 +653,10 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
               <form
                 key={klient.id}
                 onSubmit={handleZapiszEdycje}
-                className="space-y-4 rounded-xl border border-gray-100 bg-white p-5 shadow-sm"
+                className="card space-y-6"
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-gray-900">
+                  <span className="text-sm font-semibold text-slate-900">
                     Edycja danych klienta
                   </span>
                   {blad && <span className="text-xs text-red-600">{blad}</span>}
@@ -664,9 +664,9 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4">
                   <div className="sm:col-span-2">
-                    <span className="text-xs font-semibold uppercase text-gray-500">Rodzaj klienta</span>
+                    <span className="text-xs font-semibold uppercase text-slate-500">Rodzaj klienta</span>
                     <div className="mt-1 flex flex-wrap gap-3">
-                      <label className="flex min-h-11 items-center gap-2 text-sm text-gray-900">
+                      <label className="flex min-h-11 items-center gap-2 text-sm text-slate-900">
                         <input
                           type="radio"
                           name="rodzajEdycji"
@@ -677,7 +677,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                         />
                         Osoba prywatna
                       </label>
-                      <label className="flex min-h-11 items-center gap-2 text-sm text-gray-900">
+                      <label className="flex min-h-11 items-center gap-2 text-sm text-slate-900">
                         <input
                           type="radio"
                           name="rodzajEdycji"
@@ -691,29 +691,29 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                   {formEdycji.rodzajKlienta === "firma" ? (
                     <>
                       <div>
-                        <label className="text-xs font-semibold uppercase text-gray-500">Nazwa firmy</label>
+                        <label className="text-xs font-semibold uppercase text-slate-500">Nazwa firmy</label>
                         <input
                           type="text"
                           value={formEdycji.nazwaFirmy || ""}
                           onChange={(e) => setFormEdycji({ ...formEdycji, nazwaFirmy: e.target.value })}
-                          className="mt-1 w-full rounded-lg border border-gray-200 bg-white p-2 text-sm text-gray-900 outline-none focus:border-gray-400"
+                          className="field mt-1"
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-semibold uppercase text-gray-500">NIP</label>
+                        <label className="text-xs font-semibold uppercase text-slate-500">NIP</label>
                         <input
                           type="text"
                           inputMode="numeric"
                           value={formEdycji.nip || ""}
                           onChange={(e) => setFormEdycji({ ...formEdycji, nip: e.target.value })}
                           placeholder="10 cyfr"
-                          className="mt-1 w-full rounded-lg border border-gray-200 bg-white p-2 text-sm text-gray-900 outline-none focus:border-gray-400"
+                          className="field mt-1"
                         />
                       </div>
                     </>
                   ) : null}
                   <div>
-                    <label className="text-xs font-semibold uppercase text-gray-500">
+                    <label className="text-xs font-semibold uppercase text-slate-500">
                       Imię
                     </label>
                     <input
@@ -722,12 +722,12 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                       onChange={(e) =>
                         setFormEdycji({ ...formEdycji, imie: e.target.value })
                       }
-                      className="mt-1 w-full rounded-lg border border-gray-200 bg-white p-2 text-sm text-gray-900 outline-none focus:border-gray-400"
+                      className="field mt-1"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-semibold uppercase text-gray-500">
+                    <label className="text-xs font-semibold uppercase text-slate-500">
                       Nazwisko
                     </label>
                     <input
@@ -736,12 +736,12 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                       onChange={(e) =>
                         setFormEdycji({ ...formEdycji, nazwisko: e.target.value })
                       }
-                      className="mt-1 w-full rounded-lg border border-gray-200 bg-white p-2 text-sm text-gray-900 outline-none focus:border-gray-400"
+                      className="field mt-1"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-semibold uppercase text-gray-500">
+                    <label className="text-xs font-semibold uppercase text-slate-500">
                       Telefon
                     </label>
                     <input
@@ -750,12 +750,12 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                       onChange={(e) =>
                         setFormEdycji({ ...formEdycji, telefon: e.target.value })
                       }
-                      className="mt-1 w-full rounded-lg border border-gray-200 bg-white p-2 text-sm text-gray-900 outline-none focus:border-gray-400"
+                      className="field mt-1"
                     />
                   </div>
 
                   <div>
-                    <label className="text-xs font-semibold uppercase text-gray-500">
+                    <label className="text-xs font-semibold uppercase text-slate-500">
                       E-mail
                     </label>
                     <input
@@ -764,12 +764,12 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                       onChange={(e) =>
                         setFormEdycji({ ...formEdycji, email: e.target.value })
                       }
-                      className="mt-1 w-full rounded-lg border border-gray-200 bg-white p-2 text-sm text-gray-900 outline-none focus:border-gray-400"
+                      className="field mt-1"
                     />
                   </div>
 
                   <div className="sm:col-span-2">
-                    <label className="text-xs font-semibold uppercase text-gray-500">
+                    <label className="text-xs font-semibold uppercase text-slate-500">
                       Adres
                     </label>
                     <input
@@ -778,13 +778,13 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                       onChange={(e) =>
                         setFormEdycji({ ...formEdycji, adres: e.target.value })
                       }
-                      className="mt-1 w-full rounded-lg border border-gray-200 bg-white p-2 text-sm text-gray-900 outline-none focus:border-gray-400"
+                      className="field mt-1"
                     />
                   </div>
 
                   {(formEdycji.numeryKotlow || [formEdycji.numerKotla || ""]).map((numer, indeks) => (
                     <div key={indeks}>
-                      <label className="text-xs font-semibold uppercase text-gray-500">
+                      <label className="text-xs font-semibold uppercase text-slate-500">
                         Numer kotła {indeks + 1}
                       </label>
                       <input
@@ -795,7 +795,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                           numeryKotlow[indeks] = e.target.value;
                           setFormEdycji({ ...formEdycji, numeryKotlow });
                         }}
-                        className="mt-1 w-full rounded-lg border border-gray-200 bg-white p-2 text-sm text-gray-900 outline-none focus:border-gray-400"
+                        className="field mt-1"
                       />
                     </div>
                   ))}
@@ -810,7 +810,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                             numeryKotlow: [...(formEdycji.numeryKotlow || [formEdycji.numerKotla || ""]), ""],
                           })
                         }
-                        className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        className="btn btn-outline"
                       >
                         Dodaj kolejny kocioł
                       </button>
@@ -818,7 +818,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                   ) : null}
 
                   <div>
-                    <label className="text-xs font-semibold uppercase text-gray-500">
+                    <label className="text-xs font-semibold uppercase text-slate-500">
                       Data ostatniego przeglądu
                     </label>
                     <input
@@ -830,23 +830,23 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                           dataOstatniegoPrzegladu: e.target.value,
                         })
                       }
-                      className="mt-1 w-full rounded-lg border border-gray-200 bg-white p-2 text-sm text-gray-900 outline-none focus:border-gray-400"
+                      className="field mt-1"
                     />
                   </div>
                 </div>
 
-                <div className="flex gap-2 justify-end pt-2">
+                <div className="flex justify-end gap-2">
                   <button
                     type="button"
                     onClick={handleAnulujEdycje}
-                    className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                    className="btn btn-outline"
                   >
                     Anuluj
                   </button>
                   <button
                     type="submit"
                     disabled={zapisujeEdycje}
-                    className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                    className="btn btn-primary"
                   >
                     {zapisujeEdycje ? "Zapisywanie..." : "Zapisz zmiany"}
                   </button>
@@ -858,10 +858,10 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
           return (
             <div
               key={klient.id}
-              className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm"
+              className="card"
             >
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="text-lg font-semibold text-slate-900">
                   {pelnaNazwa}
                 </h3>
 
@@ -869,7 +869,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                   <button
                     type="button"
                     onClick={() => setProtokolKlient(klient)}
-                    className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+                    className="btn btn-primary"
                   >
                     <ClipboardList className="h-4 w-4" aria-hidden />
                     Raport z wizyty
@@ -885,31 +885,31 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                       }
                       handleWyslijEmail(klient, ostatni.id);
                     }}
-                    className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                    className="btn btn-outline"
                   >
-                    <Mail className="h-4 w-4 text-gray-400" aria-hidden />
+                    <Mail className="h-4 w-4 text-slate-400" aria-hidden />
                     Wyślij na e-mail
                   </button>
                   <button
                     type="button"
                     onClick={() => handleStartEdycja(klient)}
-                    className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    className="btn btn-outline"
                   >
-                    <Pencil className="h-4 w-4 text-gray-400" aria-hidden />
+                    <Pencil className="h-4 w-4 text-slate-400" aria-hidden />
                     Edytuj
                   </button>
                   <button
                     type="button"
                     onClick={() => handleUsun(klient.id, pelnaNazwa)}
-                    className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    className="btn btn-outline"
                   >
-                    <Trash2 className="h-4 w-4 text-gray-400" aria-hidden />
+                    <Trash2 className="h-4 w-4 text-slate-400" aria-hidden />
                     Usuń
                   </button>
                 </div>
               </div>
 
-              <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
+              <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
                 <KomorkaDanych etykieta="Imię" wartosc={imie} ikona={<User className="h-4 w-4" aria-hidden />} />
                 <KomorkaDanych etykieta="Nazwisko" wartosc={nazwisko} ikona={<User className="h-4 w-4" aria-hidden />} />
                 <KomorkaDanych etykieta="Telefon" wartosc={klient.telefon} ikona={<Phone className="h-4 w-4" aria-hidden />} />
@@ -936,18 +936,18 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
 
               {/* Lista wystawionych raportów z wizyty / protokołów */}
               {protokoly.length > 0 && (
-                <div className="mt-5">
-                  <span className="text-xs font-semibold uppercase text-gray-500">
+                <div className="mt-6">
+                  <span className="text-xs font-semibold uppercase text-slate-500">
                     Wystawione protokoły ({protokoly.length}):
                   </span>
-                  <div className="mt-3 space-y-3">
+                  <div className="mt-4 space-y-4">
                     {protokoly.map((protokol) => (
                       <div key={protokol.id}>
                       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
                         <div>
-                          <strong className="font-medium text-gray-900">{protokol.nazwaRaportu}</strong>
-                          <span className="ml-2 text-gray-500">({protokol.dataWypelnienia})</span>
-                          <span className="ml-2 text-sm font-medium text-gray-900">
+                          <strong className="font-medium text-slate-900">{protokol.nazwaRaportu}</strong>
+                          <span className="ml-2 text-slate-500">({protokol.dataWypelnienia})</span>
+                          <span className="ml-2 text-sm font-medium text-slate-900">
                             {protokol.czynnosci}
                           </span>
                         </div>
@@ -963,9 +963,9 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                                 protokol.nazwaRaportu
                               )
                             }
-                            className="inline-flex items-center gap-2 text-sm font-medium text-gray-900 hover:text-gray-700 disabled:opacity-50"
+                            className="btn btn-outline btn-sm"
                           >
-                            <FileDown className="h-4 w-4 text-gray-400" aria-hidden />
+                            <FileDown className="h-4 w-4 text-slate-400" aria-hidden />
                             {pobieramPdfId === protokol.id
                               ? "Generowanie..."
                               : "Pobierz PDF"}
@@ -976,9 +976,9 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                             onClick={() =>
                               handleWyslijEmail(klient, protokol.id)
                             }
-                            className="inline-flex items-center gap-2 text-sm font-medium text-gray-900 hover:text-gray-700 disabled:opacity-50"
+                            className="btn btn-outline btn-sm"
                           >
-                            <Mail className="h-4 w-4 text-gray-400" aria-hidden />
+                            <Mail className="h-4 w-4 text-slate-400" aria-hidden />
                             {wysylamEmailId === protokol.id ? "Wysyłanie..." : "Wyślij na e-mail"}
                           </button>
                           <button
@@ -990,7 +990,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                                 protokol.nazwaRaportu
                               )
                             }
-                            className="rounded p-1 text-gray-400 hover:bg-gray-50 hover:text-gray-600"
+                            className="rounded p-1 text-slate-400 hover:bg-slate-50 hover:text-slate-600"
                             title="Usuń ten raport"
                           >
                             <X className="h-4 w-4" aria-hidden />
@@ -1008,7 +1008,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
         })}
 
         {przefiltrowani.length === 0 && (
-          <div className="rounded-xl border border-dashed border-gray-200 bg-white p-6 text-center text-sm text-gray-500">
+          <div className="card border-dashed text-center text-sm text-slate-500 shadow-none">
             Brak klientów pasujących do frazy &quot;{szukaj}&quot;.
           </div>
         )}
