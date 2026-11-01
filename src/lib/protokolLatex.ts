@@ -173,19 +173,6 @@ ${grupa.pozycje.map((pozycja) => `  \\item ${tex(pozycja.etykieta)}\\dotfill\\ \
     widok.pomiary.length > 0
       ? tabelaPol(widok.pomiary.map(([etykieta, wartosc]) => [etykieta, pole(wartosc)]))
       : "";
-  const blokRozliczenia =
-    widok.rozliczenie.length > 0
-      ? `\\noindent
-\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}X >{\\raggedleft\\arraybackslash}X >{\\raggedleft\\arraybackslash}X@{}}
-\\toprule
-\\textbf{Pozycja} & \\textbf{Netto} & \\textbf{Brutto} \\\\
-\\midrule
-${widok.rozliczenie
-  .map((wiersz) => `${tex(wiersz.nazwa)} & \\textbf{${tex(wiersz.netto || "—")}} & \\textbf{${tex(wiersz.brutto || "—")}} \\\\`)
-  .join("\n\\midrule\n")}
-\\bottomrule
-\\end{tabularx}`
-      : "";
   const zdaniaOswiadczen = [
     widok.oswiadczeniePowierzchni
       ? "Oświadczam, że powierzchnia użytkowa budynku mieszkalnego jednorodzinnego nie przekracza 300 mkw."
@@ -291,7 +278,6 @@ ${blokPomiarow ? sekcja("Pomiary", blokPomiarow) : ""}
 ${sekcja("3. Lista kontrolna wykonanych czynności", listaCzynnosci)}
 ${blokChecklisty ? sekcja("Checklista czynności serwisowych", blokChecklisty) : ""}
 ${sekcja("4. Uwagi serwisanta i zdiagnozowane usterki", uwagi)}
-${blokRozliczenia ? sekcja("Rozliczenie", blokRozliczenia) : ""}
 ${sekcja("5. Załączniki", analiza)}
 ${blokOswiadczenia ? sekcja("Oświadczenie", blokOswiadczenia) : ""}
 \\vspace{0.8cm}

@@ -315,24 +315,7 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
   }
   y += wysokoscUwag + 8;
 
-  if (widok.rozliczenie.length > 0) {
-    zapewnij(12 + widok.rozliczenie.length * 6);
-    doc.setFontSize(12);
-    tekst("Rozliczenie", lewy, y);
-    y += 6;
-    doc.setFontSize(10);
-    tekst("Netto", lewy + 110, y);
-    tekst("Brutto", lewy + 145, y);
-    y += 5;
-    for (const wiersz of widok.rozliczenie) {
-      zapewnij(6);
-      tekst(wiersz.nazwa, lewy, y);
-      tekst(wiersz.netto || "—", lewy + 110, y);
-      tekst(wiersz.brutto || "—", lewy + 145, y);
-      y += 5;
-    }
-    y += 4;
-  }
+  // Rozliczenie jest informacją wewnętrzną serwisanta, nie trafia do PDF dla klienta.
 
   zapewnij(50);
   doc.setFontSize(12);
