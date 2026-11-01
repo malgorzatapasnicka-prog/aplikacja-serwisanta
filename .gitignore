@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# wektoryzacja logo (narzędzie pomocnicze, nie jest częścią aplikacji)
+/wektoryzacja.py
+/logo_kolor.svg
+/image.jpeg
+/temp_color.png

@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { jsPDF } from "jspdf";
 import type { DaneProtokoluPdf } from "@/lib/daneProtokolu";
+import { LOGO_FIRMY_PNG_DATA_URL, LOGO_FIRMY_PROPORCJE } from "@/lib/logoFirmy";
 import { widokProtokolu } from "@/lib/widokProtokolu";
 import type { WynikKontroli } from "@/types/protokol";
 
@@ -148,6 +149,17 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
     y += 6;
   }
 
+  const szerokoscLogo = 52;
+  doc.addImage(
+    LOGO_FIRMY_PNG_DATA_URL,
+    "PNG",
+    lewy,
+    y - 7,
+    szerokoscLogo,
+    szerokoscLogo / LOGO_FIRMY_PROPORCJE,
+    undefined,
+    "FAST",
+  );
   doc.setFontSize(10);
   doc.setTextColor(15, 23, 42);
   tekst(`Data przeglądu: ${widok.dataPrzegladu || "………………"}`, lewy + szerokosc, y, { align: "right" });

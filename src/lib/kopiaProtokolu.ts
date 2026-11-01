@@ -1,5 +1,6 @@
 import { FIRMA } from "@/lib/firma";
 import { formatujDateIso } from "@/lib/daneProtokolu";
+import { LOGO_FIRMY_SVG_DATA_URL } from "@/lib/logoFirmy";
 import {
   ETYKIETY_CHECKLISTY,
   ETYKIETY_CZYNNOSCI,
@@ -226,12 +227,14 @@ export function dokumentKopiiProtokolu(kopia: KopiaProtokolu) {
   th { width: 46%; background: #fafaf9; font-weight: 600; }
   figure { margin: 12px 0; }
   img { max-width: 100%; height: auto; }
+  img.logo { display: block; width: 240px; margin: 0 0 12px; }
   figcaption { font-size: 14px; margin-top: 4px; }
   .podpisy { display: flex; gap: 24px; margin-top: 12px; }
   .podpisy div { flex: 1; }
 </style>
 </head>
 <body>
+  <img class="logo" src="${LOGO_FIRMY_SVG_DATA_URL}" alt="${tekst(FIRMA.nazwa)}">
   <p>${tekst(FIRMA.nazwa)} ${tekst(FIRMA.wlasciciel)}</p>
   <p>${tekst(FIRMA.ulica)}, ${tekst(FIRMA.kod)}</p>
   <p>tel. ${tekst(FIRMA.telefon)}</p>

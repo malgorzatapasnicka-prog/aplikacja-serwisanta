@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import type { DaneProtokoluPdf } from "@/lib/daneProtokolu";
+import { LOGO_FIRMY_PNG_BASE64 } from "@/lib/logoFirmy";
 import { widokProtokolu } from "@/lib/widokProtokolu";
 import type { WynikKontroli } from "@/types/protokol";
 
@@ -119,8 +120,10 @@ export function trescLatex(
   plikiZdjec: { plik: string; podpis: string }[] = [],
   plikPodpisuKlienta = "",
   plikPodpisuSerwisanta = "",
+  plikLogo = "",
 ) {
   const widok = widokProtokolu(dane);
+  const logo = plikLogo ? `\\includegraphics[width=5.6cm]{${plikLogo}}` : "~";
   const adres = widok.klientLinie.map((linia) => tex(linia)).join("\\\\\n    ");
   const status = widok.statusAwaria
     ? `\\textbf{\\textcolor{StatusErr}{${tex(widok.status)}}}`
@@ -236,7 +239,7 @@ ${pozycjeListy.join("\n")}
 
 \\noindent
 \\begin{minipage}[c]{0.5\\textwidth}
-    ~
+    ${logo}
 \\end{minipage}
 \\hfill
 \\begin{minipage}[c]{0.48\\textwidth}
@@ -311,6 +314,7 @@ export async function utworzPdfLatex(dane: DaneProtokoluPdf): Promise<Buffer | n
       join(process.cwd(), "src/lib/fonts/NotoSans-Regular.ttf"),
       join(katalog, "NotoSans-Regular.ttf"),
     );
+    await writeFile(join(katalog, "logo-firmy.png"), Buffer.from(LOGO_FIRMY_PNG_BASE64, "base64"));
 
     const widok = widokProtokolu(dane);
     const plikiZdjec: { plik: string; podpis: string }[] = [];
@@ -347,7 +351,7 @@ export async function utworzPdfLatex(dane: DaneProtokoluPdf): Promise<Buffer | n
 
     await writeFile(
       join(katalog, "protokol.tex"),
-      trescLatex(dane, plikiZdjec, plikPodpisu, plikPodpisuSerwisanta),
+      trescLatex(dane, plikiZdjec, plikPodpisu, plikPodpisuSerwisanta, "logo-firmy.png"),
       "utf8",
     );
     await uruchom(
