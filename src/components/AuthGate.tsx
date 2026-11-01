@@ -87,6 +87,8 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-100 p-4">
         <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-md">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-radwin.svg" alt="Radwin Technika Grzewcza" width={162} height={40} className="mb-6 h-14 w-auto" />
           <h1 className="mb-2 text-2xl font-bold text-slate-900">CRM Serwisanta</h1>
           <p className="mb-6 text-sm text-slate-600">Zaloguj się, aby uzyskać dostęp do bazy</p>
 

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import { AppNav } from "@/components/AppNav";
 import { AuthGate } from "../components/AuthGate";
@@ -12,6 +12,23 @@ const geistSans = Geist({
 export const metadata: Metadata = {
   title: "CRM serwisanta",
   description: "Klienci i zlecenia serwisowe",
+  applicationName: "Radwin Serwis",
+  icons: {
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  appleWebApp: {
+    capable: true,
+    title: "Radwin Serwis",
+    statusBarStyle: "default",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0f172a",
 };
 
 export default function RootLayout({

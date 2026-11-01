@@ -31,6 +31,14 @@ export function AppNav() {
     <aside className="border-b border-slate-800 bg-slate-900 text-slate-100 md:sticky md:top-0 md:flex md:h-screen md:w-64 md:shrink-0 md:flex-col md:border-b-0 md:border-r">
       {/* Nagłówek menu */}
       <div className="px-5 py-5">
+        <Link
+          href="/"
+          aria-label="Radwin Technika Grzewcza – pulpit"
+          className="mb-4 block w-fit rounded-lg bg-white px-3 py-2"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-radwin.svg" alt="Radwin Technika Grzewcza" width={162} height={40} className="h-10 w-auto" />
+        </Link>
         <p className="text-xs font-medium uppercase tracking-[0.18em] text-amber-400">
           Serwis
         </p>
