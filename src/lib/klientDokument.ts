@@ -135,6 +135,7 @@ export function protokolyZDokumentu(wartosc: unknown): Protokol[] {
         podpisKlienta: obrazPodpisu(raport.podpisKlienta),
         podpisSerwisanta: obrazPodpisu(raport.podpisSerwisanta),
         maZalacznikPdf: tak(raport.maZalacznikPdf),
+        ...(liczba(raport.czasUtworzenia) !== undefined ? { czasUtworzenia: liczba(raport.czasUtworzenia) } : {}),
         ...(tekst(raport.modelUrzadzenia) ? { modelUrzadzenia: tekst(raport.modelUrzadzenia) } : {}),
         ...(tekst(raport.numerFabryczny) ? { numerFabryczny: tekst(raport.numerFabryczny) } : {}),
         ...(tekst(raport.rodzajGazu) ? { rodzajGazu: tekst(raport.rodzajGazu) } : {}),
@@ -174,7 +175,30 @@ export function daneProtokoluZDokumentu(
   };
 }
 
-export function scalProtokoly<T extends { id: string; dataWypelnienia?: string }>(
+type ProtokolDoSortowania = {
+  id: string;
+  dataWypelnienia?: string;
+  czasUtworzenia?: number;
+  numerProtokolu?: string;
+};
+
+/** Moment, według którego układamy protokoły: dokładny czas utworzenia, a dla starszych wpisów data protokołu. */
+function momentProtokolu(protokol: ProtokolDoSortowania) {
+  if (typeof protokol.czasUtworzenia === "number") {
+    return protokol.czasUtworzenia;
+  }
+  const dzien = Date.parse(`${protokol.dataWypelnienia ?? ""}T12:00:00Z`);
+  return Number.isFinite(dzien) ? dzien : 0;
+}
+
+/** Numer kolejny z "PR/2026/11/3" (3), a gdy numeru nie ma 0. */
+function kolejnyNumer(protokol: ProtokolDoSortowania) {
+  const dopasowanie = /(\d+)\s*$/.exec(protokol.numerProtokolu ?? "");
+  return dopasowanie ? Number(dopasowanie[1]) : 0;
+}
+
+/** Scala protokoły z dokumentu klienta i z podkolekcji. Najnowszy protokół jest pierwszy. */
+export function scalProtokoly<T extends ProtokolDoSortowania>(
   zTablicy: readonly T[],
   zPodkolekcji: readonly T[],
 ): T[] {
@@ -191,6 +215,10 @@ export function scalProtokoly<T extends { id: string; dataWypelnienia?: string }
   }
 
   return [...mapa.values()].sort(
-    (a, b) => (a.dataWypelnienia || "").localeCompare(b.dataWypelnienia || "") || a.id.localeCompare(b.id),
+    (a, b) =>
+      momentProtokolu(b) - momentProtokolu(a) ||
+      (b.dataWypelnienia || "").localeCompare(a.dataWypelnienia || "") ||
+      kolejnyNumer(b) - kolejnyNumer(a) ||
+      b.id.localeCompare(a.id),
   );
 }

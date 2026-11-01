@@ -643,6 +643,7 @@ export function AddProtocolForm({
         grzanie: temperatura,
         maksymalnaTemperaturaZasilania: formularz.maksymalnaTemperaturaZasilania.trim(),
         dataWypelnienia: formularz.dataPrzegladu,
+        czasUtworzenia: Date.now(),
         numerProtokolu,
         modelKotla: model,
         numerKotla: numer,

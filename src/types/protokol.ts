@@ -126,6 +126,8 @@ export type Protokol = {
   grzanie: string;
   maksymalnaTemperaturaZasilania: string;
   dataWypelnienia: string;
+  /** Moment utworzenia protokołu (ms od 1970), do ustawiania najnowszych na górze listy. */
+  czasUtworzenia?: number;
   numerProtokolu?: string;
   modelKotla?: string;
   numerKotla?: string;

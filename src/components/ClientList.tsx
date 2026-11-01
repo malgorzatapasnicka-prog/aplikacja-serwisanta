@@ -885,9 +885,9 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                   </button>
                   <button
                     type="button"
-                    disabled={wysylamEmailId !== null && wysylamEmailId === protokoly[protokoly.length - 1]?.id}
+                    disabled={wysylamEmailId !== null && wysylamEmailId === protokoly[0]?.id}
                     onClick={() => {
-                      const ostatni = protokoly[protokoly.length - 1];
+                      const ostatni = protokoly[0];
                       if (!ostatni) {
                         alert("Najpierw zapisz raport z wizyty. Potem można wysłać go na e-mail.");
                         return;
