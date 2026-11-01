@@ -4,12 +4,13 @@ import { jsPDF } from "jspdf";
 import type { DaneProtokoluPdf } from "@/lib/daneProtokolu";
 import {
   NAZWA_FIRMY_NAGLOWEK,
+  TEKST_STOPKI,
   kolorFirmowyJasnyRgb,
   kolorFirmowyRgb,
   logoWbudowane,
   type LogoPdf,
 } from "@/lib/identyfikacjaWizualna";
-import { widokProtokolu } from "@/lib/widokProtokolu";
+import { widokProtokolu, type GrupaChecklistyWidok } from "@/lib/widokProtokolu";
 import type { WynikKontroli } from "@/types/protokol";
 
 let czcionka: string | null = null;
@@ -111,15 +112,17 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf, logo: LogoPdf = logoW
     zapewnij(12 + wiersze.length * 8);
     doc.setFontSize(9);
     doc.setTextColor(15, 23, 42);
-    // Nagłówek tabeli: jasne tło w kolorze firmowym i czarny, pogrubiony tekst.
+    // Nagłówek tabeli: jasne tło i pogrubiony tekst w kolorze firmowym.
     doc.setFillColor(kolorJasny[0], kolorJasny[1], kolorJasny[2]);
     doc.rect(lewy, y, szerokosc, 7.2, "F");
+    doc.setTextColor(kolorR, kolorG, kolorB);
     y += 5;
     let x = lewy;
     naglowki.forEach((naglowek, indeks) => {
       pogrubiony(naglowek, x + 1, y);
       x += kolumny[indeks];
     });
+    doc.setTextColor(15, 23, 42);
     y += 2.2;
     linia(lewy, lewy + szerokosc, 0.3);
 
@@ -176,6 +179,71 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf, logo: LogoPdf = logoW
     });
     linia(lewy, lewy + szerokosc, 0.45);
     y += 6;
+  }
+
+  // Tabela jednej grupy checklisty: nagłówek z nazwą grupy i kolumną „Status”, a pod nim
+  // czynności z polem wyboru (✓ wykonano/wymieniono, puste pole = brak, kreska = nie dotyczy).
+  function tabelaChecklisty(grupa: GrupaChecklistyWidok) {
+    const kolumnaEtykiety = 112;
+    const wysokoscNaglowka = 8.4;
+    const wysokoscWiersza = 8.8;
+    const bok = 3.6;
+    zapewnij(wysokoscNaglowka + grupa.pozycje.length * wysokoscWiersza + 2);
+
+    doc.setFillColor(kolorJasny[0], kolorJasny[1], kolorJasny[2]);
+    doc.rect(lewy, y, szerokosc, wysokoscNaglowka, "F");
+    doc.setFontSize(10.5);
+    doc.setTextColor(kolorR, kolorG, kolorB);
+    pogrubiony(grupa.tytul, lewy + 3, y + 5.7);
+    pogrubiony("Status", lewy + kolumnaEtykiety + 3, y + 5.7);
+    y += wysokoscNaglowka;
+    linia(lewy, lewy + szerokosc, 0.3);
+
+    grupa.pozycje.forEach((pozycja, indeks) => {
+      if (indeks % 2 === 1) {
+        doc.setFillColor(248, 250, 252);
+        doc.rect(lewy, y, szerokosc, wysokoscWiersza, "F");
+      }
+      const baseline = y + 5.8;
+      doc.setFontSize(10);
+      doc.setTextColor(15, 23, 42);
+      tekst(pozycja.etykieta, lewy + 3, baseline);
+
+      const xPola = lewy + kolumnaEtykiety + 3;
+      const yPola = y + (wysokoscWiersza - bok) / 2;
+      const zrobione = pozycja.kodStanu === "wykonano" || pozycja.kodStanu === "wymieniono";
+      const kolor: [number, number, number] = zrobione
+        ? [kolorR, kolorG, kolorB]
+        : pozycja.kodStanu === "brak"
+          ? [220, 38, 38]
+          : [100, 116, 139];
+      doc.setDrawColor(kolor[0], kolor[1], kolor[2]);
+      doc.setLineWidth(0.35);
+      doc.rect(xPola, yPola, bok, bok);
+      if (zrobione) {
+        doc.setLineWidth(0.5);
+        doc.line(xPola + 0.7, yPola + 0.7, xPola + bok - 0.7, yPola + bok - 0.7);
+        doc.line(xPola + bok - 0.7, yPola + 0.7, xPola + 0.7, yPola + bok - 0.7);
+      } else if (pozycja.kodStanu === "nie_dotyczy") {
+        doc.line(xPola + 0.8, yPola + bok / 2, xPola + bok - 0.8, yPola + bok / 2);
+      }
+      doc.setTextColor(kolor[0], kolor[1], kolor[2]);
+      if (pozycja.kodStanu === "nie_dotyczy") {
+        tekst(pozycja.stan, xPola + bok + 2.4, baseline);
+      } else {
+        pogrubiony(pozycja.stan, xPola + bok + 2.4, baseline);
+      }
+      doc.setTextColor(15, 23, 42);
+
+      y += wysokoscWiersza;
+      if (indeks < grupa.pozycje.length - 1) {
+        doc.setDrawColor(203, 213, 225);
+        doc.setLineWidth(0.15);
+        doc.line(lewy, y, lewy + szerokosc, y);
+      }
+    });
+    linia(lewy, lewy + szerokosc, 0.45);
+    y += 7;
   }
 
   // Nagłówek: logo | pionowa kreska | nazwa firmy i dane kontaktowe, w jednym wierszu.
@@ -349,23 +417,14 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf, logo: LogoPdf = logoW
   y += 8;
 
   if (widok.checklista.length > 0) {
-    zapewnij(10);
+    // Tytuł nie może zostać sam na dole strony: musi zmieścić się razem z pierwszą tabelą.
+    zapewnij(10 + 8.4 + widok.checklista[0].pozycje.length * 8.8 + 2);
     tytulSekcji("Checklista czynności serwisowych");
-    y += 6;
+    y += 5;
     for (const grupa of widok.checklista) {
-      zapewnij(8);
-      doc.setFontSize(11);
-      tekst(grupa.tytul, lewy, y);
-      y += 5;
-      doc.setFontSize(10);
-      for (const pozycja of grupa.pozycje) {
-        const linie = doc.splitTextToSize(`${pozycja.etykieta}: ${pozycja.stan}`, szerokosc - 4) as string[];
-        zapewnij(linie.length * 5);
-        doc.text(linie, lewy + 2, y);
-        y += linie.length * 5;
-      }
+      tabelaChecklisty(grupa);
     }
-    y += 3;
+    y += 2;
   }
 
   zapewnij(70);
@@ -516,6 +575,21 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf, logo: LogoPdf = logoW
   doc.setTextColor(15, 23, 42);
   tekst("Podpis klienta", lewy + 27.5, liniaPodpisu + 5, { align: "center" });
   tekst("Podpis i pieczęć serwisanta", lewy + szerokosc - 27.5, liniaPodpisu + 5, { align: "center" });
+
+  // Stopka na każdej stronie: cienka linia, wyśrodkowany tekst w kolorze firmowym, numer strony po prawej.
+  const liczbaStron = doc.getNumberOfPages();
+  for (let strona = 1; strona <= liczbaStron; strona += 1) {
+    doc.setPage(strona);
+    doc.setFont("NotoSans", "normal");
+    doc.setDrawColor(kolorR, kolorG, kolorB);
+    doc.setLineWidth(0.3);
+    doc.line(lewy, 284, lewy + szerokosc, 284);
+    doc.setFontSize(9);
+    doc.setTextColor(kolorR, kolorG, kolorB);
+    tekst(TEKST_STOPKI, lewy + szerokosc / 2, 289.5, { align: "center" });
+    doc.setTextColor(100, 116, 139);
+    tekst(String(strona), lewy + szerokosc, 289.5, { align: "right" });
+  }
 
   return Buffer.from(doc.output("arraybuffer"));
 }

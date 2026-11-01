@@ -5,6 +5,7 @@ import {
   GRUPY_CHECKLISTY,
   stanCzynnosci,
   wynikKontroli,
+  type StanChecklisty,
   type StanCzynnosci,
   type WynikKontroli,
 } from "@/types/protokol";
@@ -22,7 +23,7 @@ export type WierszRozliczenia = {
 
 export type GrupaChecklistyWidok = {
   tytul: string;
-  pozycje: { etykieta: string; stan: string }[];
+  pozycje: { etykieta: string; stan: string; kodStanu: Exclude<StanChecklisty, ""> }[];
 };
 
 export type WidokProtokolu = {
@@ -227,7 +228,7 @@ export function widokProtokolu(dane: DaneProtokoluPdf): WidokProtokolu {
         if (!stan) {
           return [];
         }
-        return [{ etykieta, stan: ETYKIETY_CHECKLISTY[stan] }];
+        return [{ etykieta, stan: ETYKIETY_CHECKLISTY[stan], kodStanu: stan }];
       }),
     })).filter((grupa) => grupa.pozycje.length > 0),
     oswiadczeniePowierzchni: raport.powierzchniaDo300 === true,

@@ -6,6 +6,7 @@ import { promisify } from "node:util";
 import type { DaneProtokoluPdf } from "@/lib/daneProtokolu";
 import {
   NAZWA_FIRMY_NAGLOWEK,
+  TEKST_STOPKI,
   UDZIAL_KOLORU_W_TLE,
   kolorFirmowyHex,
   logoWbudowane,
@@ -54,10 +55,25 @@ function wartoscLubNieDotyczy(nieDotyczy: boolean, wartosc: string, pusta: strin
 }
 
 function komorkaWartosci(wartosc: string) {
-  if (wartosc.includes("\\begin{minipage}")) {
+  // Komórki, które już mają własne formatowanie (status, pole wyboru), zostają bez zmian.
+  if (wartosc.includes("\\begin{minipage}") || wartosc.startsWith("\\textbf{") || wartosc.startsWith("\\textcolor{")) {
     return wartosc;
   }
   return `\\textbf{${wartosc}}`;
+}
+
+// Status pozycji checklisty: pole wyboru i pogrubiony, kolorowy opis statusu.
+function statusChecklisty(kod: "wykonano" | "brak" | "wymieniono" | "nie_dotyczy", etykieta: string) {
+  const opis = tex(etykieta);
+  switch (kod) {
+    case "wykonano":
+    case "wymieniono":
+      return `\\textbf{\\textcolor{Firmowy}{\\mbox{[\\,$\\times$\\,]} ${opis}}}`;
+    case "brak":
+      return `\\textbf{\\textcolor{StatusErr}{\\mbox{[\\hspace{0.3cm}]} ${opis}}}`;
+    default:
+      return `\\textcolor{gray}{\\mbox{[\\,--\\,]} ${opis}}`;
+  }
 }
 
 function tabelaPol(wiersze: Array<[string, string]>, naglowki: [string, string] = ["Parametr", "Wartość"]) {
@@ -73,7 +89,7 @@ function tabelaPol(wiersze: Array<[string, string]>, naglowki: [string, string] 
   return `\\noindent
 \\begin{tabularx}{\\textwidth}{>{\\raggedright\\arraybackslash}X >{\\raggedright\\arraybackslash}X}
 \\arrayrulecolor{Firmowy}
-\\rowcolor{FirmowyJasny}\\textbf{${naglowki[0]}} & \\textbf{${naglowki[1]}} \\\\
+\\rowcolor{FirmowyJasny}\\textbf{\\textcolor{Firmowy}{${tex(naglowki[0])}}} & \\textbf{\\textcolor{Firmowy}{${tex(naglowki[1])}}} \\\\
 \\midrule
 ${tresc}
 \\arrayrulecolor{Firmowy}\\bottomrule
@@ -85,7 +101,7 @@ function sekcja(tytul: string, tresc: string) {
   if (!czysta) {
     return "";
   }
-  return `\\par\\vspace{0.95em}\n\\noindent{\\large\\bfseries\\color{Firmowy}${tytul}}\\par\\vspace{0.15em}\n{\\color{Firmowy}\\hrule height 0.6pt}\\vspace{0.45em}\n${czysta}\n`;
+  return `\\par\\vspace{0.95em}\n\\noindent{\\large\\bfseries\\color{Firmowy}${tytul}}\\par\\nopagebreak[4]\\vspace{0.15em}\\nopagebreak[4]\n{\\color{Firmowy}\\hrule height 0.6pt}\\nopagebreak[4]\\vspace{0.45em}\\nopagebreak[4]\n${czysta}\n`;
 }
 
 function kolumnaZdjecia(plik: string, podpis: string, szerokosc: string, wysokosc: string) {
@@ -173,14 +189,19 @@ export function trescLatex(
   ]
     .filter(Boolean)
     .join("\n\\vspace{0.25cm}\n");
+  // Każda grupa (Pomieszczenie, Instalacje, ...) to osobna tabela: nagłówek z nazwą grupy
+  // i kolumną „Status”, a pod nim czynności ze statusem w postaci pola wyboru.
   const blokChecklisty = widok.checklista
-    .map(
-      (grupa) => `{\\bfseries\\color{Firmowy}${tex(grupa.tytul)}}
-\\begin{itemize}[leftmargin=1.5em, itemsep=0.28em, topsep=0.35em, parsep=0pt]
-${grupa.pozycje.map((pozycja) => `  \\item ${tex(pozycja.etykieta)}\\dotfill\\ \\textbf{${tex(pozycja.stan)}}`).join("\n")}
-\\end{itemize}`,
+    .map((grupa) =>
+      tabelaPol(
+        grupa.pozycje.map((pozycja): [string, string] => [
+          pozycja.etykieta,
+          statusChecklisty(pozycja.kodStanu, pozycja.stan),
+        ]),
+        [grupa.tytul, "Status"],
+      ),
     )
-    .join("\n\\vspace{0.15cm}\n");
+    .join("\n\\par\\vspace{0.5cm}\n");
   const blokPomiarow =
     widok.pomiary.length > 0
       ? tabelaPol(widok.pomiary.map(([etykieta, wartosc]) => [etykieta, pole(wartosc)]))
@@ -235,6 +256,9 @@ ${pozycjeListy.join("\n")}
 \\usepackage[table]{xcolor}
 \\usepackage{enumitem}
 \\usepackage{graphicx}
+\\usepackage{fancyhdr}
+% Zakaz łamania strony tuż przed listą, żeby tytuł sekcji nie został sam na dole strony.
+\\makeatletter\\@beginparpenalty=10000\\makeatother
 \\setlength{\\parindent}{0pt}
 \\setlength{\\tabcolsep}{6pt}
 \\renewcommand{\\arraystretch}{1.35}
@@ -246,6 +270,16 @@ ${pozycjeListy.join("\n")}
 % Kolor firmowy (zmieniasz go w src/lib/identyfikacjaWizualna.ts) i jego jasny wariant na tła.
 \\definecolor{Firmowy}{HTML}{${kolorFirmowyHex()}}
 \\colorlet{FirmowyJasny}{Firmowy!${Math.round(UDZIAL_KOLORU_W_TLE * 100)}}
+
+% Stopka na każdej stronie: cienka linia w kolorze firmowym, wyśrodkowany tekst, numer strony po prawej.
+\\setlength{\\headheight}{14pt}
+\\pagestyle{fancy}
+\\fancyhf{}
+\\renewcommand{\\headrulewidth}{0pt}
+\\renewcommand{\\footrulewidth}{0.5pt}
+\\renewcommand{\\footrule}{{\\color{Firmowy}\\vskip-\\footruleskip\\vskip-\\footrulewidth\\hrule width\\headwidth height\\footrulewidth\\vskip\\footruleskip}}
+\\fancyfoot[C]{\\small\\textcolor{Firmowy}{${tex(TEKST_STOPKI)}}}
+\\fancyfoot[R]{\\small\\textcolor{gray}{\\thepage}}
 
 \\begin{document}
 

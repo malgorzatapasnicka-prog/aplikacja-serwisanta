@@ -10,10 +10,10 @@ import {
  * Tu zmieniasz wygląd nagłówka i kolory dokumentu. Reszta kodu bierze stąd dane.
  */
 
-// 1) KOLOR FIRMOWY (HEX, np. "#0056b3").
-//    Używany dla tytułów sekcji, linii oddzielających, obramowań tabel i (w jasnym
+// 1) KOLOR FIRMOWY (HEX, np. "#003366" granatowy albo "#000080" ciemnoniebieski).
+//    Używany dla tytułów sekcji, nagłówków tabel, linii oddzielających, stopki i (w jasnym
 //    wariancie) tła nagłówków tabel. Zmień na kod HEX swojej firmy.
-export const KOLOR_FIRMOWY = "#0056b3";
+export const KOLOR_FIRMOWY = "#003366";
 
 // Jak mocno kolor firmowy wypełnia tło nagłówków tabel (0-1). 0.1 = bardzo jasny odcień,
 // dzięki czemu czarny tekst jest dobrze czytelny.
@@ -34,6 +34,9 @@ export const LOGO_URL = "";
 
 // 3) NAZWA FIRMY wyświetlana w nagłówku obok logo.
 export const NAZWA_FIRMY_NAGLOWEK = "TECHNIKA GRZEWCZA RADWIN";
+
+// 4) STOPKA na dole każdej strony (wyśrodkowana, w kolorze firmowym).
+export const TEKST_STOPKI = "Radwin Wiński Arkadiusz tel. 785-221-412";
 
 // ------------------------------------------------------------------
 // Poniżej logika, zwykle nie trzeba jej zmieniać.
