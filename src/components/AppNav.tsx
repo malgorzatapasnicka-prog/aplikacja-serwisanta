@@ -10,6 +10,7 @@ const LINKI = [
   { href: "/", label: "Pulpit" },
   { href: "/klienci", label: "Klienci" },
   { href: "/zlecenia", label: "Zlecenia" },
+  { href: "/zamowienia-czesci", label: "Zamówienia na części" },
   { href: "/rozliczenia", label: "Rozliczenia" },
 ];
 

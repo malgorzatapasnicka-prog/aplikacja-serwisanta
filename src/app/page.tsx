@@ -15,6 +15,11 @@ const KARTY = [
     href: "/zlecenia",
   },
   {
+    label: "Zamówienia na części",
+    opis: `Części do zamówienia dla klientów w kolekcji ${KOLEKCJE.zamowieniaCzesci}`,
+    href: "/zamowienia-czesci",
+  },
+  {
     label: "Rozliczenia",
     opis: "Kwoty z protokołów i sumy za wybrany okres (tylko dla serwisanta)",
     href: "/rozliczenia",
