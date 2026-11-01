@@ -5,10 +5,10 @@ import { join } from "node:path";
 import { promisify } from "node:util";
 import type { DaneProtokoluPdf } from "@/lib/daneProtokolu";
 import {
-  NAZWA_FIRMY_NAGLOWEK,
   TEKST_STOPKI,
   UDZIAL_KOLORU_W_TLE,
   kolorFirmowyHex,
+  kolorZebryHex,
   logoWbudowane,
   type LogoPdf,
 } from "@/lib/identyfikacjaWizualna";
@@ -44,7 +44,10 @@ function kratka(zaznaczone: boolean, dopisek = "") {
 }
 
 function statusWyniku(wynik: WynikKontroli) {
-  return `\\begin{minipage}[t]{4.2cm}\\raggedright ${kratka(wynik === "pozytywny", "Pozytywny")}\\\\[0.4mm] ${kratka(wynik === "negatywny", "Negatywny")}\\\\[0.4mm] ${kratka(wynik === "nie_dotyczy", "Nie dotyczy")}\\end{minipage}`;
+  // Zaznaczony wynik negatywny (usterka) jest pogrubiony i czerwony, żeby od razu rzucał się w oczy.
+  const negatywny = kratka(wynik === "negatywny", "Negatywny");
+  const negatywnyWyrozniony = wynik === "negatywny" ? `\\textbf{\\textcolor{StatusErr}{${negatywny}}}` : negatywny;
+  return `\\begin{minipage}[t]{4.2cm}\\raggedright ${kratka(wynik === "pozytywny", "Pozytywny")}\\\\[0.4mm] ${negatywnyWyrozniony}\\\\[0.4mm] ${kratka(wynik === "nie_dotyczy", "Nie dotyczy")}\\end{minipage}`;
 }
 
 function wartoscLubNieDotyczy(nieDotyczy: boolean, wartosc: string, pusta: string) {
@@ -54,43 +57,42 @@ function wartoscLubNieDotyczy(nieDotyczy: boolean, wartosc: string, pusta: strin
   return wartosc.trim() ? tex(wartosc) : pusta;
 }
 
-function komorkaWartosci(wartosc: string) {
-  // Komórki, które już mają własne formatowanie (status, pole wyboru), zostają bez zmian.
-  if (wartosc.includes("\\begin{minipage}") || wartosc.startsWith("\\textbf{") || wartosc.startsWith("\\textcolor{")) {
-    return wartosc;
-  }
-  return `\\textbf{${wartosc}}`;
-}
-
-// Status pozycji checklisty: pole wyboru i pogrubiony, kolorowy opis statusu.
+// Status pozycji checklisty. „Wykonano” to wyłącznie znacznik (pole z ptaszkiem), bez powtarzanego
+// słowa. Pozostałe stany mają znacznik i krótki opis, bo niosą dodatkową informację.
 function statusChecklisty(kod: "wykonano" | "brak" | "wymieniono" | "nie_dotyczy", etykieta: string) {
-  const opis = tex(etykieta);
+  const opis = tex(etykieta.toLowerCase());
   switch (kod) {
     case "wykonano":
+      return "\\PoleWyboru{Firmowy}{\\textcolor{Firmowy}{$\\checkmark$}}";
     case "wymieniono":
-      return `\\textbf{\\textcolor{Firmowy}{\\mbox{[\\,$\\times$\\,]} ${opis}}}`;
+      return `\\PoleWyboru{Firmowy}{\\textcolor{Firmowy}{$\\checkmark$}}\\,\\textcolor{Firmowy}{\\small ${opis}}`;
     case "brak":
-      return `\\textbf{\\textcolor{StatusErr}{\\mbox{[\\hspace{0.3cm}]} ${opis}}}`;
+      return `\\PoleWyboru{StatusErr}{}\\,\\textbf{\\textcolor{StatusErr}{\\small ${opis}}}`;
     default:
-      return `\\textcolor{gray}{\\mbox{[\\,--\\,]} ${opis}}`;
+      return `\\PoleWyboru{gray}{\\textcolor{gray}{\\scriptsize --}}\\,\\textcolor{gray}{\\small ${opis}}`;
   }
 }
 
-function tabelaPol(wiersze: Array<[string, string]>, naglowki: [string, string] = ["Parametr", "Wartość"]) {
+// Tabela dwukolumnowa: granatowy nagłówek z białym tekstem, wiersze na przemian białe i w delikatnym
+// szarym odcieniu („zebra”). Wartości są zwykłą czcionką. Pogrubienie dostają tylko wpisy oznaczające
+// usterki lub ważne uwagi (przygotowane wcześniej jako \textbf{...}).
+function tabelaPol(
+  wiersze: Array<[string, string]>,
+  naglowki: [string, string] = ["Parametr", "Wartość"],
+  srodkowaDruga = false,
+) {
   if (wiersze.length === 0) {
     return "";
   }
-  // Nagłówek tabeli ma jasne tło w kolorze firmowym, linie nagłówka i dołu są w kolorze
-  // firmowym, a cienkie linie między wierszami są szare. Górną linię zastępuje linia pod
-  // tytułem sekcji.
   const tresc = wiersze
-    .map(([etykieta, wartosc]) => `${tex(etykieta)} & ${komorkaWartosci(wartosc)} \\\\`)
-    .join("\n\\arrayrulecolor{BorderGray}\\midrule\n");
+    .map(([etykieta, wartosc], indeks) => `${indeks % 2 === 1 ? "\\rowcolor{Zebra}" : ""}${tex(etykieta)} & ${wartosc} \\\\`)
+    .join("\n");
+  const kolumny = srodkowaDruga
+    ? ">{\\raggedright\\arraybackslash}X >{\\centering\\arraybackslash}p{3.6cm}"
+    : ">{\\raggedright\\arraybackslash}X >{\\raggedright\\arraybackslash}X";
   return `\\noindent
-\\begin{tabularx}{\\textwidth}{>{\\raggedright\\arraybackslash}X >{\\raggedright\\arraybackslash}X}
-\\arrayrulecolor{Firmowy}
-\\rowcolor{FirmowyJasny}\\textbf{\\textcolor{Firmowy}{${tex(naglowki[0])}}} & \\textbf{\\textcolor{Firmowy}{${tex(naglowki[1])}}} \\\\
-\\midrule
+\\begin{tabularx}{\\textwidth}{${kolumny}}
+\\rowcolor{Firmowy}\\textbf{\\textcolor{white}{${tex(naglowki[0])}}} & \\textbf{\\textcolor{white}{${tex(naglowki[1])}}} \\\\
 ${tresc}
 \\arrayrulecolor{Firmowy}\\bottomrule
 \\end{tabularx}`;
@@ -104,20 +106,35 @@ function sekcja(tytul: string, tresc: string) {
   return `\\par\\vspace{0.95em}\n\\noindent{\\large\\bfseries\\color{Firmowy}${tytul}}\\par\\nopagebreak[4]\\vspace{0.15em}\\nopagebreak[4]\n{\\color{Firmowy}\\hrule height 0.6pt}\\nopagebreak[4]\\vspace{0.45em}\\nopagebreak[4]\n${czysta}\n`;
 }
 
-function kolumnaZdjecia(plik: string, podpis: string, szerokosc: string, wysokosc: string) {
-  const opis = podpis.trim() ? `\\\\[0.15cm]\n{\\small ${tex(podpis.trim())}}` : "";
+// Zdjęcie w zaokrąglonej ramce. Zachowuje proporcje (keepaspectratio) i mieści się w podanej szerokości
+// oraz wysokości, więc nigdy nie jest rozciągnięte.
+function zdjecieZaokraglone(plik: string, szerokosc: string, wysokosc: string) {
+  return `\\sbox{\\PudelkoZdjecia}{\\includegraphics[width=${szerokosc},height=${wysokosc},keepaspectratio]{${plik}}}%
+\\begin{tikzpicture}[baseline=(current bounding box.north)]
+\\begin{scope}
+\\clip[rounded corners=2.2mm] (0,0) rectangle (\\the\\wd\\PudelkoZdjecia,\\the\\ht\\PudelkoZdjecia);
+\\node[anchor=south west, inner sep=0pt] at (0,0) {\\usebox{\\PudelkoZdjecia}};
+\\end{scope}
+\\draw[rounded corners=2.2mm, line width=0.6pt, color=BorderGray] (0,0) rectangle (\\the\\wd\\PudelkoZdjecia,\\the\\ht\\PudelkoZdjecia);
+\\end{tikzpicture}`;
+}
+
+function kolumnaZdjecia(plik: string, podpis: string, szerokosc: string, wysokosc: string, szerokoscZdjecia: string) {
+  const opis = podpis.trim() ? `\\\\[0.2cm]\n{\\small ${tex(podpis.trim())}}` : "";
   return `\\begin{minipage}[t]{${szerokosc}}
 \\centering
-\\includegraphics[width=\\linewidth,height=${wysokosc},keepaspectratio]{${plik}}${opis}
+${zdjecieZaokraglone(plik, szerokoscZdjecia, wysokosc)}${opis}
 \\end{minipage}`;
 }
 
+// Siatka zdjęć: jedno zdjęcie wyśrodkowane, więcej w dwóch kolumnach (równe odstępy, maksymalna
+// szerokość i wysokość komórki).
 function ukladZdjec(pliki: { plik: string; podpis: string }[]) {
   if (pliki.length === 1) {
     const jedyne = pliki[0];
     return `\\noindent
 \\begin{center}
-${kolumnaZdjecia(jedyne.plik, jedyne.podpis, "0.78\\textwidth", "8.2cm")}
+${kolumnaZdjecia(jedyne.plik, jedyne.podpis, "0.78\\textwidth", "8.2cm", "\\linewidth")}
 \\end{center}
 \\vspace{0.4cm}`;
   }
@@ -126,16 +143,16 @@ ${kolumnaZdjecia(jedyne.plik, jedyne.podpis, "0.78\\textwidth", "8.2cm")}
   for (let indeks = 0; indeks < pliki.length; indeks += 2) {
     const lewe = pliki[indeks];
     const prawe = pliki[indeks + 1];
-    const lewaRamka = kolumnaZdjecia(lewe.plik, lewe.podpis, "0.48\\textwidth", "7.4cm");
+    const lewaRamka = kolumnaZdjecia(lewe.plik, lewe.podpis, "0.48\\textwidth", "7cm", "0.96\\linewidth");
     const prawaRamka = prawe
-      ? kolumnaZdjecia(prawe.plik, prawe.podpis, "0.48\\textwidth", "7.4cm")
+      ? kolumnaZdjecia(prawe.plik, prawe.podpis, "0.48\\textwidth", "7cm", "0.96\\linewidth")
       : "\\begin{minipage}[t]{0.48\\textwidth}~\\end{minipage}";
     wiersze.push(`\\noindent
 ${lewaRamka}
 \\hfill
 ${prawaRamka}
 \\par
-\\vspace{0.45cm}`);
+\\vspace{0.5cm}`);
   }
   return wiersze.join("\n");
 }
@@ -152,7 +169,7 @@ export function trescLatex(
   const adres = widok.klientLinie.map((linia) => tex(linia)).join("\\\\\n    ");
   const status = widok.statusAwaria
     ? `\\textbf{\\textcolor{StatusErr}{${tex(widok.status)}}}`
-    : `\\textbf{${tex(widok.status)}}`;
+    : tex(widok.status);
   const identyfikacja: Array<[string, string]> = [
     ["Model kotła", pole(widok.modelKotla)],
     ["Numer kotła", pole(widok.numerKotla)],
@@ -199,6 +216,7 @@ export function trescLatex(
           statusChecklisty(pozycja.kodStanu, pozycja.stan),
         ]),
         [grupa.tytul, "Status"],
+        true,
       ),
     )
     .join("\n\\par\\vspace{0.5cm}\n");
@@ -224,17 +242,19 @@ ${pozycjeListy.join("\n")}
 \\end{itemize}
 \\vspace{0.2cm}
 \\noindent \\textbf{Data kolejnego przeglądu:} ${kolejny}`;
-  const szerokoscUwagi = "\\dimexpr\\textwidth-2\\fboxsep-2\\fboxrule\\relax";
+  // Ramka uwag: delikatne granatowe obramowanie, zaokrąglone rogi i wewnętrzny odstęp. Wpisy serwisanta
+  // są pogrubione, bo to ważne informacje o usterkach.
+  const poleUwag = "text width=\\dimexpr\\textwidth-8mm-0.8pt\\relax, inner sep=4mm";
   const uwagi = widok.uwagi
-    ? `\\noindent\n\\fbox{%\n\\begin{minipage}{${szerokoscUwagi}}\n\\vspace{0.3cm}\n${tex(widok.uwagi).replaceAll("\n", "\\\\\n")}\n\\vspace{0.4cm}\n\\end{minipage}\n}`
-    : `\\noindent\n\\fbox{%\n\\begin{minipage}{${szerokoscUwagi}}\n\\vspace{3cm}\n~\n\\end{minipage}\n}`;
+    ? `\\noindent\n\\begin{tikzpicture}\n\\node[draw=Firmowy, line width=0.8pt, rounded corners=2.5mm, fill=white, align=left, anchor=north west, ${poleUwag}] {\\textbf{${tex(widok.uwagi).replaceAll("\n", "\\\\\n")}}};\n\\end{tikzpicture}`
+    : `\\noindent\n\\begin{tikzpicture}\n\\node[draw=Firmowy, line width=0.8pt, rounded corners=2.5mm, fill=white, align=left, anchor=north west, minimum height=3.4cm, ${poleUwag}] {~};\n\\end{tikzpicture}`;
   const analiza = plikiZdjec.length > 0 ? ukladZdjec(plikiZdjec) : "~";
   const miejscePodpisu = plikPodpisuKlienta
-    ? `\\includegraphics[width=5.2cm,height=1.5cm,keepaspectratio]{${plikPodpisuKlienta}}\\\\[-1.5mm]`
-    : "\\vspace{1.2cm}";
+    ? `\\vspace{0.9cm}\\includegraphics[width=5.2cm,height=1.5cm,keepaspectratio]{${plikPodpisuKlienta}}\\\\[-1.5mm]`
+    : "\\vspace{2.4cm}";
   const miejscePodpisuSerwisanta = plikPodpisuSerwisanta
-    ? `\\includegraphics[width=5.2cm,height=1.5cm,keepaspectratio]{${plikPodpisuSerwisanta}}\\\\[-1.5mm]`
-    : "\\vspace{1.2cm}";
+    ? `\\vspace{0.9cm}\\includegraphics[width=5.2cm,height=1.5cm,keepaspectratio]{${plikPodpisuSerwisanta}}\\\\[-1.5mm]`
+    : "\\vspace{2.4cm}";
 
   return `\\documentclass[10pt, a4paper]{article}
 
@@ -257,16 +277,21 @@ ${pozycjeListy.join("\n")}
 \\usepackage{enumitem}
 \\usepackage{graphicx}
 \\usepackage{fancyhdr}
+\\usepackage{amssymb}
+\\usepackage{tikz}
 % Zakaz łamania strony tuż przed listą, żeby tytuł sekcji nie został sam na dole strony.
 \\makeatletter\\@beginparpenalty=10000\\makeatother
 \\setlength{\\parindent}{0pt}
 \\setlength{\\tabcolsep}{6pt}
+
+% Pole wyboru (znacznik statusu): kwadrat w podanym kolorze z miejscem na ptaszek.
+\\newsavebox{\\PudelkoZdjecia}
+\\newcommand{\\PoleWyboru}[2]{\\mbox{\\setlength{\\fboxsep}{0pt}\\setlength{\\fboxrule}{0.7pt}\\fcolorbox{#1}{white}{\\makebox[4mm][c]{\\rule[-1mm]{0pt}{4mm}#2}}}}
 \\renewcommand{\\arraystretch}{1.35}
 
-\\definecolor{HeaderBg}{HTML}{1E293B}
-\\definecolor{RowEven}{HTML}{F8FAFC}
 \\definecolor{StatusErr}{HTML}{DC2626}
 \\definecolor{BorderGray}{HTML}{CBD5E1}
+\\definecolor{Zebra}{HTML}{${kolorZebryHex()}}
 % Kolor firmowy (zmieniasz go w src/lib/identyfikacjaWizualna.ts) i jego jasny wariant na tła.
 \\definecolor{Firmowy}{HTML}{${kolorFirmowyHex()}}
 \\colorlet{FirmowyJasny}{Firmowy!${Math.round(UDZIAL_KOLORU_W_TLE * 100)}}
@@ -283,7 +308,7 @@ ${pozycjeListy.join("\n")}
 
 \\begin{document}
 
-% Nagłówek: logo | pionowa kreska | nazwa firmy i dane kontaktowe, w jednym wierszu.
+% Nagłówek: logo | pionowa kreska | imię i nazwisko oraz dane teleadresowe (bez nazwy firmy).
 \\noindent
 \\begin{minipage}[c]{0.34\\textwidth}
     ${logo}
@@ -293,10 +318,10 @@ ${pozycjeListy.join("\n")}
 \\hspace{0.35cm}%
 \\begin{minipage}[c]{0.6\\textwidth}
     \\raggedright
-    {\\large\\bfseries\\color{Firmowy}${tex(NAZWA_FIRMY_NAGLOWEK)}}\\\\[0.12cm]
-    {\\small ${tex(widok.serwisantNazwa)}}\\\\
-    {\\small ${tex(widok.serwisantAdres)}}\\\\
-    {\\small tel. ${tex(widok.serwisantTelefon)}\\quad e-mail: ${tex(widok.serwisantEmail)}}
+    {\\large\\bfseries\\color{Firmowy}${tex(widok.serwisantNazwa)}}\\\\[0.2cm]
+    {\\small ${tex(widok.serwisantAdres)}}\\\\[0.1cm]
+    {\\small tel. ${tex(widok.serwisantTelefon)}}\\\\[0.1cm]
+    {\\small e-mail: ${tex(widok.serwisantEmail)}}
 \\end{minipage}
 \\par
 \\vspace{0.3cm}
@@ -338,7 +363,8 @@ ${sekcja("4. Uwagi serwisanta i zdiagnozowane usterki", uwagi)}
 ${sekcja("5. Załączniki", analiza)}
 ${blokOswiadczenia ? sekcja("Oświadczenie", blokOswiadczenia) : ""}
 \\vspace{0.8cm}
-\\vfill
+% Podpisy przypięte do dołu strony (\\vspace* nie jest gubione na początku nowej strony).
+\\vspace*{\\fill}
 \\noindent
 \\begin{minipage}[b]{0.44\\textwidth}
     \\centering

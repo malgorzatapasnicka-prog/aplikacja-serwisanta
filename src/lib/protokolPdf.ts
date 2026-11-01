@@ -3,10 +3,10 @@ import { join } from "node:path";
 import { jsPDF } from "jspdf";
 import type { DaneProtokoluPdf } from "@/lib/daneProtokolu";
 import {
-  NAZWA_FIRMY_NAGLOWEK,
   TEKST_STOPKI,
   kolorFirmowyJasnyRgb,
   kolorFirmowyRgb,
+  kolorZebryRgb,
   logoWbudowane,
   type LogoPdf,
 } from "@/lib/identyfikacjaWizualna";
@@ -47,6 +47,7 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf, logo: LogoPdf = logoW
   // Kolor firmowy i jego jasny wariant (tła nagłówków tabel) z src/lib/identyfikacjaWizualna.ts.
   const [kolorR, kolorG, kolorB] = kolorFirmowyRgb();
   const kolorJasny = kolorFirmowyJasnyRgb();
+  const kolorZebry = kolorZebryRgb();
   doc.addFileToVFS("NotoSans-Regular.ttf", czcionkaBase64());
   doc.addFont("NotoSans-Regular.ttf", "NotoSans", "normal");
   doc.setFont("NotoSans", "normal");
@@ -112,10 +113,10 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf, logo: LogoPdf = logoW
     zapewnij(12 + wiersze.length * 8);
     doc.setFontSize(9);
     doc.setTextColor(15, 23, 42);
-    // Nagłówek tabeli: jasne tło i pogrubiony tekst w kolorze firmowym.
-    doc.setFillColor(kolorJasny[0], kolorJasny[1], kolorJasny[2]);
+    // Nagłówek tabeli: tło w kolorze firmowym i pogrubiony biały tekst.
+    doc.setFillColor(kolorR, kolorG, kolorB);
     doc.rect(lewy, y, szerokosc, 7.2, "F");
-    doc.setTextColor(kolorR, kolorG, kolorB);
+    doc.setTextColor(255, 255, 255);
     y += 5;
     let x = lewy;
     naglowki.forEach((naglowek, indeks) => {
@@ -124,7 +125,6 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf, logo: LogoPdf = logoW
     });
     doc.setTextColor(15, 23, 42);
     y += 2.2;
-    linia(lewy, lewy + szerokosc, 0.3);
 
     wiersze.forEach((wiersz, indeksWiersza) => {
       const komorki = wiersz.slice(0, 4).map((komorkaSurowa, indeks) => {
@@ -147,8 +147,9 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf, logo: LogoPdf = logoW
       const maxLinii = Math.max(1, ...komorki.map((komorka) => komorka.linie.length));
       const wysokosc = Math.max(8, 3.4 + maxLinii * 4);
       zapewnij(wysokosc + 2);
-      if (indeksWiersza % 2 === 0) {
-        doc.setFillColor(248, 250, 252);
+      // „Zebra”: co drugi wiersz ma delikatne, jasnoszare tło.
+      if (indeksWiersza % 2 === 1) {
+        doc.setFillColor(kolorZebry[0], kolorZebry[1], kolorZebry[2]);
         doc.rect(lewy, y, szerokosc, wysokosc, "F");
       }
       const baseline = y + 4.4;
@@ -163,8 +164,17 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf, logo: LogoPdf = logoW
           doc.setTextColor(15, 23, 42);
           tekst("bar", xKomorki + kolumny[indeks] - 9, baseline);
         } else if (komorka.linie.length > 0) {
-          doc.setTextColor(komorka.czerwony ? 220 : 15, komorka.czerwony ? 38 : 23, komorka.czerwony ? 38 : 42);
-          doc.text(komorka.linie, xKomorki + 1, baseline);
+          // Usterki (status awarii, wynik negatywny) są pogrubione i czerwone, reszta zwykłą czcionką.
+          const krok = doc.getLineHeight() / doc.internal.scaleFactor;
+          komorka.linie.forEach((linijka, numer) => {
+            const wyrozniona = komorka.czerwony || linijka.startsWith("[×] Negatywny");
+            doc.setTextColor(wyrozniona ? 220 : 15, wyrozniona ? 38 : 23, wyrozniona ? 38 : 42);
+            if (wyrozniona) {
+              pogrubiony(linijka, xKomorki + 1, baseline + numer * krok);
+            } else {
+              tekst(linijka, xKomorki + 1, baseline + numer * krok);
+            }
+          });
           doc.setTextColor(15, 23, 42);
         } else if (!komorka.pustaPara) {
           doc.setDrawColor(100, 116, 139);
@@ -181,27 +191,27 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf, logo: LogoPdf = logoW
     y += 6;
   }
 
-  // Tabela jednej grupy checklisty: nagłówek z nazwą grupy i kolumną „Status”, a pod nim
-  // czynności z polem wyboru (✓ wykonano/wymieniono, puste pole = brak, kreska = nie dotyczy).
+  // Tabela jednej grupy checklisty: granatowy nagłówek z nazwą grupy i kolumną „Status”, a pod nim
+  // czynności. „Wykonano” to wyłącznie wyśrodkowane pole z ptaszkiem. Inne stany mają pole i krótki opis.
   function tabelaChecklisty(grupa: GrupaChecklistyWidok) {
     const kolumnaEtykiety = 112;
     const wysokoscNaglowka = 8.4;
     const wysokoscWiersza = 8.8;
-    const bok = 3.6;
+    const bok = 3.8;
+    const srodekStatusu = lewy + kolumnaEtykiety + (szerokosc - kolumnaEtykiety) / 2;
     zapewnij(wysokoscNaglowka + grupa.pozycje.length * wysokoscWiersza + 2);
 
-    doc.setFillColor(kolorJasny[0], kolorJasny[1], kolorJasny[2]);
+    doc.setFillColor(kolorR, kolorG, kolorB);
     doc.rect(lewy, y, szerokosc, wysokoscNaglowka, "F");
     doc.setFontSize(10.5);
-    doc.setTextColor(kolorR, kolorG, kolorB);
+    doc.setTextColor(255, 255, 255);
     pogrubiony(grupa.tytul, lewy + 3, y + 5.7);
-    pogrubiony("Status", lewy + kolumnaEtykiety + 3, y + 5.7);
+    pogrubiony("Status", srodekStatusu - doc.getTextWidth("Status") / 2, y + 5.7);
     y += wysokoscNaglowka;
-    linia(lewy, lewy + szerokosc, 0.3);
 
     grupa.pozycje.forEach((pozycja, indeks) => {
       if (indeks % 2 === 1) {
-        doc.setFillColor(248, 250, 252);
+        doc.setFillColor(kolorZebry[0], kolorZebry[1], kolorZebry[2]);
         doc.rect(lewy, y, szerokosc, wysokoscWiersza, "F");
       }
       const baseline = y + 5.8;
@@ -209,48 +219,50 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf, logo: LogoPdf = logoW
       doc.setTextColor(15, 23, 42);
       tekst(pozycja.etykieta, lewy + 3, baseline);
 
-      const xPola = lewy + kolumnaEtykiety + 3;
-      const yPola = y + (wysokoscWiersza - bok) / 2;
-      const zrobione = pozycja.kodStanu === "wykonano" || pozycja.kodStanu === "wymieniono";
-      const kolor: [number, number, number] = zrobione
+      const jestPtaszek = pozycja.kodStanu === "wykonano" || pozycja.kodStanu === "wymieniono";
+      const kolor: [number, number, number] = jestPtaszek
         ? [kolorR, kolorG, kolorB]
         : pozycja.kodStanu === "brak"
           ? [220, 38, 38]
           : [100, 116, 139];
+      const opis = pozycja.kodStanu === "wykonano" ? "" : pozycja.stan.toLowerCase();
+      doc.setFontSize(9);
+      const szerokoscOpisu = opis ? doc.getTextWidth(opis) + 2.4 : 0;
+      const xPola = srodekStatusu - (bok + szerokoscOpisu) / 2;
+      const yPola = y + (wysokoscWiersza - bok) / 2;
+
       doc.setDrawColor(kolor[0], kolor[1], kolor[2]);
       doc.setLineWidth(0.35);
       doc.rect(xPola, yPola, bok, bok);
-      if (zrobione) {
-        doc.setLineWidth(0.5);
-        doc.line(xPola + 0.7, yPola + 0.7, xPola + bok - 0.7, yPola + bok - 0.7);
-        doc.line(xPola + bok - 0.7, yPola + 0.7, xPola + 0.7, yPola + bok - 0.7);
+      if (jestPtaszek) {
+        doc.setLineWidth(0.55);
+        doc.line(xPola + 0.7, yPola + bok * 0.55, xPola + bok * 0.4, yPola + bok - 0.8);
+        doc.line(xPola + bok * 0.4, yPola + bok - 0.8, xPola + bok - 0.6, yPola + 0.8);
       } else if (pozycja.kodStanu === "nie_dotyczy") {
         doc.line(xPola + 0.8, yPola + bok / 2, xPola + bok - 0.8, yPola + bok / 2);
       }
-      doc.setTextColor(kolor[0], kolor[1], kolor[2]);
-      if (pozycja.kodStanu === "nie_dotyczy") {
-        tekst(pozycja.stan, xPola + bok + 2.4, baseline);
-      } else {
-        pogrubiony(pozycja.stan, xPola + bok + 2.4, baseline);
+      if (opis) {
+        doc.setTextColor(kolor[0], kolor[1], kolor[2]);
+        if (pozycja.kodStanu === "brak") {
+          pogrubiony(opis, xPola + bok + 2.4, baseline);
+        } else {
+          tekst(opis, xPola + bok + 2.4, baseline);
+        }
       }
       doc.setTextColor(15, 23, 42);
 
       y += wysokoscWiersza;
-      if (indeks < grupa.pozycje.length - 1) {
-        doc.setDrawColor(203, 213, 225);
-        doc.setLineWidth(0.15);
-        doc.line(lewy, y, lewy + szerokosc, y);
-      }
     });
     linia(lewy, lewy + szerokosc, 0.45);
     y += 7;
   }
 
-  // Nagłówek: logo | pionowa kreska | nazwa firmy i dane kontaktowe, w jednym wierszu.
+  // Nagłówek: logo (miejsce na logo z konfiguracji) | pionowa kreska | imię i nazwisko oraz dane
+  // teleadresowe. Nazwy firmy w nagłówku nie ma.
   const gornaKrawedz = y - 7;
-  const wysokoscNaglowka = 16.5;
+  const wysokoscNaglowka = 20;
   const maxSzerokoscLogo = 50;
-  const szerokoscLogo = Math.min(maxSzerokoscLogo, 15 * logo.proporcje);
+  const szerokoscLogo = Math.min(maxSzerokoscLogo, 17 * logo.proporcje);
   const wysokoscLogo = szerokoscLogo / logo.proporcje;
   doc.addImage(
     logo.dataUrl,
@@ -267,14 +279,14 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf, logo: LogoPdf = logoW
   doc.setLineWidth(0.5);
   doc.line(xKreski, gornaKrawedz, xKreski, gornaKrawedz + wysokoscNaglowka);
   const xTekstu = xKreski + 5;
-  doc.setFontSize(11.5);
+  doc.setFontSize(13);
   doc.setTextColor(kolorR, kolorG, kolorB);
-  pogrubiony(NAZWA_FIRMY_NAGLOWEK, xTekstu, gornaKrawedz + 3.8);
-  doc.setFontSize(9);
+  pogrubiony(widok.serwisantNazwa, xTekstu, gornaKrawedz + 5);
+  doc.setFontSize(9.5);
   doc.setTextColor(15, 23, 42);
-  tekst(widok.serwisantNazwa, xTekstu, gornaKrawedz + 8.4);
-  tekst(widok.serwisantAdres, xTekstu, gornaKrawedz + 12.3);
-  tekst(`tel. ${widok.serwisantTelefon}   e-mail: ${widok.serwisantEmail}`, xTekstu, gornaKrawedz + 16.2);
+  tekst(widok.serwisantAdres, xTekstu, gornaKrawedz + 10.4);
+  tekst(`tel. ${widok.serwisantTelefon}`, xTekstu, gornaKrawedz + 15);
+  tekst(`e-mail: ${widok.serwisantEmail}`, xTekstu, gornaKrawedz + 19.6);
 
   y = gornaKrawedz + wysokoscNaglowka + 3.5;
   linia(lewy, lewy + szerokosc, 0.8);
@@ -430,15 +442,21 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf, logo: LogoPdf = logoW
   zapewnij(70);
   tytulSekcji("4. Uwagi serwisanta i zdiagnozowane usterki");
   y += 4;
-  const linieUwag = widok.uwagi ? (doc.splitTextToSize(widok.uwagi, szerokosc - 8) as string[]) : [];
-  const wysokoscUwag = Math.max(widok.uwagi ? 28 : 48, linieUwag.length * 5 + 8);
-  doc.setDrawColor(15, 23, 42);
-  doc.setLineWidth(0.3);
-  doc.rect(lewy, y, szerokosc, wysokoscUwag);
+  // Ramka uwag: obramowanie w kolorze firmowym, zaokrąglone rogi i wewnętrzny odstęp. Wpisy są pogrubione.
+  const odstepWewnetrzny = 5;
+  const linieUwag = widok.uwagi
+    ? (doc.splitTextToSize(widok.uwagi, szerokosc - 2 * odstepWewnetrzny - 1) as string[])
+    : [];
+  const wysokoscUwag = Math.max(widok.uwagi ? 30 : 48, linieUwag.length * 5 + 2 * odstepWewnetrzny);
+  doc.setDrawColor(kolorR, kolorG, kolorB);
+  doc.setLineWidth(0.5);
+  doc.roundedRect(lewy, y, szerokosc, wysokoscUwag, 2.5, 2.5, "S");
   if (linieUwag.length > 0) {
     doc.setFontSize(10);
     doc.setTextColor(15, 23, 42);
-    doc.text(linieUwag, lewy + 3, y + 6);
+    linieUwag.forEach((linijka, numer) => {
+      pogrubiony(linijka, lewy + odstepWewnetrzny, y + odstepWewnetrzny + 3.6 + numer * 5);
+    });
   }
   y += wysokoscUwag + 8;
 
@@ -505,12 +523,12 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf, logo: LogoPdf = logoW
     y += 2;
   }
 
-  zapewnij(28);
-  const podpisY = Math.max(y + 14, 262);
-  if (podpisY > 275) {
+  // Dużo wolnego miejsca nad liniami podpisów: klient i serwisant podpisują się odręcznie po wydruku.
+  const miejsceNaPodpis = 32;
+  if (y + miejsceNaPodpis + 10 > 277) {
     nowaStrona();
   }
-  const liniaPodpisu = Math.min(podpisY, 268);
+  const liniaPodpisu = Math.max(y + miejsceNaPodpis, 262);
   doc.setDrawColor(15, 23, 42);
   doc.setLineWidth(0.3);
   doc.line(lewy, liniaPodpisu, lewy + 55, liniaPodpisu);
@@ -612,7 +630,8 @@ function dopiszPodpis(doc: jsPDF, podpis: string | undefined, x: number, y: numb
   doc.setFontSize(8);
   doc.setTextColor(15, 23, 42);
   const linie = doc.splitTextToSize(czysty, szerokosc) as string[];
-  doc.text(linie, x, y);
+  // Podpis jest wyśrodkowany pod zdjęciem.
+  doc.text(linie, x + szerokosc / 2, y, { align: "center" });
   return y + linie.length * 3.6;
 }
 
@@ -644,5 +663,15 @@ function wstawZdjecie(doc: jsPDF, adres: string, x: number, y: number, szerokosc
     rysowanaWysokosc = wysokosc;
   }
 
+  // Zdjęcie jest przycięte do zaokrąglonej ramki i ma delikatne obramowanie.
+  const promien = 2.2;
+  doc.saveGraphicsState();
+  doc.roundedRect(rysowaneX, rysowaneY, rysowanaSzerokosc, rysowanaWysokosc, promien, promien, null);
+  doc.clip();
+  doc.discardPath();
   doc.addImage(adres, format, rysowaneX, rysowaneY, rysowanaSzerokosc, rysowanaWysokosc, undefined, "FAST");
+  doc.restoreGraphicsState();
+  doc.setDrawColor(203, 213, 225);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(rysowaneX, rysowaneY, rysowanaSzerokosc, rysowanaWysokosc, promien, promien, "S");
 }

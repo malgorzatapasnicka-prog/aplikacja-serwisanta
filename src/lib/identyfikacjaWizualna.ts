@@ -11,13 +11,16 @@ import {
  */
 
 // 1) KOLOR FIRMOWY (HEX, np. "#003366" granatowy albo "#000080" ciemnoniebieski).
-//    Używany dla tytułów sekcji, nagłówków tabel, linii oddzielających, stopki i (w jasnym
-//    wariancie) tła nagłówków tabel. Zmień na kod HEX swojej firmy.
+//    Używany jako tło nagłówków tabel (z białym tekstem), dla tytułów sekcji, linii
+//    oddzielających, ramki uwag i stopki. Zmień na kod HEX swojej firmy.
 export const KOLOR_FIRMOWY = "#003366";
 
-// Jak mocno kolor firmowy wypełnia tło nagłówków tabel (0-1). 0.1 = bardzo jasny odcień,
-// dzięki czemu czarny tekst jest dobrze czytelny.
+// Jak mocno kolor firmowy wypełnia jasne tło (pasek z datą i numerem protokołu) (0-1).
+// 0.1 = bardzo jasny odcień, dzięki czemu ciemny tekst jest dobrze czytelny.
 export const UDZIAL_KOLORU_W_TLE = 0.1;
+
+// Efekt „zebry” w tabelach: co drugi wiersz ma to bardzo delikatne, jasnoszare tło.
+export const KOLOR_ZEBRY = "#F5F5F5";
 
 // 2) LOGO. Wybierana jest pierwsza niepusta opcja, a gdy żadna nie działa, używane jest
 //    logo wbudowane w aplikację (src/lib/logoFirmy.ts).
@@ -32,8 +35,8 @@ export const LOGO_BASE64 = "";
 //    przez serwer przy tworzeniu PDF-a, więc musi być publicznie dostępny.
 export const LOGO_URL = "";
 
-// 3) NAZWA FIRMY wyświetlana w nagłówku obok logo.
-export const NAZWA_FIRMY_NAGLOWEK = "TECHNIKA GRZEWCZA RADWIN";
+// 3) NAGŁÓWEK: obok logo drukowane są tylko imię i nazwisko oraz dane teleadresowe
+//    z src/lib/firma.ts (bez nazwy firmy).
 
 // 4) STOPKA na dole każdej strony (wyśrodkowana, w kolorze firmowym).
 export const TEKST_STOPKI = "Radwin Wiński Arkadiusz tel. 785-221-412";
@@ -74,6 +77,16 @@ export function kolorFirmowyHex() {
 
 export function kolorFirmowyRgb(): [number, number, number] {
   const hex = kolorFirmowyHex();
+  return [0, 2, 4].map((poczatek) => parseInt(hex.slice(poczatek, poczatek + 2), 16)) as [number, number, number];
+}
+
+/** Kolor „zebry” jako "RRGGBB" (wielkie litery, bez #), np. dla LaTeX-a. */
+export function kolorZebryHex() {
+  return znormalizowanyKolor(KOLOR_ZEBRY);
+}
+
+export function kolorZebryRgb(): [number, number, number] {
+  const hex = kolorZebryHex();
   return [0, 2, 4].map((poczatek) => parseInt(hex.slice(poczatek, poczatek + 2), 16)) as [number, number, number];
 }
 
