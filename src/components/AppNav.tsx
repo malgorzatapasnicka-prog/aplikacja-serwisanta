@@ -11,6 +11,7 @@ const LINKI = [
   { href: "/klienci", label: "Klienci" },
   { href: "/zlecenia", label: "Zlecenia" },
   { href: "/zamowienia-czesci", label: "Zamówienia na części" },
+  { href: "/magazyn", label: "Magazyn" },
   { href: "/rozliczenia", label: "Rozliczenia" },
 ];
 
@@ -30,7 +31,7 @@ export function AppNav() {
   };
 
   return (
-    <aside className="border-b border-white/10 bg-navy text-slate-100 md:sticky md:top-0 md:flex md:h-screen md:w-64 md:shrink-0 md:flex-col md:border-b-0 md:border-r md:border-white/10">
+    <aside className="print:hidden border-b border-white/10 bg-navy text-slate-100 md:sticky md:top-0 md:flex md:h-screen md:w-64 md:shrink-0 md:flex-col md:border-b-0 md:border-r md:border-white/10">
       {/* Nagłówek menu */}
       <div className="px-5 py-5">
         <Link

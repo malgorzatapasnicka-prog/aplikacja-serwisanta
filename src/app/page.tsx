@@ -20,6 +20,11 @@ const KARTY = [
     href: "/zamowienia-czesci",
   },
   {
+    label: "Magazyn",
+    opis: `Stan części i wartość magazynu w kolekcji ${KOLEKCJE.magazynCzesci}`,
+    href: "/magazyn",
+  },
+  {
     label: "Rozliczenia",
     opis: "Kwoty z protokołów i sumy za wybrany okres (tylko dla serwisanta)",
     href: "/rozliczenia",

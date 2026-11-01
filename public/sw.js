@@ -4,7 +4,7 @@
 const WERSJA = "v1";
 const NAZWA_STRON = `strony-${WERSJA}`;
 const NAZWA_ZASOBOW = `zasoby-${WERSJA}`;
-const STRONY_APLIKACJI = ["/", "/klienci", "/zlecenia", "/zamowienia-czesci", "/rozliczenia"];
+const STRONY_APLIKACJI = ["/", "/klienci", "/zlecenia", "/zamowienia-czesci", "/magazyn", "/rozliczenia"];
 const CZAS_NA_SIEC_MS = 4000;
 const MAKS_ZASOBOW = 400;
 

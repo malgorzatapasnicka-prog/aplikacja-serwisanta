@@ -94,3 +94,57 @@ body {
     box-shadow: 0 0 0 3px rgb(11 36 71 / 0.15);
   }
 }
+
+/* Wydruk (np. remanent magazynu): tylko treść oznaczona jako do druku, na białej kartce A4 */
+@page {
+  size: A4;
+  margin: 15mm;
+}
+
+@media print {
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  main {
+    padding: 0 !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .card {
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
+  .tabela-wydruk {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10pt;
+  }
+
+  .tabela-wydruk th,
+  .tabela-wydruk td {
+    border-bottom: 0.5pt solid #999;
+    padding: 4pt 6pt;
+  }
+
+  .tabela-wydruk thead {
+    display: table-header-group;
+  }
+
+  .tabela-wydruk tr {
+    break-inside: avoid;
+  }
+
+  /* podsumowanie tylko raz, na końcu ostatniej strony (nie powtarzane na każdej) */
+  .tabela-wydruk tfoot {
+    display: table-row-group;
+  }
+}
