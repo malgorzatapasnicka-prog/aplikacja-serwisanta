@@ -4,7 +4,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import type { DaneProtokoluPdf } from "@/lib/daneProtokolu";
-import { LOGO_FIRMY_PNG_BASE64 } from "@/lib/logoFirmy";
+import {
+  NAZWA_FIRMY_NAGLOWEK,
+  UDZIAL_KOLORU_W_TLE,
+  kolorFirmowyHex,
+  logoWbudowane,
+  type LogoPdf,
+} from "@/lib/identyfikacjaWizualna";
 import { widokProtokolu } from "@/lib/widokProtokolu";
 import type { WynikKontroli } from "@/types/protokol";
 
@@ -58,16 +64,19 @@ function tabelaPol(wiersze: Array<[string, string]>, naglowki: [string, string] 
   if (wiersze.length === 0) {
     return "";
   }
+  // Nagłówek tabeli ma jasne tło w kolorze firmowym, linie nagłówka i dołu są w kolorze
+  // firmowym, a cienkie linie między wierszami są szare. Górną linię zastępuje linia pod
+  // tytułem sekcji.
   const tresc = wiersze
     .map(([etykieta, wartosc]) => `${tex(etykieta)} & ${komorkaWartosci(wartosc)} \\\\`)
-    .join("\n\\midrule\n");
+    .join("\n\\arrayrulecolor{BorderGray}\\midrule\n");
   return `\\noindent
-\\begin{tabularx}{\\textwidth}{@{}>{\\raggedright\\arraybackslash}X >{\\raggedright\\arraybackslash}X@{}}
-\\toprule
-\\textbf{${naglowki[0]}} & \\textbf{${naglowki[1]}} \\\\
+\\begin{tabularx}{\\textwidth}{>{\\raggedright\\arraybackslash}X >{\\raggedright\\arraybackslash}X}
+\\arrayrulecolor{Firmowy}
+\\rowcolor{FirmowyJasny}\\textbf{${naglowki[0]}} & \\textbf{${naglowki[1]}} \\\\
 \\midrule
 ${tresc}
-\\bottomrule
+\\arrayrulecolor{Firmowy}\\bottomrule
 \\end{tabularx}`;
 }
 
@@ -76,7 +85,7 @@ function sekcja(tytul: string, tresc: string) {
   if (!czysta) {
     return "";
   }
-  return `\\par\\vspace{0.95em}\n\\noindent{\\large\\bfseries\\color{HeaderBg}${tytul}}\\par\\vspace{0.4em}\n${czysta}\n`;
+  return `\\par\\vspace{0.95em}\n\\noindent{\\large\\bfseries\\color{Firmowy}${tytul}}\\par\\vspace{0.15em}\n{\\color{Firmowy}\\hrule height 0.6pt}\\vspace{0.45em}\n${czysta}\n`;
 }
 
 function kolumnaZdjecia(plik: string, podpis: string, szerokosc: string, wysokosc: string) {
@@ -123,7 +132,7 @@ export function trescLatex(
   plikLogo = "",
 ) {
   const widok = widokProtokolu(dane);
-  const logo = plikLogo ? `\\includegraphics[width=5.6cm]{${plikLogo}}` : "~";
+  const logo = plikLogo ? `\\includegraphics[width=\\linewidth,height=2.2cm,keepaspectratio]{${plikLogo}}` : "~";
   const adres = widok.klientLinie.map((linia) => tex(linia)).join("\\\\\n    ");
   const status = widok.statusAwaria
     ? `\\textbf{\\textcolor{StatusErr}{${tex(widok.status)}}}`
@@ -166,7 +175,7 @@ export function trescLatex(
     .join("\n\\vspace{0.25cm}\n");
   const blokChecklisty = widok.checklista
     .map(
-      (grupa) => `{\\bfseries\\color{HeaderBg}${tex(grupa.tytul)}}
+      (grupa) => `{\\bfseries\\color{Firmowy}${tex(grupa.tytul)}}
 \\begin{itemize}[leftmargin=1.5em, itemsep=0.28em, topsep=0.35em, parsep=0pt]
 ${grupa.pozycje.map((pozycja) => `  \\item ${tex(pozycja.etykieta)}\\dotfill\\ \\textbf{${tex(pozycja.stan)}}`).join("\n")}
 \\end{itemize}`,
@@ -234,22 +243,34 @@ ${pozycjeListy.join("\n")}
 \\definecolor{RowEven}{HTML}{F8FAFC}
 \\definecolor{StatusErr}{HTML}{DC2626}
 \\definecolor{BorderGray}{HTML}{CBD5E1}
+% Kolor firmowy (zmieniasz go w src/lib/identyfikacjaWizualna.ts) i jego jasny wariant na tła.
+\\definecolor{Firmowy}{HTML}{${kolorFirmowyHex()}}
+\\colorlet{FirmowyJasny}{Firmowy!${Math.round(UDZIAL_KOLORU_W_TLE * 100)}}
 
 \\begin{document}
 
+% Nagłówek: logo | pionowa kreska | nazwa firmy i dane kontaktowe, w jednym wierszu.
 \\noindent
-\\begin{minipage}[c]{0.5\\textwidth}
+\\begin{minipage}[c]{0.34\\textwidth}
     ${logo}
+\\end{minipage}%
+\\hspace{0.35cm}%
+\\textcolor{Firmowy}{\\rule[-1.05cm]{1.2pt}{2.1cm}}%
+\\hspace{0.35cm}%
+\\begin{minipage}[c]{0.6\\textwidth}
+    \\raggedright
+    {\\large\\bfseries\\color{Firmowy}${tex(NAZWA_FIRMY_NAGLOWEK)}}\\\\[0.12cm]
+    {\\small ${tex(widok.serwisantNazwa)}}\\\\
+    {\\small ${tex(widok.serwisantAdres)}}\\\\
+    {\\small tel. ${tex(widok.serwisantTelefon)}\\quad e-mail: ${tex(widok.serwisantEmail)}}
 \\end{minipage}
-\\hfill
-\\begin{minipage}[c]{0.48\\textwidth}
-    \\raggedleft
-    \\textbf{Data przeglądu:} ${pole(widok.dataPrzegladu)}\\\\
-    \\textbf{Nr protokołu:} ${pole(widok.numerProtokolu)}
-\\end{minipage}
+\\par
+\\vspace{0.3cm}
+{\\color{Firmowy}\\hrule height 1.5pt}
+\\vspace{0.25cm}
 
-\\vspace{0.4cm}
-\\hrule height 1.5pt
+\\noindent\\colorbox{FirmowyJasny}{\\parbox{\\dimexpr\\textwidth-2\\fboxsep\\relax}{\\strut\\textbf{Data przeglądu:} ${pole(widok.dataPrzegladu)}\\hfill\\textbf{Nr protokołu:} ${pole(widok.numerProtokolu)}\\strut}}
+
 \\vspace{0.5cm}
 
 \\begin{center}
@@ -261,13 +282,12 @@ ${pozycjeListy.join("\n")}
 
 \\noindent
 \\begin{minipage}[t]{0.48\\textwidth}
-    \\textbf{Serwisant}\\\\
-    ${tex(widok.serwisantNazwa)}\\\\
-    Tel: ${tex(widok.serwisantTelefon)}\\\\
-    e-mail: ${tex(widok.serwisantEmail)}
+    \\textbf{\\color{Firmowy}Serwisant}\\\\
+    ${tex(widok.serwisantNazwa)}
 \\end{minipage}
 \\hfill
 \\begin{minipage}[t]{0.48\\textwidth}
+    \\textbf{\\color{Firmowy}Klient}\\\\
     ${tex(widok.klientNazwa)}\\\\
     ${adres}
 \\end{minipage}
@@ -306,7 +326,10 @@ ${blokOswiadczenia ? sekcja("Oświadczenie", blokOswiadczenia) : ""}
 `;
 }
 
-export async function utworzPdfLatex(dane: DaneProtokoluPdf): Promise<Buffer | null> {
+export async function utworzPdfLatex(
+  dane: DaneProtokoluPdf,
+  logo: LogoPdf = logoWbudowane(),
+): Promise<Buffer | null> {
   const katalog = await mkdtemp(join(tmpdir(), "protokol-"));
 
   try {
@@ -314,7 +337,8 @@ export async function utworzPdfLatex(dane: DaneProtokoluPdf): Promise<Buffer | n
       join(process.cwd(), "src/lib/fonts/NotoSans-Regular.ttf"),
       join(katalog, "NotoSans-Regular.ttf"),
     );
-    await writeFile(join(katalog, "logo-firmy.png"), Buffer.from(LOGO_FIRMY_PNG_BASE64, "base64"));
+    const plikLogo = logo.rozszerzenie === "png" ? "logo-firmy.png" : "logo-firmy.jpg";
+    await writeFile(join(katalog, plikLogo), logo.dane);
 
     const widok = widokProtokolu(dane);
     const plikiZdjec: { plik: string; podpis: string }[] = [];
@@ -351,7 +375,7 @@ export async function utworzPdfLatex(dane: DaneProtokoluPdf): Promise<Buffer | n
 
     await writeFile(
       join(katalog, "protokol.tex"),
-      trescLatex(dane, plikiZdjec, plikPodpisu, plikPodpisuSerwisanta, "logo-firmy.png"),
+      trescLatex(dane, plikiZdjec, plikPodpisu, plikPodpisuSerwisanta, plikLogo),
       "utf8",
     );
     await uruchom(

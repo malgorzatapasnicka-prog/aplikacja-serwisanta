@@ -2,7 +2,13 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { jsPDF } from "jspdf";
 import type { DaneProtokoluPdf } from "@/lib/daneProtokolu";
-import { LOGO_FIRMY_PNG_DATA_URL, LOGO_FIRMY_PROPORCJE } from "@/lib/logoFirmy";
+import {
+  NAZWA_FIRMY_NAGLOWEK,
+  kolorFirmowyJasnyRgb,
+  kolorFirmowyRgb,
+  logoWbudowane,
+  type LogoPdf,
+} from "@/lib/identyfikacjaWizualna";
 import { widokProtokolu } from "@/lib/widokProtokolu";
 import type { WynikKontroli } from "@/types/protokol";
 
@@ -35,8 +41,11 @@ function wartoscLubNieDotyczy(nieDotyczy: boolean, wartosc: string, pusta: strin
   return wartosc.trim() || pusta;
 }
 
-export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
+export function utworzPdfProtokolu(dane: DaneProtokoluPdf, logo: LogoPdf = logoWbudowane()) {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
+  // Kolor firmowy i jego jasny wariant (tła nagłówków tabel) z src/lib/identyfikacjaWizualna.ts.
+  const [kolorR, kolorG, kolorB] = kolorFirmowyRgb();
+  const kolorJasny = kolorFirmowyJasnyRgb();
   doc.addFileToVFS("NotoSans-Regular.ttf", czcionkaBase64());
   doc.addFont("NotoSans-Regular.ttf", "NotoSans", "normal");
   doc.setFont("NotoSans", "normal");
@@ -62,10 +71,28 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
     doc.text(wartosc, x, yy, opcje);
   }
 
+  // Linie oddzielające są w kolorze firmowym.
   function linia(od: number, doX: number, grubosc = 0.4) {
-    doc.setDrawColor(15, 23, 42);
+    doc.setDrawColor(kolorR, kolorG, kolorB);
     doc.setLineWidth(grubosc);
     doc.line(od, y, doX, y);
+  }
+
+  // Czcionka ma tylko wagę normalną, więc pogrubienie powstaje przez podwójne rysowanie z przesunięciem.
+  function pogrubiony(wartosc: string, x: number, yy: number) {
+    doc.text(wartosc, x, yy);
+    doc.text(wartosc, x + 0.18, yy);
+  }
+
+  // Tytuł sekcji: kolor firmowy, pogrubiony, z cienką linią pod spodem.
+  function tytulSekcji(wartosc: string) {
+    doc.setFontSize(12);
+    doc.setTextColor(kolorR, kolorG, kolorB);
+    pogrubiony(wartosc, lewy, y);
+    doc.setDrawColor(kolorR, kolorG, kolorB);
+    doc.setLineWidth(0.3);
+    doc.line(lewy, y + 1.6, lewy + szerokosc, y + 1.6);
+    doc.setTextColor(15, 23, 42);
   }
 
   function kropki(x: number, szer: number) {
@@ -84,15 +111,17 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
     zapewnij(12 + wiersze.length * 8);
     doc.setFontSize(9);
     doc.setTextColor(15, 23, 42);
-    linia(lewy, lewy + szerokosc, 0.45);
+    // Nagłówek tabeli: jasne tło w kolorze firmowym i czarny, pogrubiony tekst.
+    doc.setFillColor(kolorJasny[0], kolorJasny[1], kolorJasny[2]);
+    doc.rect(lewy, y, szerokosc, 7.2, "F");
     y += 5;
     let x = lewy;
     naglowki.forEach((naglowek, indeks) => {
-      tekst(naglowek, x + 1, y);
+      pogrubiony(naglowek, x + 1, y);
       x += kolumny[indeks];
     });
     y += 2.2;
-    linia(lewy, lewy + szerokosc, 0.25);
+    linia(lewy, lewy + szerokosc, 0.3);
 
     wiersze.forEach((wiersz, indeksWiersza) => {
       const komorki = wiersz.slice(0, 4).map((komorkaSurowa, indeks) => {
@@ -149,25 +178,57 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
     y += 6;
   }
 
-  const szerokoscLogo = 52;
+  // Nagłówek: logo | pionowa kreska | nazwa firmy i dane kontaktowe, w jednym wierszu.
+  const gornaKrawedz = y - 7;
+  const wysokoscNaglowka = 16.5;
+  const maxSzerokoscLogo = 50;
+  const szerokoscLogo = Math.min(maxSzerokoscLogo, 15 * logo.proporcje);
+  const wysokoscLogo = szerokoscLogo / logo.proporcje;
   doc.addImage(
-    LOGO_FIRMY_PNG_DATA_URL,
-    "PNG",
+    logo.dataUrl,
+    logo.format,
     lewy,
-    y - 7,
+    gornaKrawedz + (wysokoscNaglowka - wysokoscLogo) / 2,
     szerokoscLogo,
-    szerokoscLogo / LOGO_FIRMY_PROPORCJE,
+    wysokoscLogo,
     undefined,
     "FAST",
   );
+  const xKreski = lewy + maxSzerokoscLogo + 4;
+  doc.setDrawColor(kolorR, kolorG, kolorB);
+  doc.setLineWidth(0.5);
+  doc.line(xKreski, gornaKrawedz, xKreski, gornaKrawedz + wysokoscNaglowka);
+  const xTekstu = xKreski + 5;
+  doc.setFontSize(11.5);
+  doc.setTextColor(kolorR, kolorG, kolorB);
+  pogrubiony(NAZWA_FIRMY_NAGLOWEK, xTekstu, gornaKrawedz + 3.8);
+  doc.setFontSize(9);
+  doc.setTextColor(15, 23, 42);
+  tekst(widok.serwisantNazwa, xTekstu, gornaKrawedz + 8.4);
+  tekst(widok.serwisantAdres, xTekstu, gornaKrawedz + 12.3);
+  tekst(`tel. ${widok.serwisantTelefon}   e-mail: ${widok.serwisantEmail}`, xTekstu, gornaKrawedz + 16.2);
+
+  y = gornaKrawedz + wysokoscNaglowka + 3.5;
+  linia(lewy, lewy + szerokosc, 0.8);
+
+  // Jasny pasek z datą przeglądu (po lewej) i numerem protokołu (po prawej).
+  const gornaKrawedzPaska = y + 2.5;
+  const wysokoscPaska = 8;
+  doc.setFillColor(kolorJasny[0], kolorJasny[1], kolorJasny[2]);
+  doc.rect(lewy, gornaKrawedzPaska, szerokosc, wysokoscPaska, "F");
   doc.setFontSize(10);
   doc.setTextColor(15, 23, 42);
-  tekst(`Data przeglądu: ${widok.dataPrzegladu || "………………"}`, lewy + szerokosc, y, { align: "right" });
-  y += 5;
-  tekst(`Nr protokołu: ${widok.numerProtokolu || "………………"}`, lewy + szerokosc, y, { align: "right" });
-  y += 4;
-  linia(lewy, lewy + szerokosc, 0.6);
-  y += 10;
+  const baselinePaska = gornaKrawedzPaska + 5.4;
+  const etykietaData = "Data przeglądu:";
+  pogrubiony(etykietaData, lewy + 2, baselinePaska);
+  tekst(widok.dataPrzegladu || "………………", lewy + 2 + doc.getTextWidth(`${etykietaData} `), baselinePaska);
+  const etykietaNumer = "Nr protokołu:";
+  const wartoscNumeru = widok.numerProtokolu || "………………";
+  const szerokoscNumeru = doc.getTextWidth(`${etykietaNumer} `) + doc.getTextWidth(wartoscNumeru);
+  const xNumeru = lewy + szerokosc - 2 - szerokoscNumeru;
+  pogrubiony(etykietaNumer, xNumeru, baselinePaska);
+  tekst(wartoscNumeru, xNumeru + doc.getTextWidth(`${etykietaNumer} `), baselinePaska);
+  y = gornaKrawedzPaska + wysokoscPaska + 10;
   doc.setFontSize(18);
   tekst("PROTOKÓŁ", lewy + szerokosc / 2, y, { align: "center" });
   y += 7;
@@ -177,16 +238,18 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
 
   const startKolumn = y;
   doc.setFontSize(10);
-  tekst("Serwisant", lewy, y);
+  doc.setTextColor(kolorR, kolorG, kolorB);
+  pogrubiony("Serwisant", lewy, y);
+  doc.setTextColor(15, 23, 42);
   y += 5;
   tekst(widok.serwisantNazwa, lewy, y);
-  y += 5;
-  tekst(`Tel: ${widok.serwisantTelefon}`, lewy, y);
-  y += 5;
-  tekst(`e-mail: ${widok.serwisantEmail}`, lewy, y);
 
   let yPrawy = startKolumn;
   const prawy = lewy + 90;
+  doc.setTextColor(kolorR, kolorG, kolorB);
+  pogrubiony("Klient", prawy, yPrawy);
+  doc.setTextColor(15, 23, 42);
+  yPrawy += 5;
   tekst(widok.klientNazwa, prawy, yPrawy);
   widok.klientLinie.forEach((linia) => {
     yPrawy += 5;
@@ -194,8 +257,7 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
   });
   y = Math.max(y, yPrawy) + 8;
 
-  doc.setFontSize(12);
-  tekst("1. Identyfikacja i ustawienia urządzenia", lewy, y);
+  tytulSekcji("1. Identyfikacja i ustawienia urządzenia");
   y += 4;
   tabela(["Parametr", "Wartość", "Parametr", "Wartość"], [
     ["Model kotła", widok.modelKotla, "Numer kotła", widok.numerKotla],
@@ -206,8 +268,7 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
 
   if (widok.dodatkoweUrzadzenie.length > 0 || widok.opisUslugi) {
     zapewnij(10);
-    doc.setFontSize(12);
-    tekst("Urządzenie", lewy, y);
+    tytulSekcji("Urządzenie");
     y += 6;
     doc.setFontSize(10);
     for (const [etykieta, wartosc] of widok.dodatkoweUrzadzenie) {
@@ -225,8 +286,7 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
     y += 4;
   }
 
-  doc.setFontSize(12);
-  tekst("2. Test bezpieczeństwa i szczelności", lewy, y);
+  tytulSekcji("2. Test bezpieczeństwa i szczelności");
   y += 4;
   tabela(["Kryterium kontrolne", "Status", "Parametr", "Wartość"], [
     [
@@ -245,8 +305,7 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
 
   if (widok.pomiary.length > 0) {
     zapewnij(10);
-    doc.setFontSize(12);
-    tekst("Pomiary", lewy, y);
+    tytulSekcji("Pomiary");
     y += 6;
     doc.setFontSize(10);
     for (const [etykieta, wartosc] of widok.pomiary) {
@@ -257,8 +316,7 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
     y += 3;
   }
 
-  doc.setFontSize(12);
-  tekst("3. Lista kontrolna wykonanych czynności", lewy, y);
+  tytulSekcji("3. Lista kontrolna wykonanych czynności");
   y += 7;
   doc.setFontSize(10);
   for (const pozycja of widok.czynnosci) {
@@ -292,8 +350,7 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
 
   if (widok.checklista.length > 0) {
     zapewnij(10);
-    doc.setFontSize(12);
-    tekst("Checklista czynności serwisowych", lewy, y);
+    tytulSekcji("Checklista czynności serwisowych");
     y += 6;
     for (const grupa of widok.checklista) {
       zapewnij(8);
@@ -312,8 +369,7 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
   }
 
   zapewnij(70);
-  doc.setFontSize(12);
-  tekst("4. Uwagi serwisanta i zdiagnozowane usterki", lewy, y);
+  tytulSekcji("4. Uwagi serwisanta i zdiagnozowane usterki");
   y += 4;
   const linieUwag = widok.uwagi ? (doc.splitTextToSize(widok.uwagi, szerokosc - 8) as string[]) : [];
   const wysokoscUwag = Math.max(widok.uwagi ? 28 : 48, linieUwag.length * 5 + 8);
@@ -330,9 +386,7 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
   // Rozliczenie jest informacją wewnętrzną serwisanta, nie trafia do PDF dla klienta.
 
   zapewnij(50);
-  doc.setFontSize(12);
-  doc.setTextColor(15, 23, 42);
-  tekst("5. Załączniki", lewy, y);
+  tytulSekcji("5. Załączniki");
   y += 6;
   const zdjecia = widok.zdjecia.slice(0, 10);
   if (zdjecia.length === 0) {
@@ -379,10 +433,8 @@ export function utworzPdfProtokolu(dane: DaneProtokoluPdf) {
       : "",
   ].filter(Boolean);
   if (oswiadczenia.length > 0) {
-    doc.setFontSize(12);
-    doc.setTextColor(15, 23, 42);
     zapewnij(8);
-    tekst("Oświadczenie", lewy, y);
+    tytulSekcji("Oświadczenie");
     y += 6;
     doc.setFontSize(10);
     for (const tresc of oswiadczenia) {

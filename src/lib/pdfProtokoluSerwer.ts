@@ -4,6 +4,7 @@ import { KOLEKCJE } from "@/lib/collections";
 import { dolaczZalacznikPdf } from "@/lib/dolaczZalacznikPdf";
 import { otworzBazeSerwera } from "@/lib/firebaseServer";
 import { daneProtokoluZDokumentu } from "@/lib/klientDokument";
+import { wczytajLogo } from "@/lib/identyfikacjaWizualna";
 import { utworzPdfLatex } from "@/lib/protokolLatex";
 import { utworzPdfProtokolu } from "@/lib/protokolPdf";
 
@@ -91,7 +92,8 @@ export async function utworzPdfDlaProtokolu(klientId: string, protokolId: string
       ).filter((adres) => adres.startsWith("data:image/"));
     }
 
-    let pdf = (await utworzPdfLatex(dane)) ?? utworzPdfProtokolu(dane);
+    const logo = await wczytajLogo();
+    let pdf = (await utworzPdfLatex(dane, logo)) ?? utworzPdfProtokolu(dane, logo);
     if (dane.protokol.maZalacznikPdf) {
       let zeStaregoMiejsca = "";
       try {

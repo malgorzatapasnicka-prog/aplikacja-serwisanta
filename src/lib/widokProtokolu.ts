@@ -30,6 +30,7 @@ export type WidokProtokolu = {
   numerProtokolu: string;
   podtytul: string;
   serwisantNazwa: string;
+  serwisantAdres: string;
   serwisantTelefon: string;
   serwisantEmail: string;
   klientNazwa: string;
@@ -161,6 +162,7 @@ export function widokProtokolu(dane: DaneProtokoluPdf): WidokProtokolu {
     numerProtokolu: raport.numerProtokolu?.trim() || numerProtokoluZDaty(raport.dataWypelnienia, 1),
     podtytul: raport.czynnosci === "awaria" ? "awaria" : "Przegląd okresowy",
     serwisantNazwa: FIRMA.wlasciciel,
+    serwisantAdres: `${FIRMA.ulica}, ${FIRMA.kod}`,
     serwisantTelefon: FIRMA.telefon,
     serwisantEmail: FIRMA.email,
     klientNazwa: dane.imieNazwisko.trim(),
