@@ -7,6 +7,9 @@ export type Klient = {
   email: string;
   adres: string;
   dataOstatniegoPrzegladu: string;
+  /** Data przeglądu, dla której wysłano już SMS „za 3 miesiące”. */
+  smsPrzypomnienieDlaDaty?: string;
+  smsPrzypomnienieWyslano?: string;
   numerKotla: string;
   nazwaKotla: string;
   protokoly: Protokol[];

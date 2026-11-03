@@ -27,6 +27,7 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { KOLEKCJE } from "@/lib/collections";
+import { formatujDateIso } from "@/lib/daneProtokolu";
 import { getDb, getFirebaseApp, gdySesjaAktywna, tokenSesji } from "@/lib/firebase";
 import { protokolyZDokumentu, scalProtokoly } from "@/lib/klientDokument";
 import { brakSieci, odczytDokumentu, odczytZapytania, zapiszBezCzekania } from "@/lib/zapisOffline";
@@ -59,6 +60,8 @@ type KlientDokument = {
   email?: string;
   adres?: string;
   dataOstatniegoPrzegladu?: string;
+  smsPrzypomnienieDlaDaty?: string;
+  smsPrzypomnienieWyslano?: string;
   numerKotla?: string;
   numeryKotlow?: string[];
   nazwaKotla?: string;
@@ -91,10 +94,12 @@ function KomorkaDanych({
   etykieta,
   wartosc,
   ikona,
+  dopisek,
 }: {
   etykieta: string;
   wartosc?: string;
   ikona?: ReactNode;
+  dopisek?: string;
 }) {
   if (!wartosc || wartosc.trim() === "") return null;
 
@@ -104,9 +109,22 @@ function KomorkaDanych({
       <div className="min-w-0">
         <span className="text-xs font-semibold uppercase text-slate-500">{etykieta}</span>
         <span className="mt-1 block break-words text-sm font-medium text-slate-900">{wartosc}</span>
+        {dopisek ? <span className="mt-1 block text-xs font-normal text-slate-500">{dopisek}</span> : null}
       </div>
     </div>
   );
+}
+
+function dopisekPrzypomnieniaSms(klient: KlientDokument) {
+  const data = klient.dataOstatniegoPrzegladu?.trim().slice(0, 10) ?? "";
+  if (!data || klient.smsPrzypomnienieDlaDaty?.trim().slice(0, 10) !== data) {
+    return undefined;
+  }
+
+  const wyslano = klient.smsPrzypomnienieWyslano?.trim().slice(0, 10) ?? "";
+  return wyslano
+    ? `SMS z przypomnieniem wysłany ${formatujDateIso(wyslano)}.`
+    : "SMS z przypomnieniem wysłany.";
 }
 
 function numeryKotlowKlienta(klient: { numerKotla?: string; numeryKotlow?: unknown }) {
@@ -940,6 +958,7 @@ export function ClientList({ opisPustej }: { opisPustej?: string }) {
                   etykieta="Data ostatniego przeglądu"
                   wartosc={klient.dataOstatniegoPrzegladu}
                   ikona={<Calendar className="h-4 w-4" aria-hidden />}
+                  dopisek={dopisekPrzypomnieniaSms(klient)}
                 />
               </div>
 

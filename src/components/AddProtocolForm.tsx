@@ -1,7 +1,7 @@
 "use client";
 
 import { FirebaseError } from "firebase/app";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, updateDoc } from "firebase/firestore";
 import { ChangeEvent, FormEvent, useEffect, useState, type ReactNode } from "react";
 import { KOLEKCJE } from "@/lib/collections";
 import { getDb } from "@/lib/firebase";
@@ -674,10 +674,18 @@ export function AddProtocolForm({
         ...polaRozszerzenia(formularz),
         }),
       );
+      const zapisanoDatePrzegladu =
+        formularz.czynnosci === "przeglad" && formularz.dataPrzegladu
+          ? await zapiszBezCzekania(
+              updateDoc(doc(db, KOLEKCJE.klienci, klientId), {
+                dataOstatniegoPrzegladu: formularz.dataPrzegladu,
+              }),
+            )
+          : true;
       if (plikiOczekuja) {
         void przetworzKolejkePlikow();
       }
-      if (!zapisanoNaSerwerze || plikiOczekuja || telefonBezSieci()) {
+      if (!zapisanoNaSerwerze || !zapisanoDatePrzegladu || plikiOczekuja || telefonBezSieci()) {
         setZapisanoWAplikacji(true);
         return;
       }
