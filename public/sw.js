@@ -21,6 +21,12 @@ self.addEventListener("install", (event) => {
           }
         }),
       );
+      try {
+        // czcionka do PDF-ów generowanych w telefonie, żeby działały też bez internetu
+        await (await caches.open(NAZWA_ZASOBOW)).add("/fonts/NotoSans-Regular.ttf");
+      } catch {
+        // brak sieci przy instalacji: czcionka zapamięta się przy pierwszym użyciu
+      }
       await self.skipWaiting();
     })(),
   );
@@ -176,7 +182,7 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (/\.(?:png|jpg|jpeg|svg|ico|webp|woff2?|webmanifest)$/.test(adres.pathname)) {
+  if (/\.(?:png|jpg|jpeg|svg|ico|webp|woff2?|ttf|webmanifest)$/.test(adres.pathname)) {
     event.respondWith(zasobZOdswiezaniem(event));
   }
 });

@@ -6,22 +6,13 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { flushSync } from "react-dom";
 import { KOLEKCJE } from "@/lib/collections";
 import { getDb, gdySesjaAktywna } from "@/lib/firebase";
+import { formatujIlosc, sumaWGroszach, wartoscWGroszach, type CzescMagazynowa } from "@/lib/magazyn";
+import { utworzPdfRemanentu } from "@/lib/remanentPdf";
 import { formatujKwote } from "@/lib/rozliczenie";
 import { KOMUNIKAT_ZAPISANO_OFFLINE, zapiszBezCzekania } from "@/lib/zapisOffline";
 
 const DOMYSLNA_JEDNOSTKA = "szt.";
 const JEDNOSTKI = ["szt.", "kpl.", "m", "kg", "l", "op."];
-
-type CzescMagazynowa = {
-  id: string;
-  nazwa: string;
-  kodKatalogowy: string;
-  producent: string;
-  kategoria: string;
-  ilosc: number;
-  jednostka: string;
-  cenaZakupuNetto: number;
-};
 
 type FormularzCzesci = {
   nazwa: string;
@@ -61,15 +52,6 @@ function wczytajLiczbe(wartosc: string) {
   return Number.isFinite(wynik) ? wynik : undefined;
 }
 
-/** Wartość pozycji w groszach, żeby sumy nie łapały błędów zaokrągleń. */
-function wartoscWGroszach(czesc: Pick<CzescMagazynowa, "ilosc" | "cenaZakupuNetto">) {
-  return Math.round(czesc.ilosc * Math.round(czesc.cenaZakupuNetto * 100));
-}
-
-function formatujIlosc(ilosc: number) {
-  return ilosc.toLocaleString("pl-PL", { maximumFractionDigits: 3 });
-}
-
 function komunikatBledu(error: unknown) {
   if (error instanceof FirebaseError && error.code === "permission-denied") {
     return `Firestore odrzuciło zapis. W regułach dodaj dostęp zalogowanego serwisanta do kolekcji ${KOLEKCJE.magazynCzesci}.`;
@@ -92,6 +74,8 @@ export function Magazyn() {
   const [sukces, setSukces] = useState("");
   const [blad, setBlad] = useState("");
   const [dataWydruku, setDataWydruku] = useState("");
+  const [pobieramPdf, setPobieramPdf] = useState(false);
+  const [bladWydruku, setBladWydruku] = useState("");
 
   useEffect(() => {
     return gdySesjaAktywna((db) =>
@@ -133,7 +117,7 @@ export function Magazyn() {
     return () => window.removeEventListener("beforeprint", przygotujWydruk);
   }, []);
 
-  const sumaGrosze = useMemo(() => czesci.reduce((suma, czesc) => suma + wartoscWGroszach(czesc), 0), [czesci]);
+  const sumaGrosze = useMemo(() => sumaWGroszach(czesci), [czesci]);
   const kategorie = useMemo(() => [...new Set(czesci.map((c) => c.kategoria).filter(Boolean))].sort(), [czesci]);
   const producenci = useMemo(() => [...new Set(czesci.map((c) => c.producent).filter(Boolean))].sort(), [czesci]);
 
@@ -238,8 +222,60 @@ export function Magazyn() {
   }
 
   function drukujRemanent() {
+    setBladWydruku("");
     flushSync(() => setDataWydruku(formatujDateWydruku()));
-    window.print();
+    try {
+      window.print();
+    } catch {
+      setBladWydruku("Ta przeglądarka nie otwiera okna drukowania. Użyj przycisku „Pobierz PDF” i wydrukuj plik.");
+    }
+  }
+
+  /** PDF remanentu: działa też tam, gdzie okno drukowania nie jest dostępne (np. aplikacja z ekranu głównego iPhone'a). */
+  async function pobierzPdfRemanentu() {
+    setBladWydruku("");
+    setPobieramPdf(true);
+    try {
+      const odpowiedz = await fetch("/fonts/NotoSans-Regular.ttf");
+      if (!odpowiedz.ok) {
+        throw new Error("Nie udało się wczytać czcionki do PDF.");
+      }
+      const czcionka = await new Promise<string>((resolve, reject) => {
+        const czytnik = new FileReader();
+        czytnik.onload = () => resolve(String(czytnik.result).split(",")[1] ?? "");
+        czytnik.onerror = () => reject(czytnik.error);
+        void odpowiedz.blob().then((blob) => czytnik.readAsDataURL(blob), reject);
+      });
+
+      const teraz = new Date();
+      const blob = await utworzPdfRemanentu(czesci, formatujDateWydruku(), czcionka);
+      const nazwaPliku = `remanent-${teraz.toISOString().slice(0, 10)}.pdf`;
+      const plik = new File([blob], nazwaPliku, { type: "application/pdf" });
+
+      // Na telefonie otwieramy systemowe udostępnianie (zapis, AirPrint, drukarka), na komputerze pobieramy plik
+      if (window.matchMedia("(pointer: coarse)").matches && navigator.canShare?.({ files: [plik] })) {
+        try {
+          await navigator.share({ files: [plik], title: "Remanent magazynu" });
+          return;
+        } catch (error) {
+          if (error instanceof DOMException && error.name === "AbortError") {
+            return;
+          }
+        }
+      }
+      const adres = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = adres;
+      link.download = nazwaPliku;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(adres), 10_000);
+    } catch (error) {
+      setBladWydruku(error instanceof Error && error.message ? error.message : "Nie udało się utworzyć PDF.");
+    } finally {
+      setPobieramPdf(false);
+    }
   }
 
   return (
@@ -359,10 +395,20 @@ export function Magazyn() {
       <section className="card">
         <div className="no-print flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-base font-semibold text-slate-900">Części w magazynie ({czesci.length})</h2>
-          <button type="button" onClick={drukujRemanent} className="btn btn-primary">
-            Drukuj Remanent
-          </button>
+          <div className="flex flex-wrap gap-3">
+            <button type="button" onClick={pobierzPdfRemanentu} disabled={pobieramPdf} className="btn btn-outline">
+              {pobieramPdf ? "Tworzenie PDF…" : "Pobierz PDF"}
+            </button>
+            <button type="button" onClick={drukujRemanent} className="btn btn-primary">
+              Drukuj Remanent
+            </button>
+          </div>
         </div>
+        {bladWydruku ? (
+          <p role="alert" className="no-print mt-3 text-sm font-medium text-red-700">
+            {bladWydruku}
+          </p>
+        ) : null}
 
         {/* Nagłówek widoczny tylko na wydruku */}
         <div className="hidden print:mb-4 print:block">
